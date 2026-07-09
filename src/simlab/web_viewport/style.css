@@ -1,0 +1,39 @@
+html,
+body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #171a1f;
+  color: #e6edf3;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+#viewport {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+#hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  min-width: 180px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  background: rgba(24, 28, 35, 0.82);
+  line-height: 1.45;
+  pointer-events: none;
+}
+
+#scene-name {
+  font-weight: 600;
+}
+
+#scene-stats,
+#selection {
+  color: #aeb8c4;
+  font-size: 12px;
+}

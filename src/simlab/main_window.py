@@ -24,7 +24,7 @@ from simlab.ui.asset_browser import AssetBrowser
 from simlab.ui.console_panel import ConsolePanel
 from simlab.ui.property_panel import PropertyPanel
 from simlab.ui.scene_tree import SceneTree
-from simlab.ui.viewport_placeholder import ViewportPlaceholder
+from simlab.ui.web_viewport import WebViewport
 
 
 class MainWindow(QMainWindow):
@@ -43,7 +43,7 @@ class MainWindow(QMainWindow):
         self.asset_browser = AssetBrowser(self.project_root / "assets" / "metadata.json")
         self.scene_tree = SceneTree()
         self.property_panel = PropertyPanel()
-        self.viewport = ViewportPlaceholder()
+        self.viewport = WebViewport()
 
         self.setWindowTitle("SimLab")
         self.resize(1200, 800)
@@ -90,6 +90,8 @@ class MainWindow(QMainWindow):
         self.scene_tree.actor_delete_requested.connect(self.delete_actor)
         self.property_panel.actor_name_changed.connect(self.rename_actor)
         self.property_panel.actor_transform_changed.connect(self.update_transform)
+        self.viewport.actor_selected.connect(self.select_actor)
+        self.viewport.actor_transform_changed.connect(self.update_transform_from_viewport)
 
     def new_scene(self) -> None:
         self.scene_service.new_scene()
@@ -190,6 +192,32 @@ class MainWindow(QMainWindow):
     def update_transform(self, actor_id: str, transform: object) -> None:
         self.scene_service.update_transform(actor_id, transform)  # type: ignore[arg-type]
         self.refresh_ui()
+
+    def update_transform_from_viewport(self, actor_id: str, transform_data: object) -> None:
+        actor = self.scene_service.get_actor(actor_id)
+        if actor is None or not isinstance(transform_data, dict):
+            return
+        actor.transform.position = self._vector_from_viewport(
+            transform_data.get("position"),
+            actor.transform.position,
+        )
+        actor.transform.rotation = self._vector_from_viewport(
+            transform_data.get("rotation"),
+            actor.transform.rotation,
+        )
+        actor.transform.scale = self._vector_from_viewport(
+            transform_data.get("scale"),
+            actor.transform.scale,
+        )
+        self.selected_actor_id = actor_id
+        self.property_panel.set_actor(actor)
+        self.scene_tree.set_actors(self.scene_service.list_actors(), self.selected_actor_id)
+        self.viewport.refresh(self.scene_service.scene, actor)
+
+    def _vector_from_viewport(self, value: object, fallback: list[float]) -> list[float]:
+        if not isinstance(value, list) or len(value) != 3:
+            return list(fallback)
+        return [float(item) for item in value]
 
     def refresh_ui(self) -> None:
         actors = self.scene_service.list_actors()

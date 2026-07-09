@@ -10,7 +10,7 @@ SimLab Desktop
 |   +-- Asset Browser
 |   +-- Scene Tree
 |   +-- Property Panel
-|   +-- Viewport Placeholder
+|   +-- three.js Viewport
 |   +-- Console
 +-- Scene Model
 |   +-- scene.json
@@ -36,7 +36,9 @@ On macOS or Linux, activate the virtual environment with `source .venv/bin/activ
 python -m simlab.app
 ```
 
-The desktop app opens with an asset browser, scene tree, placeholder viewport, property panel, and console. Primitive assets can be added to the scene and exported to `exports/scene.xml`.
+The desktop app opens with an asset browser, scene tree, three.js viewport, property panel, and console. Primitive assets can be added to the scene and exported to `exports/scene.xml`.
+
+The viewport is a local QtWebEngine view backed by vendored three.js files. It renders primitive actors, supports orbit camera controls, click selection, and a basic translate gizmo for moving selected actors.
 
 ## Tests
 
@@ -48,7 +50,7 @@ The tests cover the scene model, project save/load behavior, scene service actor
 
 ## Current Limitations
 
-- The viewport is a placeholder; no live 3D rendering is implemented yet.
+- The viewport supports primitive editing only; it is not yet a MuJoCo-rendered live view.
 - The simulation runner is headless and runs a short fixed loop.
 - MJCF export supports primitive box, sphere, and cylinder actors only.
 - Rotation export is intentionally minimal in this milestone.
@@ -61,3 +63,7 @@ The tests cover the scene model, project save/load behavior, scene service actor
 - Add richer validation for scene files and asset metadata.
 - Introduce timeline controls and simulation state inspection.
 - Flesh out the environment API for training and evaluation workflows.
+
+## Third-Party Code
+
+- three.js r160 is vendored under `src/simlab/web_viewport/vendor/` and distributed under the MIT License.

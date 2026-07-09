@@ -28,6 +28,15 @@ simlab = "simlab.app:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+simlab = [
+  "web_viewport/*.html",
+  "web_viewport/*.css",
+  "web_viewport/*.js",
+  "web_viewport/vendor/*.js",
+  "web_viewport/vendor/*.txt",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
