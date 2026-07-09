@@ -25,7 +25,7 @@ SimLab Desktop
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
-python -m pip install -e ".[dev]"
+python -m pip install -r requirements.txt
 ```
 
 On macOS or Linux, activate the virtual environment with `source .venv/bin/activate`.
@@ -41,7 +41,7 @@ The desktop app opens with an asset browser, scene tree, placeholder viewport, p
 ## Tests
 
 ```bash
-pytest
+python -m pytest
 ```
 
 The tests cover the scene model, project save/load behavior, scene service actor operations, and MJCF export. MuJoCo model loading is skipped automatically if MuJoCo is not installed.
