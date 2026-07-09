@@ -1,0 +1,37 @@
+{
+  "assets": [
+    {
+      "id": "primitive_box",
+      "name": "Box",
+      "type": "object",
+      "primitive": "box",
+      "default_properties": {
+        "mass": 1.0,
+        "size": [0.5, 0.5, 0.5],
+        "rgba": [0.2, 0.5, 0.9, 1.0]
+      }
+    },
+    {
+      "id": "primitive_sphere",
+      "name": "Sphere",
+      "type": "object",
+      "primitive": "sphere",
+      "default_properties": {
+        "mass": 1.0,
+        "size": [0.5],
+        "rgba": [0.9, 0.4, 0.3, 1.0]
+      }
+    },
+    {
+      "id": "primitive_cylinder",
+      "name": "Cylinder",
+      "type": "object",
+      "primitive": "cylinder",
+      "default_properties": {
+        "mass": 1.0,
+        "size": [0.35, 0.8],
+        "rgba": [0.3, 0.8, 0.5, 1.0]
+      }
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "version": "1.0",
+  "name": "Demo Scene",
+  "units": "meters",
+  "actors": [
+    {
+      "id": "actor_001",
+      "name": "Box",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [0.0, 0.0, 0.5],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "properties": {
+        "primitive": "box",
+        "mass": 1.0,
+        "size": [0.5, 0.5, 0.5],
+        "rgba": [0.2, 0.5, 0.9, 1.0]
+      }
+    }
+  ],
+  "simulation_config": {
+    "timestep": 0.01,
+    "duration": 1.0
+  }
+}
