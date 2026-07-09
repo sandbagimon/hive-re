@@ -1,0 +1,680 @@
+# SimLab Product Plan
+
+日期：2026-07-09
+状态：长期路线图
+
+## 产品目标
+
+SimLab 的目标是做一个本地优先的机器人仿真编辑器。产品能力对标现代机器人仿真工作台，但所有实现都必须是 clean-room 的：独立品牌、独立 UI、独立资产、独立数据结构、独立业务逻辑，不复制任何 OrcaLab 的代码、素材、云服务、包名、协议、文案或视觉表达。
+
+核心技术路线：
+
+- 物理仿真：MuJoCo。
+- 桌面壳：PySide6。
+- 3D viewport 和交互控制：本地 vendored three.js。
+- 场景源格式：`scene.json`。
+- 物理导出格式：MJCF。
+- 自动化验证：pytest、ruff，后续增加 mypy 和端到端 UI smoke tests。
+
+## 非侵权边界
+
+必须遵守：
+
+- 不使用 OrcaLab 名称、Logo、图标、截图、素材、示例项目或品牌元素。
+- 不反编译、不抓取、不复制 OrcaLab 客户端或服务端代码。
+- 不复制 OrcaLab 的私有协议、云服务接口、商业逻辑或包名。
+- 不照抄 UI 布局、颜色系统、文案、动效和交互细节。
+- 可以做功能等价：场景编辑、仿真运行、机器人导入、控制器、数据记录、批量实验、训练环境。
+- 功能等价必须通过我们自己的架构、命名、视觉设计和交互设计实现。
+- 每次引入第三方开源组件，都要记录许可证、来源、用途和替代方案。
+
+## 当前已经实现
+
+### 项目基础
+
+- 已创建 Python `src/` layout 项目。
+- 已配置 `pyproject.toml`。
+- 已配置 `requirements.txt`，可在新机器上直接创建 `.venv` 后安装。
+- 已添加 README、LICENSE、`.gitignore`。
+- 已建立 Git 仓库和多次迭代提交。
+- 已新增 `docs/iterations/`，用于记录每次迭代。
+
+### 桌面应用
+
+- 支持通过以下命令启动：
+
+```powershell
+python -m simlab.app
+```
+
+- 主窗口已有：
+  - Top toolbar。
+  - Asset Browser。
+  - Scene Tree。
+  - three.js Viewport。
+  - Property Panel。
+  - Console Panel。
+
+### 场景模型
+
+- 已实现：
+  - `Transform`
+  - `Actor`
+  - `Scene`
+- 支持 `scene.json` 序列化和反序列化。
+- Actor 已包含：
+  - `id`
+  - `name`
+  - `type`
+  - `asset_id`
+  - `transform`
+  - `properties`
+- Scene 已包含：
+  - `version`
+  - `name`
+  - `units`
+  - `actors`
+  - `simulation_config`
+
+### 项目和场景服务
+
+- 已实现 `save_scene()` 和 `load_scene()`。
+- 已实现基础验证：
+  - scene version 存在。
+  - actor id 唯一。
+  - transform 向量长度为 3。
+- 已实现 `SceneService`：
+  - `new_scene()`
+  - `add_actor()`
+  - `remove_actor()`
+  - `rename_actor()`
+  - `update_transform()`
+  - `update_actor_properties()`
+  - `get_actor()`
+  - `list_actors()`
+- Actor id 已按 `actor_001` 形式生成。
+
+### 资产系统初版
+
+- 已添加本地 primitive assets：
+  - Box
+  - Sphere
+  - Cylinder
+- Asset Browser 可读取 `assets/metadata.json`。
+- 双击资产或点击按钮可添加 actor 到场景。
+
+### three.js viewport 初版
+
+- 已用 `QWebEngineView` 加载本地 HTML/JS/CSS。
+- 已 vendored three.js r160。
+- 已保留 three.js MIT license 文件。
+- Viewport 当前支持：
+  - 显示 grid 和 axes。
+  - 渲染 box/sphere/cylinder。
+  - orbit camera。
+  - 点击 mesh 选择 actor。
+  - 选择状态同步到 Scene Tree 和 Property Panel。
+  - translate gizmo。
+  - 拖动后把 position 回写到 Python scene model。
+
+### MJCF 和 MuJoCo
+
+- 已实现 MJCF exporter。
+- 支持 primitive object actor：
+  - box -> `<geom type="box">`
+  - sphere -> `<geom type="sphere">`
+  - cylinder -> `<geom type="cylinder">`
+- 已实现 headless MuJoCo runner。
+- UI 可导出 MJCF 并启动 runner 子进程。
+- Console Panel 可显示 runner 输出。
+
+### 测试
+
+- 已有 pytest 覆盖：
+  - scene model。
+  - actor add/remove/update。
+  - scene save/load。
+  - MJCF export。
+  - MuJoCo model load。
+  - web viewport asset 文件存在性。
+- 当前验证状态：
+  - `pytest`：9 passed。
+  - `ruff`：passed。
+
+## 总体架构目标
+
+长期目标架构：
+
+```text
+SimLab Desktop
++-- PySide6 Application Shell
+|   +-- Project Browser
+|   +-- Asset Browser
+|   +-- Scene Tree
+|   +-- Property Inspector
+|   +-- Timeline / Simulation Controls
+|   +-- Console / Diagnostics
+|   +-- QtWebEngine three.js Viewport
+|
++-- Scene Core
+|   +-- scene.json
+|   +-- asset metadata
+|   +-- actor graph
+|   +-- transform hierarchy
+|   +-- validation
+|
++-- Simulation Core
+|   +-- MJCF exporter
+|   +-- MuJoCo model manager
+|   +-- stepping loop
+|   +-- state recorder
+|   +-- reset / replay / pause
+|
++-- Robotics Layer
+|   +-- robot importer
+|   +-- joints / actuators / sensors
+|   +-- controller API
+|   +-- task definitions
+|
++-- Experiment Layer
+|   +-- scripted runs
+|   +-- batch evaluation
+|   +-- metrics
+|   +-- dataset export
+|
++-- Packaging
+    +-- local desktop distribution
+    +-- reproducible examples
+    +-- license notices
+```
+
+## Milestones
+
+### M0 - Simulation-First MVP Foundation
+
+状态：已完成。
+
+目标：
+
+- 建立可运行桌面项目。
+- 建立 scene model。
+- 支持 scene JSON save/load。
+- 支持 primitive asset add。
+- 支持 MJCF export。
+- 支持 headless MuJoCo runner。
+
+已完成内容：
+
+- PySide6 desktop shell。
+- Scene/Actor/Transform model。
+- ProjectService 和 SceneService。
+- Asset Browser、Scene Tree、Property Panel、Console。
+- Primitive assets。
+- MJCF exporter。
+- MuJoCo runner。
+- pytest/ruff。
+
+验收标准：
+
+- `python -m simlab.app` 可打开 UI。
+- 可添加 primitive actors。
+- 可保存和打开 `scene.json`。
+- 可导出 `exports/scene.xml`。
+- 可运行 headless MuJoCo runner。
+- 测试通过。
+
+### M1 - Local three.js Viewport
+
+状态：第一版已完成，仍需增强。
+
+目标：
+
+- 用不依赖云服务的开源 3D viewport 替代 placeholder。
+- 建立 Python 和 JavaScript 的双向同步。
+- 支持基础 3D 编辑闭环。
+
+已完成内容：
+
+- QtWebEngine + three.js viewport。
+- Primitive actor 渲染。
+- Click selection。
+- Orbit camera。
+- Translate gizmo。
+- Position 回写 scene model。
+
+剩余任务：
+
+- 添加 selection outline。
+- 添加 rotate/scale gizmo。
+- 添加 transform mode toolbar。
+- 添加 camera view shortcuts。
+- 增加 viewport 坐标轴、网格尺寸和背景设置。
+- 增加 viewport JS 单元或集成测试策略。
+
+验收标准：
+
+- 任何 scene model 变化都能反映到 viewport。
+- 任何 viewport transform 编辑都能回写 scene model。
+- 选中状态在 viewport、Scene Tree、Property Panel 之间一致。
+
+### M2 - Robust Scene Editing Workflow
+
+状态：未开始。
+
+目标：
+
+- 让场景编辑从 demo 状态进入可持续使用状态。
+
+要实现：
+
+- Actor hierarchy。
+- Parent/child transform。
+- Duplicate actor。
+- Multi-select。
+- Undo/redo。
+- Dirty state。
+- Auto-save recovery。
+- Scene validation panel。
+- Actor search/filter。
+- Property Panel 支持 typed properties。
+- Scene Tree context menu。
+- Rename inline edit。
+- Delete confirmation。
+- Save/open 最近项目列表。
+
+验收标准：
+
+- 常规编辑操作可撤销和重做。
+- 保存前可知道 scene 是否有未保存改动。
+- 错误 scene 可被明确提示而不是静默失败。
+
+### M3 - MuJoCo Live State Sync
+
+状态：未开始。
+
+目标：
+
+- 让 MuJoCo 不只是 headless 子进程日志，而是成为 viewport 的实时物理数据源。
+
+要实现：
+
+- In-process MuJoCo simulation manager。
+- 将 scene export 为 MJCF 后加载到 `MjModel`。
+- 管理 `MjData`。
+- 支持 play/pause/step/reset。
+- 每帧读取 body pose。
+- 将 pose 推送到 three.js viewport。
+- 区分 authoring transform 和 simulation transform。
+- 支持 simulation overlay。
+- Console 显示 simulation event 和 warning。
+
+验收标准：
+
+- 点击 Run 后 viewport 中 actor 随 MuJoCo step 实时更新。
+- Stop/Reset 后 scene 恢复到 authoring 状态。
+- 不阻塞 UI 主线程。
+
+### M4 - Robot Import and Robotics Model
+
+状态：未开始。
+
+目标：
+
+- 支持真实机器人模型，而不只是 primitive objects。
+
+要实现：
+
+- Robot actor type。
+- Import MJCF。
+- Import URDF。
+- Mesh asset reference。
+- Joint model。
+- Actuator model。
+- Sensor model。
+- Robot tree inspector。
+- Initial pose editor。
+- Joint limit validation。
+- Robot asset metadata。
+
+验收标准：
+
+- 可导入一个开源机器人 MJCF/URDF。
+- 可在 viewport 中查看机器人结构。
+- 可在 Property Panel 中查看 joints、actuators、sensors。
+- 可导出可加载的 MJCF。
+
+### M5 - Physics Authoring
+
+状态：未开始。
+
+目标：
+
+- 让用户能编辑 MuJoCo 关键物理参数。
+
+要实现：
+
+- Mass/inertia editor。
+- Friction/contact parameters。
+- Solver settings。
+- Timestep and integrator settings。
+- Materials。
+- Collision groups。
+- Constraints。
+- Tendons。
+- Equality constraints。
+- World gravity。
+- Terrain/plane/table primitives。
+
+验收标准：
+
+- 用户可从 UI 修改物理参数。
+- 导出 MJCF 后参数保真。
+- 错误或不稳定参数能被 validation 捕获。
+
+### M6 - Timeline, Playback, and Recording
+
+状态：未开始。
+
+目标：
+
+- 支持仿真控制、回放和数据记录。
+
+要实现：
+
+- Timeline widget。
+- Play/pause/step/reset。
+- Simulation speed control。
+- Frame capture。
+- State recording。
+- Replay saved trajectory。
+- Export CSV/JSON trajectory。
+- Record selected body/joint/sensor data。
+
+验收标准：
+
+- 可录制一次仿真并回放。
+- 可导出关键状态数据。
+- UI 能显示当前 simulation time/frame。
+
+### M7 - Asset Pipeline
+
+状态：未开始。
+
+目标：
+
+- 建立本地资产库和导入流程。
+
+要实现：
+
+- Local asset library。
+- Asset metadata schema。
+- Mesh import。
+- Texture/material import。
+- Asset thumbnails。
+- Asset validation。
+- Asset dependency copying。
+- Project-relative asset paths。
+- Example asset packs。
+
+验收标准：
+
+- 新资产可导入、预览、添加到场景。
+- 项目移动目录后 asset 引用仍然可用。
+- 许可证信息可记录到 asset metadata。
+
+### M8 - Controller and Scripting API
+
+状态：未开始。
+
+目标：
+
+- 让用户可以写控制器和自动化脚本。
+
+要实现：
+
+- Python controller interface。
+- Per-step callback。
+- Reset callback。
+- Observation/action API。
+- Controller attach UI。
+- Script validation。
+- Safe execution boundary。
+- Built-in examples：
+  - position controller。
+  - velocity controller。
+  - simple PID。
+
+验收标准：
+
+- 用户能把 Python controller 绑定到 robot。
+- 仿真时 controller 能读取 sensor/joint state 并输出 actuator commands。
+- Controller exception 不会崩掉整个 UI。
+
+### M9 - Experiment and Gym-Style Environment
+
+状态：stub 已存在，功能未开始。
+
+目标：
+
+- 支持批量实验、训练、评估和自动化运行。
+
+要实现：
+
+- 完整 `SimLabEnv`。
+- `reset()` / `step()` / `close()` 语义。
+- Observation spec。
+- Action spec。
+- Reward hooks。
+- Termination hooks。
+- Batch runner。
+- Metrics collector。
+- Seed control。
+- Headless mode。
+
+验收标准：
+
+- 可用 Python 脚本 headless 运行 task。
+- 可重复 seed。
+- 可导出 metrics。
+- 不强制依赖 gymnasium，但可提供 adapter。
+
+### M10 - Diagnostics, Validation, and Test Coverage
+
+状态：部分开始。
+
+目标：
+
+- 提升产品稳定性，避免 scene、MJCF、viewport、MuJoCo 状态不一致。
+
+要实现：
+
+- Scene schema versioning。
+- Migration system。
+- Validation report panel。
+- MJCF load check。
+- Asset dependency check。
+- UI smoke tests。
+- Viewport bridge tests。
+- Simulation regression tests。
+- Performance budget tests。
+- Crash-safe logging。
+
+验收标准：
+
+- 错误 scene 能给出明确定位。
+- 导出 MJCF 前后可自动验证。
+- CI 可以在无 GUI 环境中跑核心测试。
+
+### M11 - Packaging and Distribution
+
+状态：未开始。
+
+目标：
+
+- 把开发环境变成可交付桌面应用。
+
+要实现：
+
+- Windows packaging。
+- Application icon and original branding。
+- License notices。
+- Example projects。
+- First-run sample scene。
+- Crash log location。
+- Version info。
+- Release checklist。
+- Optional installer。
+
+验收标准：
+
+- 非开发机器可安装运行。
+- 不需要用户手动配置 Python 环境。
+- 第三方 license notice 完整。
+
+### M12 - Product Polish and Workflow Parity
+
+状态：未开始。
+
+目标：
+
+- 让 SimLab 成为完整工作台，而不是功能拼装 demo。
+
+要实现：
+
+- 独立视觉设计系统。
+- 快捷键系统。
+- Command palette。
+- Dock layout persistence。
+- Project templates。
+- Advanced inspector。
+- Scene compare。
+- Export presets。
+- Documentation site。
+- Tutorial examples。
+
+验收标准：
+
+- 新用户可以从 template 创建项目并完成一次仿真实验。
+- 常用操作有快捷键和稳定反馈。
+- UI 风格完全原创，不复制目标竞品表达。
+
+## 优先级建议
+
+近期最该做：
+
+1. M3 MuJoCo Live State Sync。
+2. M2 Robust Scene Editing Workflow 中的 undo/redo、dirty state、duplicate/delete。
+3. M1 viewport 的 rotate/scale gizmo 和 selection outline。
+4. M4 robot import 的最小 MJCF import。
+5. M10 validation panel。
+
+理由：
+
+- 现在已经有桌面壳、scene model、three.js viewport 和 MJCF export。
+- 下一步要把 MuJoCo 仿真结果实时显示出来，这会把产品从“编辑器”推进到“仿真器”。
+- undo/redo 和 validation 是编辑器可靠性的底座。
+- Robot import 是从 primitive demo 走向机器人产品的关键。
+
+## 近期迭代计划
+
+### Iteration A - Simulation State Bridge
+
+目标：
+
+- 改造 SimulationService，使其支持 in-process stepping。
+- 将 MuJoCo body poses 推送到 viewport。
+
+交付：
+
+- `MuJoCoSimulationSession`。
+- `SimulationState` 数据结构。
+- Viewport `applySimulationState()` JS API。
+- Run/Pause/Step/Reset toolbar behavior。
+
+### Iteration B - Viewport Editing Tools
+
+目标：
+
+- 补齐编辑器基础操作。
+
+交付：
+
+- translate/rotate/scale mode。
+- selection outline。
+- snap to grid。
+- frame selected。
+- camera view shortcuts。
+
+### Iteration C - Scene Editing Reliability
+
+目标：
+
+- 让用户编辑不会轻易丢数据。
+
+交付：
+
+- dirty state。
+- undo/redo stack。
+- duplicate actor。
+- context menu。
+- auto-save recovery file。
+
+### Iteration D - Robot MJCF Import
+
+目标：
+
+- 支持导入开源 MJCF robot。
+
+交付：
+
+- MJCF import service。
+- Robot actor。
+- Mesh/reference handling。
+- Robot tree view。
+
+### Iteration E - Validation Panel
+
+目标：
+
+- 给用户清晰反馈 scene、asset、MJCF 的问题。
+
+交付：
+
+- validation report model。
+- UI panel。
+- export preflight checks。
+- quick fixes。
+
+## Definition of Done
+
+每个 milestone 完成时必须满足：
+
+- 功能可从 UI 或 documented command 触达。
+- 有最小测试覆盖。
+- README 或 docs 有更新。
+- `docs/iterations/` 有本次迭代记录。
+- `pytest` 通过。
+- `ruff` 通过。
+- 如引入第三方代码，必须记录许可证。
+- 不引入 OrcaLab 品牌、素材、代码或表达复制。
+
+## 当前风险
+
+- QtWebEngine + three.js 的打包体积和平台兼容性需要后续验证。
+- MuJoCo state 和 editor scene 的同步模型需要设计清楚，否则会混淆 authoring state 和 runtime state。
+- Robot import 会涉及 mesh 路径、material、joint、actuator、sensor 等复杂模型。
+- 只靠 `requirements.txt` 未 pin 精确版本，跨机器长期复现性仍可加强。
+- 法务边界需要持续保持 clean-room 纪律，尤其是 UI 和示例资产。
+
+## 长期愿景
+
+SimLab 最终应成为一个本地优先、可扩展、可脚本化的机器人仿真工作台：
+
+- 设计场景。
+- 导入机器人。
+- 配置物理参数。
+- 编写控制器。
+- 运行和回放仿真。
+- 批量评估实验。
+- 导出数据。
+- 服务于机器人控制、强化学习、数字孪生和仿真验证工作流。
