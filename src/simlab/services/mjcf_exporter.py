@@ -37,8 +37,9 @@ def scene_to_mjcf_xml(scene: Scene) -> str:
         body = ET.SubElement(
             worldbody,
             "body",
-            {"name": _xml_name(actor.name), "pos": _format_vector(actor.transform.position)},
+            {"name": _xml_name(actor.id), "pos": _format_vector(actor.transform.position)},
         )
+        ET.SubElement(body, "freejoint")
         geom_attrs = {
             "name": f"{_xml_name(actor.name)}_geom",
             "type": geom_type,

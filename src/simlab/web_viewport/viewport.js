@@ -3,6 +3,7 @@ import { OrbitControls } from './vendor/OrbitControls.js';
 import { TransformControls } from './vendor/TransformControls.js';
 
 const canvas = document.querySelector('#viewport');
+const toolbar = document.querySelector('#viewport-toolbar');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setClearColor(0x171a1f, 1);
@@ -20,7 +21,8 @@ orbitControls.enableDamping = true;
 orbitControls.dampingFactor = 0.08;
 
 const transformControls = new TransformControls(camera, renderer.domElement);
-transformControls.setMode('translate');
+let transformMode = 'translate';
+transformControls.setMode(transformMode);
 transformControls.setSpace('world');
 scene.add(transformControls);
 
@@ -35,6 +37,8 @@ transformControls.addEventListener('mouseUp', () => {
   }
   const transform = object.userData.transform;
   transform.position = [object.position.x, object.position.y, object.position.z];
+  transform.rotation = [object.rotation.x, object.rotation.y, object.rotation.z];
+  transform.scale = [object.scale.x, object.scale.y, object.scale.z];
   window.simlabBridge.updateActorTransform(object.userData.actorId, JSON.stringify(transform));
 });
 
@@ -53,11 +57,26 @@ scene.add(keyLight);
 const actorGroup = new THREE.Group();
 scene.add(actorGroup);
 
+const selectionOutline = new THREE.BoxHelper(new THREE.Object3D(), 0xffd166);
+selectionOutline.visible = false;
+selectionOutline.material.depthTest = false;
+selectionOutline.renderOrder = 10;
+scene.add(selectionOutline);
+
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 const actorMeshes = new Map();
 let selectedActorId = null;
 let currentScene = { name: 'Untitled Scene', actors: [] };
+let simulationState = null;
+const focusBox = new THREE.Box3();
+const focusSphere = new THREE.Sphere();
+const viewDirections = {
+  iso: new THREE.Vector3(1, -1, 0.75).normalize(),
+  front: new THREE.Vector3(0, -1, 0),
+  right: new THREE.Vector3(1, 0, 0),
+  top: new THREE.Vector3(0, 0, 1),
+};
 
 function resize() {
   const width = canvas.clientWidth || window.innerWidth;
@@ -101,6 +120,7 @@ function geometryForActor(actor) {
 
 function clearActors() {
   transformControls.detach();
+  selectionOutline.visible = false;
   actorMeshes.clear();
   while (actorGroup.children.length > 0) {
     const child = actorGroup.children.pop();
@@ -136,6 +156,9 @@ function setScene(sceneData) {
   }
 
   selectActor(selectedActorId, false);
+  if (simulationState) {
+    applySimulationState(simulationState);
+  }
   updateHud();
 }
 
@@ -146,11 +169,12 @@ function selectActor(actorId, notifyPython = true) {
     mesh.material.emissiveIntensity = id === selectedActorId ? 0.45 : 0;
   }
   const selectedMesh = actorMeshes.get(selectedActorId);
-  if (selectedMesh) {
+  if (selectedMesh && !simulationState) {
     transformControls.attach(selectedMesh);
   } else {
     transformControls.detach();
   }
+  updateSelectionOutline();
   updateHud();
   if (notifyPython && selectedActorId && window.simlabBridge) {
     window.simlabBridge.selectActor(selectedActorId);
@@ -160,9 +184,104 @@ function selectActor(actorId, notifyPython = true) {
 function updateHud() {
   const actors = currentScene.actors || [];
   const selected = actors.find((actor) => actor.id === selectedActorId);
+  const simText = simulationState ? ` | sim t=${simulationState.time.toFixed(3)}` : '';
   document.querySelector('#scene-name').textContent = currentScene.name || 'Untitled Scene';
-  document.querySelector('#scene-stats').textContent = `${actors.length} actors`;
+  document.querySelector('#scene-stats').textContent = `${actors.length} actors${simText}`;
   document.querySelector('#selection').textContent = `Selected: ${selected?.name || 'None'}`;
+}
+
+function applySimulationState(stateData) {
+  simulationState = stateData || null;
+  if (!simulationState) {
+    setScene(currentScene);
+    return;
+  }
+
+  transformControls.detach();
+  for (const actorState of simulationState.actors || []) {
+    const mesh = actorMeshes.get(actorState.id);
+    if (!mesh) {
+      continue;
+    }
+    const position = actorState.position || [0, 0, 0];
+    const quaternion = actorState.quaternion || [1, 0, 0, 0];
+    mesh.position.set(position[0], position[1], position[2]);
+    mesh.quaternion.set(quaternion[1], quaternion[2], quaternion[3], quaternion[0]);
+  }
+  updateSelectionOutline();
+  updateHud();
+}
+
+function clearSimulationState() {
+  simulationState = null;
+  setScene(currentScene);
+}
+
+function updateSelectionOutline() {
+  const selectedMesh = actorMeshes.get(selectedActorId);
+  if (!selectedMesh) {
+    selectionOutline.visible = false;
+    return;
+  }
+  selectionOutline.visible = true;
+  selectionOutline.setFromObject(selectedMesh);
+}
+
+function setTransformMode(mode) {
+  transformMode = mode;
+  transformControls.setMode(mode);
+  for (const button of toolbar?.querySelectorAll('[data-tool]') || []) {
+    button.classList.toggle('active', button.dataset.tool === mode);
+  }
+  const selectedMesh = actorMeshes.get(selectedActorId);
+  if (selectedMesh && !simulationState) {
+    transformControls.attach(selectedMesh);
+  }
+}
+
+function getFocusObject() {
+  return actorMeshes.get(selectedActorId) || actorGroup;
+}
+
+function frameObject(object, direction = null) {
+  if (!object || (object === actorGroup && actorGroup.children.length === 0)) {
+    return;
+  }
+  focusBox.setFromObject(object);
+  if (focusBox.isEmpty()) {
+    return;
+  }
+  focusBox.getBoundingSphere(focusSphere);
+  const radius = Math.max(focusSphere.radius, 0.35);
+  const viewDirection = direction || camera.position.clone().sub(orbitControls.target).normalize();
+  if (viewDirection.lengthSq() < 0.0001) {
+    viewDirection.copy(viewDirections.iso);
+  }
+  const fov = THREE.MathUtils.degToRad(camera.fov);
+  const distance = Math.max(radius / Math.sin(fov / 2), 2.5);
+  orbitControls.target.copy(focusSphere.center);
+  camera.position.copy(focusSphere.center).add(viewDirection.multiplyScalar(distance * 1.35));
+  camera.near = Math.max(distance / 1000, 0.01);
+  camera.far = Math.max(distance * 100, 1000);
+  camera.updateProjectionMatrix();
+  orbitControls.update();
+}
+
+function frameSelected() {
+  frameObject(getFocusObject());
+}
+
+function setCameraView(viewName) {
+  const direction = viewDirections[viewName]?.clone();
+  if (!direction) {
+    return;
+  }
+  if (viewName === 'top') {
+    camera.up.set(0, 1, 0);
+  } else {
+    camera.up.set(0, 0, 1);
+  }
+  frameObject(getFocusObject(), direction);
 }
 
 function onPointerDown(event) {
@@ -179,20 +298,63 @@ function onPointerDown(event) {
 
 renderer.domElement.addEventListener('pointerdown', onPointerDown);
 
+toolbar?.addEventListener('click', (event) => {
+  const button = event.target.closest('button');
+  if (!button) {
+    return;
+  }
+  if (button.dataset.tool) {
+    setTransformMode(button.dataset.tool);
+    return;
+  }
+  if (button.dataset.action === 'frame') {
+    frameSelected();
+    return;
+  }
+  if (button.dataset.camera) {
+    setCameraView(button.dataset.camera);
+  }
+});
+
+window.addEventListener('keydown', (event) => {
+  const key = event.key.toLowerCase();
+  const shortcuts = {
+    w: () => setTransformMode('translate'),
+    e: () => setTransformMode('rotate'),
+    r: () => setTransformMode('scale'),
+    f: () => frameSelected(),
+    '1': () => setCameraView('front'),
+    '3': () => setCameraView('right'),
+    '7': () => setCameraView('top'),
+    '0': () => setCameraView('iso'),
+  };
+  const action = shortcuts[key];
+  if (!action) {
+    return;
+  }
+  event.preventDefault();
+  action();
+});
+
 function animate() {
   requestAnimationFrame(animate);
   resize();
   orbitControls.update();
+  updateSelectionOutline();
   renderer.render(scene, camera);
 }
 
-new QWebChannel(qt.webChannelTransport, (channel) => {
-  window.simlabBridge = channel.objects.simlabBridge;
+if (window.QWebChannel && window.qt?.webChannelTransport) {
+  new QWebChannel(qt.webChannelTransport, (channel) => {
+    window.simlabBridge = channel.objects.simlabBridge;
+    window.simlabViewportReady = true;
+    if (window.simlabBridge?.viewportReady) {
+      window.simlabBridge.viewportReady();
+    }
+  });
+} else {
   window.simlabViewportReady = true;
-  if (window.simlabBridge?.viewportReady) {
-    window.simlabBridge.viewportReady();
-  }
-});
+}
 
 window.simlabViewport = {
   setSceneFromJson(sceneJson) {
@@ -200,6 +362,21 @@ window.simlabViewport = {
   },
   selectActor(actorId) {
     selectActor(actorId || null, false);
+  },
+  setSimulationStateFromJson(stateJson) {
+    applySimulationState(JSON.parse(stateJson));
+  },
+  clearSimulationState() {
+    clearSimulationState();
+  },
+  setTransformMode(mode) {
+    setTransformMode(mode);
+  },
+  frameSelected() {
+    frameSelected();
+  },
+  setCameraView(viewName) {
+    setCameraView(viewName);
   },
 };
 

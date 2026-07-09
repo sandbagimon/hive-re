@@ -14,6 +14,49 @@
       <div id="scene-stats">0 actors</div>
       <div id="selection">Selected: None</div>
     </div>
+    <div id="viewport-toolbar" aria-label="Viewport tools">
+      <button class="tool-button active" type="button" data-tool="translate" aria-label="Translate" title="Translate">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3v18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12h18M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" />
+        </svg>
+      </button>
+      <button class="tool-button" type="button" data-tool="rotate" aria-label="Rotate" title="Rotate">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M18.4 8A7 7 0 1 0 20 12M18.4 8H14M18.4 8V3.6" />
+        </svg>
+      </button>
+      <button class="tool-button" type="button" data-tool="scale" aria-label="Scale" title="Scale">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 19L19 5M19 5h-6M19 5v6M5 19h6M5 19v-6" />
+        </svg>
+      </button>
+      <span class="toolbar-divider" aria-hidden="true"></span>
+      <button class="tool-button" type="button" data-action="frame" aria-label="Frame selected" title="Frame selected">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5M8 12h8" />
+        </svg>
+      </button>
+      <button class="tool-button" type="button" data-camera="iso" aria-label="Isometric view" title="Isometric view">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3zM12 12l8-4.5M12 12v9M12 12L4 7.5" />
+        </svg>
+      </button>
+      <button class="tool-button" type="button" data-camera="front" aria-label="Front view" title="Front view">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 7h14v10H5zM8 10h8M8 14h8" />
+        </svg>
+      </button>
+      <button class="tool-button" type="button" data-camera="right" aria-label="Right view" title="Right view">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M8 6l8-3v18l-8-3zM8 6v12" />
+        </svg>
+      </button>
+      <button class="tool-button" type="button" data-camera="top" aria-label="Top view" title="Top view">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 5h14v14H5zM8 8h8v8H8z" />
+        </svg>
+      </button>
+    </div>
     <script type="module" src="./viewport.js"></script>
   </body>
 </html>

@@ -9,6 +9,7 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 
 from simlab.models.actor import Actor
 from simlab.models.scene import Scene
+from simlab.services.simulation_session import SimulationState
 
 
 class ViewportBridge(QObject):
@@ -72,3 +73,12 @@ class WebViewport(QWebEngineView):
         selected_actor_id = self._pending_selected_actor_id or ""
         self.page().runJavaScript(f"window.simlabViewport.setSceneFromJson({scene_json!r});")
         self.page().runJavaScript(f"window.simlabViewport.selectActor({selected_actor_id!r});")
+
+    def apply_simulation_state(self, state: SimulationState) -> None:
+        state_json = json.dumps(state.to_dict())
+        self.page().runJavaScript(
+            f"window.simlabViewport.setSimulationStateFromJson({state_json!r});"
+        )
+
+    def clear_simulation_state(self) -> None:
+        self.page().runJavaScript("window.simlabViewport.clearSimulationState();")

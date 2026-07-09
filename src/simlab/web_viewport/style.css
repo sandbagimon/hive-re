@@ -37,3 +37,73 @@ body {
   color: #aeb8c4;
   font-size: 12px;
 }
+
+#viewport-toolbar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(420px, calc(100vw - 24px));
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  background: rgba(24, 28, 35, 0.86);
+}
+
+.tool-button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 6px;
+  background: rgba(37, 44, 54, 0.92);
+  color: #d7dee8;
+  cursor: pointer;
+}
+
+.tool-button:hover,
+.tool-button:focus-visible {
+  border-color: rgba(126, 172, 255, 0.74);
+  background: rgba(52, 64, 80, 0.96);
+  outline: none;
+}
+
+.tool-button.active {
+  border-color: rgba(255, 209, 102, 0.88);
+  color: #ffd166;
+  background: rgba(68, 62, 44, 0.96);
+}
+
+.tool-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+@media (max-width: 720px) {
+  #hud {
+    right: 12px;
+  }
+
+  #viewport-toolbar {
+    top: auto;
+    right: 12px;
+    bottom: 12px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}

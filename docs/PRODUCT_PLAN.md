@@ -124,9 +124,13 @@ python -m simlab.app
   - box -> `<geom type="box">`
   - sphere -> `<geom type="sphere">`
   - cylinder -> `<geom type="cylinder">`
-- 已实现 headless MuJoCo runner。
-- UI 可导出 MJCF 并启动 runner 子进程。
-- Console Panel 可显示 runner 输出。
+- 已保留 headless MuJoCo runner，可用于命令行 smoke run。
+- UI 可导出 MJCF 并启动 in-process MuJoCo session。
+- Console Panel 可显示 simulation event。
+- 已实现 in-process MuJoCo simulation session。
+- 已实现 Run/Pause/Step/Reset 基础控制。
+- 已实现 MuJoCo body pose 到 three.js viewport 的实时同步。
+- Simulation pose 会覆盖 viewport 显示，但不写回 authoring transform。
 
 ### 测试
 
@@ -134,11 +138,13 @@ python -m simlab.app
   - scene model。
   - actor add/remove/update。
   - scene save/load。
+  - scene history dirty/undo/redo。
   - MJCF export。
   - MuJoCo model load。
+  - MuJoCo simulation state sync。
   - web viewport asset 文件存在性。
 - 当前验证状态：
-  - `pytest`：9 passed。
+  - `pytest`：13 passed。
   - `ruff`：passed。
 
 ## 总体架构目标
@@ -240,16 +246,19 @@ SimLab Desktop
 - Click selection。
 - Orbit camera。
 - Translate gizmo。
+- Rotate gizmo。
+- Scale gizmo。
+- Selection outline。
+- Transform mode toolbar。
+- Frame selected。
+- Front/right/top/isometric camera shortcuts。
 - Position 回写 scene model。
 
 剩余任务：
 
-- 添加 selection outline。
-- 添加 rotate/scale gizmo。
-- 添加 transform mode toolbar。
-- 添加 camera view shortcuts。
+- 添加 snap to grid。
 - 增加 viewport 坐标轴、网格尺寸和背景设置。
-- 增加 viewport JS 单元或集成测试策略。
+- 增加更完整的 viewport JS 单元或集成测试策略。
 
 验收标准：
 
@@ -259,20 +268,27 @@ SimLab Desktop
 
 ### M2 - Robust Scene Editing Workflow
 
-状态：未开始。
+状态：部分开始。
 
 目标：
 
 - 让场景编辑从 demo 状态进入可持续使用状态。
 
-要实现：
+已完成：
+
+- Dirty state。
+- New/Open/Close 前未保存改动提示。
+- Save 成功后清除 dirty。
+- Undo/redo stack。
+- `Ctrl+Z` / `Ctrl+Shift+Z` 快捷键。
+- Toolbar Undo/Redo action。
+
+剩余任务：
 
 - Actor hierarchy。
 - Parent/child transform。
 - Duplicate actor。
 - Multi-select。
-- Undo/redo。
-- Dirty state。
 - Auto-save recovery。
 - Scene validation panel。
 - Actor search/filter。
@@ -290,28 +306,35 @@ SimLab Desktop
 
 ### M3 - MuJoCo Live State Sync
 
-状态：未开始。
+状态：第一版已完成，仍需增强。
 
 目标：
 
 - 让 MuJoCo 不只是 headless 子进程日志，而是成为 viewport 的实时物理数据源。
 
-要实现：
+已完成：
 
 - In-process MuJoCo simulation manager。
 - 将 scene export 为 MJCF 后加载到 `MjModel`。
 - 管理 `MjData`。
-- 支持 play/pause/step/reset。
+- 支持 Run/Pause/Step/Reset。
 - 每帧读取 body pose。
 - 将 pose 推送到 three.js viewport。
-- 区分 authoring transform 和 simulation transform。
-- 支持 simulation overlay。
-- Console 显示 simulation event 和 warning。
+- 基础区分 authoring transform 和 simulation transform。
+- Console 显示基础 simulation event。
+
+剩余任务：
+
+- 更完整的 simulation overlay。
+- 更清晰的 running/paused/reset UI 状态。
+- 长时间运行、速度控制和时间轴。
+- 大场景下的非阻塞 stepping 策略。
+- 更完整的 warning/error report。
 
 验收标准：
 
 - 点击 Run 后 viewport 中 actor 随 MuJoCo step 实时更新。
-- Stop/Reset 后 scene 恢复到 authoring 状态。
+- Reset 后 scene 恢复到 authoring 状态。
 - 不阻塞 UI 主线程。
 
 ### M4 - Robot Import and Robotics Model
@@ -579,6 +602,8 @@ SimLab Desktop
 
 ### Iteration A - Simulation State Bridge
 
+状态：第一版已完成。
+
 目标：
 
 - 改造 SimulationService，使其支持 in-process stepping。
@@ -593,6 +618,8 @@ SimLab Desktop
 
 ### Iteration B - Viewport Editing Tools
 
+状态：第一版已完成，仍需增强。
+
 目标：
 
 - 补齐编辑器基础操作。
@@ -601,20 +628,29 @@ SimLab Desktop
 
 - translate/rotate/scale mode。
 - selection outline。
-- snap to grid。
 - frame selected。
 - camera view shortcuts。
 
+剩余：
+
+- snap to grid。
+- 更完整的 viewport smoke/integration tests。
+
 ### Iteration C - Scene Editing Reliability
+
+状态：部分开始。
 
 目标：
 
 - 让用户编辑不会轻易丢数据。
 
-交付：
+已完成：
 
 - dirty state。
 - undo/redo stack。
+
+剩余：
+
 - duplicate actor。
 - context menu。
 - auto-save recovery file。

@@ -48,11 +48,14 @@ def test_mjcf_export_contains_expected_geoms() -> None:
     xml = scene_to_mjcf_xml(_scene_with_primitives())
     root = ET.fromstring(xml)
     geom_types = [geom.attrib.get("type") for geom in root.findall(".//geom")]
+    body_names = [body.attrib.get("name") for body in root.findall(".//body")]
 
     assert root.tag == "mujoco"
     assert "box" in geom_types
     assert "sphere" in geom_types
     assert "cylinder" in geom_types
+    assert "actor_001" in body_names
+    assert len(root.findall(".//freejoint")) == 3
 
 
 def test_export_writes_scene_xml(tmp_path) -> None:
