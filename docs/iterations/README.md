@@ -30,3 +30,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-09 MVP Scaffold](2026-07-09-mvp-scaffold.md)
 - [2026-07-09 Venv Requirements](2026-07-09-venv-requirements.md)
 - [2026-07-09 Three.js Viewport](2026-07-09-threejs-viewport.md)
+- [2026-07-09 Requirements Smoke Fix](2026-07-09-requirements-smoke-fix.md)
