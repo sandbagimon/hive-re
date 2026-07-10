@@ -36,7 +36,8 @@
       "maxItems": 5
     },
     "roughness": { "type": "number", "minimum": 0, "maximum": 1 },
-    "metalness": { "type": "number", "minimum": 0, "maximum": 1 }
+    "metalness": { "type": "number", "minimum": 0, "maximum": 1 },
+    "restitution": { "type": "number", "minimum": 0, "maximum": 1 }
   },
   "required": ["dynamic"],
   "additionalProperties": true

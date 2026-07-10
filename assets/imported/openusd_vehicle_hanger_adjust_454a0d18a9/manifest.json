@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "format": "openusd",
+  "source": "assets/imported/openusd_vehicle_hanger_adjust_454a0d18a9/Vehicle_Hanger_Adjust.usd",
+  "source_name": "Vehicle_Hanger_Adjust.usd",
+  "visual_cache": "assets/imported/openusd_vehicle_hanger_adjust_454a0d18a9/visual.json",
+  "collision_mesh": "assets/imported/openusd_vehicle_hanger_adjust_454a0d18a9/collision.obj",
+  "mesh_count": 90,
+  "vertex_count": 144828,
+  "triangle_count": 48276,
+  "bounds": {
+    "min": [
+      -1.6611600341796875,
+      -1.1355084228515626,
+      -1.9709501953125002
+    ],
+    "max": [
+      1.6611600341796875,
+      1.1355084228515626,
+      0.35011685180664065
+    ]
+  },
+  "warnings": [
+    "No UsdPhysics rigid body was found; imported actor defaults to Static.",
+    "Collision uses the merged visual mesh; author a dedicated collider for production use."
+  ]
+}

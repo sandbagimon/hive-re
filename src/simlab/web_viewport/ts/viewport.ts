@@ -3,7 +3,13 @@ import { OrbitControls } from '../vendor/OrbitControls.js';
 import { TransformControls } from '../vendor/TransformControls.js';
 
 import { sourceGeometry } from './geometry-contract.js';
-import type { Actor, Scene, SimulationState, Transform } from './types.js';
+import type {
+  Actor,
+  Scene,
+  SimulationState,
+  Transform,
+  VisualGeometryPayload,
+} from './types.js';
 
 type TransformMode = 'translate' | 'rotate' | 'scale';
 type CameraView = 'iso' | 'front' | 'right' | 'top';
@@ -40,6 +46,8 @@ scene.add(transformControls);
 
 let actorSelectedCallback: (actorId: string | null) => void = () => undefined;
 let actorTransformCallback: (actorId: string, transform: Transform) => void = () => undefined;
+let visualGeometryResolver: (cachePath: string) => Promise<VisualGeometryPayload | null> =
+  async () => null;
 
 transformControls.addEventListener('dragging-changed', (event) => {
   orbitControls.enabled = !event.value;
@@ -90,6 +98,7 @@ let currentScene: Scene = {
 };
 let simulationState: SimulationState | null = null;
 let colliderDebugVisible = false;
+let sceneRevision = 0;
 const focusBox = new THREE.Box3();
 const focusSphere = new THREE.Sphere();
 const viewDirections: Record<CameraView, any> = {
@@ -109,9 +118,11 @@ const materialVisuals: Record<string, { roughness: number; metalness: number }> 
 export function configureViewport(callbacks: {
   onActorSelected: (actorId: string | null) => void;
   onActorTransformChanged: (actorId: string, transform: Transform) => void;
+  resolveVisualGeometry: (cachePath: string) => Promise<VisualGeometryPayload | null>;
 }): void {
   actorSelectedCallback = callbacks.onActorSelected;
   actorTransformCallback = callbacks.onActorTransformChanged;
+  visualGeometryResolver = callbacks.resolveVisualGeometry;
 }
 
 function resize(): void {
@@ -124,7 +135,9 @@ function resize(): void {
 
 function materialForActor(actor: Actor): any {
   const rgba = actor.properties.rgba ?? [0.55, 0.62, 0.7, 1];
-  const primitive = sourceGeometry(actor).geomType;
+  const primitive = actor.properties.geometry?.kind === 'mesh'
+    ? 'mesh'
+    : sourceGeometry(actor).geomType;
   const physics = actor.properties.physics ?? { dynamic: true };
   const materialVisual = materialVisuals[physics.material ?? 'default'] ?? materialVisuals.default;
   return new THREE.MeshStandardMaterial({
@@ -138,6 +151,15 @@ function materialForActor(actor: Actor): any {
 }
 
 function geometryForActor(actor: Actor): any {
+  if (actor.properties.geometry?.kind === 'mesh') {
+    const bounds = actor.properties.geometry.bounds;
+    if (!bounds) return new THREE.BoxGeometry(1, 1, 1);
+    const size = bounds.max.map((value, index) => Math.max(value - bounds.min[index], 0.01));
+    const center = bounds.max.map((value, index) => (value + bounds.min[index]) / 2);
+    return new THREE.BoxGeometry(size[0], size[1], size[2]).translate(
+      center[0], center[1], center[2],
+    );
+  }
   const { geomType, size } = sourceGeometry(actor);
   if (geomType === 'plane') return new THREE.PlaneGeometry((size[0] ?? 5) * 2, (size[1] ?? 5) * 2);
   if (geomType === 'sphere') return new THREE.SphereGeometry(size[0] ?? 0.5, 40, 24);
@@ -154,6 +176,16 @@ function geometryForActor(actor: Actor): any {
     return geometry;
   }
   return new THREE.BoxGeometry((size[0] ?? 0.5) * 2, (size[1] ?? 0.5) * 2, (size[2] ?? 0.5) * 2);
+}
+
+function geometryFromPayload(payload: VisualGeometryPayload): any {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(payload.positions, 3));
+  geometry.setIndex(payload.indices);
+  geometry.computeVertexNormals();
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
+  return geometry;
 }
 
 function actorIsDynamic(actor: Actor): boolean {
@@ -186,6 +218,15 @@ function addColliderDebug(mesh: any, actor: Actor): void {
   mesh.add(center);
 }
 
+function rebuildColliderDebug(mesh: any, actor: Actor): void {
+  for (const child of [...mesh.children]) {
+    if (!child.userData.colliderDebug) continue;
+    mesh.remove(child);
+    disposeObject(child);
+  }
+  addColliderDebug(mesh, actor);
+}
+
 function disposeObject(object: any): void {
   object.traverse((child) => {
     child.geometry?.dispose();
@@ -204,6 +245,7 @@ function clearActors(): void {
 }
 
 export function setViewportScene(sceneData: Scene): void {
+  const revision = ++sceneRevision;
   currentScene = sceneData;
   clearActors();
   for (const actor of currentScene.actors) {
@@ -218,6 +260,16 @@ export function setViewportScene(sceneData: Scene): void {
     addColliderDebug(mesh, actor);
     actorGroup.add(mesh);
     actorMeshes.set(actor.id, mesh);
+    const cachePath = actor.properties.geometry?.visual_cache;
+    if (cachePath) {
+      void visualGeometryResolver(cachePath).then((payload) => {
+        if (!payload || revision !== sceneRevision || actorMeshes.get(actor.id) !== mesh) return;
+        mesh.geometry.dispose();
+        mesh.geometry = geometryFromPayload(payload);
+        rebuildColliderDebug(mesh, actor);
+        updateSelectionOutline();
+      });
+    }
   }
   selectViewportActor(selectedActorId, false);
   if (simulationState) applySimulationState(simulationState);

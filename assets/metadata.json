@@ -12,11 +12,24 @@
           "mass_mode": "density",
           "density": 700.0,
           "mass": 1.0,
-          "friction": [0.6, 0.004, 0.0001]
+          "friction": [
+            0.6,
+            0.004,
+            0.0001
+          ]
         },
         "mass": 1.0,
-        "size": [0.5, 0.5, 0.5],
-        "rgba": [0.2, 0.5, 0.9, 1.0]
+        "size": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "rgba": [
+          0.2,
+          0.5,
+          0.9,
+          1.0
+        ]
       }
     },
     {
@@ -31,11 +44,22 @@
           "mass_mode": "density",
           "density": 1100.0,
           "mass": 1.0,
-          "friction": [1.2, 0.01, 0.0002]
+          "friction": [
+            1.2,
+            0.01,
+            0.0002
+          ]
         },
         "mass": 1.0,
-        "size": [0.5],
-        "rgba": [0.9, 0.4, 0.3, 1.0]
+        "size": [
+          0.5
+        ],
+        "rgba": [
+          0.9,
+          0.4,
+          0.3,
+          1.0
+        ]
       }
     },
     {
@@ -50,11 +74,23 @@
           "mass_mode": "density",
           "density": 7800.0,
           "mass": 1.0,
-          "friction": [0.35, 0.003, 0.0001]
+          "friction": [
+            0.35,
+            0.003,
+            0.0001
+          ]
         },
         "mass": 1.0,
-        "size": [0.35, 0.8],
-        "rgba": [0.3, 0.8, 0.5, 1.0]
+        "size": [
+          0.35,
+          0.8
+        ],
+        "rgba": [
+          0.3,
+          0.8,
+          0.5,
+          1.0
+        ]
       }
     },
     {
@@ -66,15 +102,40 @@
         "physics": {
           "dynamic": false,
           "material": "default",
-          "friction": [1.0, 0.005, 0.0001]
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ]
         },
-        "size": [6.0, 6.0, 0.05],
-        "rgba": [0.35, 0.38, 0.42, 1.0]
+        "size": [
+          6.0,
+          6.0,
+          0.05
+        ],
+        "rgba": [
+          0.35,
+          0.38,
+          0.42,
+          1.0
+        ]
       },
       "default_transform": {
-        "position": [0.0, 0.0, -0.05],
-        "rotation": [0.0, 0.0, 0.0],
-        "scale": [1.0, 1.0, 1.0]
+        "position": [
+          0.0,
+          0.0,
+          -0.05
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
       }
     },
     {
@@ -86,15 +147,40 @@
         "physics": {
           "dynamic": false,
           "material": "wood",
-          "friction": [0.6, 0.004, 0.0001]
+          "friction": [
+            0.6,
+            0.004,
+            0.0001
+          ]
         },
-        "size": [1.5, 1.0, 0.08],
-        "rgba": [0.62, 0.52, 0.38, 1.0]
+        "size": [
+          1.5,
+          1.0,
+          0.08
+        ],
+        "rgba": [
+          0.62,
+          0.52,
+          0.38,
+          1.0
+        ]
       },
       "default_transform": {
-        "position": [0.0, 0.0, 0.45],
-        "rotation": [0.0, 0.0, 0.0],
-        "scale": [1.0, 1.0, 1.0]
+        "position": [
+          0.0,
+          0.0,
+          0.45
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
       }
     },
     {
@@ -106,15 +192,236 @@
         "physics": {
           "dynamic": false,
           "material": "wood",
-          "friction": [0.6, 0.004, 0.0001]
+          "friction": [
+            0.6,
+            0.004,
+            0.0001
+          ]
         },
-        "size": [1.5, 0.6, 0.08],
-        "rgba": [0.55, 0.48, 0.72, 1.0]
+        "size": [
+          1.5,
+          0.6,
+          0.08
+        ],
+        "rgba": [
+          0.55,
+          0.48,
+          0.72,
+          1.0
+        ]
       },
       "default_transform": {
-        "position": [0.0, 0.0, 0.35],
-        "rotation": [0.0, 0.45, 0.0],
-        "scale": [1.0, 1.0, 1.0]
+        "position": [
+          0.0,
+          0.0,
+          0.35
+        ],
+        "rotation": [
+          0.0,
+          0.45,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      }
+    },
+    {
+      "id": "openusd_pipes_53332058a0",
+      "name": "Pipes",
+      "type": "object",
+      "source_format": "openusd",
+      "default_properties": {
+        "geometry": {
+          "kind": "mesh",
+          "source_format": "openusd",
+          "source": "assets/imported/openusd_pipes_53332058a0/Pipes.usd",
+          "visual_cache": "assets/imported/openusd_pipes_53332058a0/visual.json",
+          "collision_mesh": "assets/imported/openusd_pipes_53332058a0/collision.obj",
+          "bounds": {
+            "min": [
+              -16.70224609375,
+              -30.3423193359375,
+              -0.1596990966796875
+            ],
+            "max": [
+              19.058201904296876,
+              29.558642578125,
+              10.576104736328125
+            ]
+          }
+        },
+        "rgba": [
+          0.55,
+          0.62,
+          0.7,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "density",
+          "mass": 1.0,
+          "density": 1000.0,
+          "friction": [
+            0.8,
+            0.005,
+            0.0001
+          ]
+        },
+        "import_warnings": [
+          "No UsdPhysics rigid body was found; imported actor defaults to Static.",
+          "Collision uses the merged visual mesh; author a dedicated collider for production use."
+        ]
+      }
+    },
+    {
+      "id": "openusd_pillar_wires_82f150c76d",
+      "name": "pillar_wires",
+      "type": "object",
+      "source_format": "openusd",
+      "default_properties": {
+        "geometry": {
+          "kind": "mesh",
+          "source_format": "openusd",
+          "source": "assets/imported/openusd_pillar_wires_82f150c76d/pillar_wires.usd",
+          "visual_cache": "assets/imported/openusd_pillar_wires_82f150c76d/visual.json",
+          "collision_mesh": "assets/imported/openusd_pillar_wires_82f150c76d/collision.obj",
+          "bounds": {
+            "min": [
+              -0.08279541015625,
+              -0.1636656951904297,
+              0.007230737209320068
+            ],
+            "max": [
+              0.08279541015625,
+              0.1636656951904297,
+              11.98828369140625
+            ]
+          }
+        },
+        "rgba": [
+          0.4000000059604645,
+          0.4000000059604645,
+          0.4000000059604645,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "density",
+          "mass": 1.0,
+          "density": 1000.0,
+          "friction": [
+            0.8,
+            0.005,
+            0.0001
+          ]
+        },
+        "import_warnings": [
+          "No UsdPhysics rigid body was found; imported actor defaults to Static.",
+          "Collision uses the merged visual mesh; author a dedicated collider for production use."
+        ]
+      }
+    },
+    {
+      "id": "openusd_vehicle_hanger_adjust_454a0d18a9",
+      "name": "Vehicle_Hanger_Adjust",
+      "type": "object",
+      "source_format": "openusd",
+      "default_properties": {
+        "geometry": {
+          "kind": "mesh",
+          "source_format": "openusd",
+          "source": "assets/imported/openusd_vehicle_hanger_adjust_454a0d18a9/Vehicle_Hanger_Adjust.usd",
+          "visual_cache": "assets/imported/openusd_vehicle_hanger_adjust_454a0d18a9/visual.json",
+          "collision_mesh": "assets/imported/openusd_vehicle_hanger_adjust_454a0d18a9/collision.obj",
+          "bounds": {
+            "min": [
+              -1.6611600341796875,
+              -1.1355084228515626,
+              -1.9709501953125002
+            ],
+            "max": [
+              1.6611600341796875,
+              1.1355084228515626,
+              0.35011685180664065
+            ]
+          }
+        },
+        "rgba": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "density",
+          "mass": 1.0,
+          "density": 1000.0,
+          "friction": [
+            0.8,
+            0.005,
+            0.0001
+          ]
+        },
+        "import_warnings": [
+          "No UsdPhysics rigid body was found; imported actor defaults to Static.",
+          "Collision uses the merged visual mesh; author a dedicated collider for production use."
+        ]
+      }
+    },
+    {
+      "id": "openusd_robot_arm_export_800c300551",
+      "name": "Robot_Arm_Export",
+      "type": "object",
+      "source_format": "openusd",
+      "default_properties": {
+        "geometry": {
+          "kind": "mesh",
+          "source_format": "openusd",
+          "source": "assets/imported/openusd_robot_arm_export_800c300551/Robot_Arm_Export.usd",
+          "visual_cache": "assets/imported/openusd_robot_arm_export_800c300551/visual.json",
+          "collision_mesh": "assets/imported/openusd_robot_arm_export_800c300551/collision.obj",
+          "bounds": {
+            "min": [
+              -133.7729420568487,
+              -0.24594726928989985,
+              0.0
+            ],
+            "max": [
+              -1.0171162954709712,
+              59.654053623289656,
+              125.69999292081326
+            ]
+          }
+        },
+        "rgba": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.20000000298023224,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "density",
+          "mass": 1.0,
+          "density": 1000.0,
+          "friction": [
+            0.8,
+            0.005,
+            0.0001
+          ]
+        },
+        "import_warnings": [
+          "No UsdPhysics rigid body was found; imported actor defaults to Static.",
+          "Collision uses the merged visual mesh; author a dedicated collider for production use."
+        ]
       }
     }
   ]

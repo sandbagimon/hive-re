@@ -29,6 +29,7 @@ transformControls.setSpace('world');
 scene.add(transformControls);
 let actorSelectedCallback = () => undefined;
 let actorTransformCallback = () => undefined;
+let visualGeometryResolver = async () => null;
 transformControls.addEventListener('dragging-changed', (event) => {
     orbitControls.enabled = !event.value;
 });
@@ -72,6 +73,7 @@ let currentScene = {
 };
 let simulationState = null;
 let colliderDebugVisible = false;
+let sceneRevision = 0;
 const focusBox = new THREE.Box3();
 const focusSphere = new THREE.Sphere();
 const viewDirections = {
@@ -90,6 +92,7 @@ const materialVisuals = {
 export function configureViewport(callbacks) {
     actorSelectedCallback = callbacks.onActorSelected;
     actorTransformCallback = callbacks.onActorTransformChanged;
+    visualGeometryResolver = callbacks.resolveVisualGeometry;
 }
 function resize() {
     const width = canvas.clientWidth || window.innerWidth;
@@ -100,7 +103,9 @@ function resize() {
 }
 function materialForActor(actor) {
     const rgba = actor.properties.rgba ?? [0.55, 0.62, 0.7, 1];
-    const primitive = sourceGeometry(actor).geomType;
+    const primitive = actor.properties.geometry?.kind === 'mesh'
+        ? 'mesh'
+        : sourceGeometry(actor).geomType;
     const physics = actor.properties.physics ?? { dynamic: true };
     const materialVisual = materialVisuals[physics.material ?? 'default'] ?? materialVisuals.default;
     return new THREE.MeshStandardMaterial({
@@ -113,6 +118,14 @@ function materialForActor(actor) {
     });
 }
 function geometryForActor(actor) {
+    if (actor.properties.geometry?.kind === 'mesh') {
+        const bounds = actor.properties.geometry.bounds;
+        if (!bounds)
+            return new THREE.BoxGeometry(1, 1, 1);
+        const size = bounds.max.map((value, index) => Math.max(value - bounds.min[index], 0.01));
+        const center = bounds.max.map((value, index) => (value + bounds.min[index]) / 2);
+        return new THREE.BoxGeometry(size[0], size[1], size[2]).translate(center[0], center[1], center[2]);
+    }
     const { geomType, size } = sourceGeometry(actor);
     if (geomType === 'plane')
         return new THREE.PlaneGeometry((size[0] ?? 5) * 2, (size[1] ?? 5) * 2);
@@ -127,6 +140,15 @@ function geometryForActor(actor) {
         return geometry;
     }
     return new THREE.BoxGeometry((size[0] ?? 0.5) * 2, (size[1] ?? 0.5) * 2, (size[2] ?? 0.5) * 2);
+}
+function geometryFromPayload(payload) {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(payload.positions, 3));
+    geometry.setIndex(payload.indices);
+    geometry.computeVertexNormals();
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
+    return geometry;
 }
 function actorIsDynamic(actor) {
     return actor.properties.physics?.dynamic ?? true;
@@ -149,6 +171,15 @@ function addColliderDebug(mesh, actor) {
     center.userData.centerOfMass = true;
     mesh.add(center);
 }
+function rebuildColliderDebug(mesh, actor) {
+    for (const child of [...mesh.children]) {
+        if (!child.userData.colliderDebug)
+            continue;
+        mesh.remove(child);
+        disposeObject(child);
+    }
+    addColliderDebug(mesh, actor);
+}
 function disposeObject(object) {
     object.traverse((child) => {
         child.geometry?.dispose();
@@ -166,6 +197,7 @@ function clearActors() {
     }
 }
 export function setViewportScene(sceneData) {
+    const revision = ++sceneRevision;
     currentScene = sceneData;
     clearActors();
     for (const actor of currentScene.actors) {
@@ -181,6 +213,17 @@ export function setViewportScene(sceneData) {
         addColliderDebug(mesh, actor);
         actorGroup.add(mesh);
         actorMeshes.set(actor.id, mesh);
+        const cachePath = actor.properties.geometry?.visual_cache;
+        if (cachePath) {
+            void visualGeometryResolver(cachePath).then((payload) => {
+                if (!payload || revision !== sceneRevision || actorMeshes.get(actor.id) !== mesh)
+                    return;
+                mesh.geometry.dispose();
+                mesh.geometry = geometryFromPayload(payload);
+                rebuildColliderDebug(mesh, actor);
+                updateSelectionOutline();
+            });
+        }
     }
     selectViewportActor(selectedActorId, false);
     if (simulationState)

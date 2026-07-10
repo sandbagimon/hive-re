@@ -61,4 +61,4 @@ class SimulationService:
 
     def _create_session(self, scene: Scene) -> MuJoCoSimulationSession:
         export_path = self.project_root / "exports" / "scene.xml"
-        return MuJoCoSimulationSession(scene, export_path)
+        return MuJoCoSimulationSession(scene, export_path, asset_root=self.project_root)

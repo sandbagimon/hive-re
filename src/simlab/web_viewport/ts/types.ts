@@ -26,11 +26,22 @@ export interface PhysicsProperties {
   [key: string]: unknown;
 }
 
+export interface MeshGeometryProperties {
+  kind: 'mesh';
+  source_format: 'openusd';
+  source: string;
+  visual_cache: string;
+  collision_mesh: string;
+  bounds?: { min: Vector3; max: Vector3 };
+}
+
 export interface ActorProperties {
   primitive?: PrimitiveType;
   size?: number[];
   rgba?: [number, number, number, number];
   physics?: PhysicsProperties;
+  geometry?: MeshGeometryProperties;
+  import_warnings?: string[];
   mass?: number;
   [key: string]: unknown;
 }
@@ -61,6 +72,7 @@ export interface AssetMetadata {
   name: string;
   type: ActorType;
   primitive?: PrimitiveType;
+  source_format?: 'openusd';
   default_transform?: Transform;
   default_properties?: ActorProperties;
 }
@@ -110,12 +122,24 @@ export interface ExportPayload {
   issues: ValidationIssue[];
 }
 
+export interface OpenUsdImportPayload {
+  asset: AssetMetadata;
+  warnings: string[];
+}
+
+export interface VisualGeometryPayload {
+  positions: number[];
+  indices: number[];
+}
+
 export interface QtSignal<T extends unknown[]> {
   connect(callback: (...args: T) => void): void;
 }
 
 export interface PythonBridgeObject {
   getAssets(callback: (result: string) => void): void;
+  importOpenUsd(callback: (result: string) => void): void;
+  getVisualGeometry(cachePath: string, callback: (result: string) => void): void;
   openProject(callback: (result: string) => void): void;
   saveProject(sceneJson: string, saveAs: boolean, callback: (result: string) => void): void;
   exportMjcf(sceneJson: string, callback: (result: string) => void): void;

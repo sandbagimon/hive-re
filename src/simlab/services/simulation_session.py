@@ -37,7 +37,13 @@ class SimulationState:
 class MuJoCoSimulationSession:
     """In-process MuJoCo session that exposes body poses keyed by SimLab actor id."""
 
-    def __init__(self, scene: Scene, xml_path: str | Path) -> None:
+    def __init__(
+        self,
+        scene: Scene,
+        xml_path: str | Path,
+        *,
+        asset_root: str | Path | None = None,
+    ) -> None:
         try:
             import mujoco
         except ImportError as exc:  # pragma: no cover - depends on optional runtime package
@@ -46,7 +52,7 @@ class MuJoCoSimulationSession:
 
         self._mujoco = mujoco
         self.scene = scene
-        self.xml_path = export_scene_to_mjcf(scene, xml_path)
+        self.xml_path = export_scene_to_mjcf(scene, xml_path, asset_root=asset_root)
         self.model = mujoco.MjModel.from_xml_path(str(self.xml_path))
         self.data = mujoco.MjData(self.model)
         self._body_ids = self._map_actor_bodies(scene)

@@ -64,6 +64,8 @@
       "type": "array",
       "const": [
         "getAssets",
+        "importOpenUsd",
+        "getVisualGeometry",
         "openProject",
         "saveProject",
         "exportMjcf",

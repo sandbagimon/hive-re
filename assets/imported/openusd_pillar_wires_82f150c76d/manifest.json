@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "format": "openusd",
+  "source": "assets/imported/openusd_pillar_wires_82f150c76d/pillar_wires.usd",
+  "source_name": "pillar_wires.usd",
+  "visual_cache": "assets/imported/openusd_pillar_wires_82f150c76d/visual.json",
+  "collision_mesh": "assets/imported/openusd_pillar_wires_82f150c76d/collision.obj",
+  "mesh_count": 4,
+  "vertex_count": 14452,
+  "triangle_count": 28424,
+  "bounds": {
+    "min": [
+      -0.08279541015625,
+      -0.1636656951904297,
+      0.007230737209320068
+    ],
+    "max": [
+      0.08279541015625,
+      0.1636656951904297,
+      11.98828369140625
+    ]
+  },
+  "warnings": [
+    "No UsdPhysics rigid body was found; imported actor defaults to Static.",
+    "Collision uses the merged visual mesh; author a dedicated collider for production use."
+  ]
+}

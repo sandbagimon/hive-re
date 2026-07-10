@@ -3,11 +3,13 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Literal
 
 from simlab.models.actor import Actor
 from simlab.models.scene import Scene
 from simlab.services.mjcf_exporter import scene_to_mjcf_xml
+from simlab.services.openusd_importer import OpenUsdImportError, resolve_imported_asset_path
 from simlab.services.physics_materials import PHYSICS_MATERIALS, material_for_id
 from simlab.services.primitive_geometry import (
     GeometryContractError,
@@ -63,6 +65,7 @@ def run_physics_preflight(
     scene: Scene,
     *,
     model_loader: ModelLoader | None = None,
+    asset_root: str | Path | None = None,
 ) -> PhysicsPreflightReport:
     """Validate physics properties, generate MJCF, and compile it with MuJoCo."""
     report = PhysicsPreflightReport()
@@ -73,7 +76,7 @@ def run_physics_preflight(
         if actor.type != "object":
             continue
         physics_actor_count += 1
-        _validate_actor(actor, report)
+        _validate_actor(actor, report, asset_root)
 
     if physics_actor_count == 0:
         report.issues.append(
@@ -88,8 +91,8 @@ def run_physics_preflight(
         return report
 
     try:
-        report.mjcf_xml = scene_to_mjcf_xml(scene)
-    except (TypeError, ValueError, IndexError) as exc:
+        report.mjcf_xml = scene_to_mjcf_xml(scene, asset_root=asset_root)
+    except (TypeError, ValueError, IndexError, OpenUsdImportError) as exc:
         report.issues.append(
             PhysicsValidationIssue(
                 severity="error",
@@ -145,21 +148,77 @@ def _validate_actor_ids(scene: Scene, report: PhysicsPreflightReport) -> None:
         seen.add(actor.id)
 
 
-def _validate_actor(actor: Actor, report: PhysicsPreflightReport) -> None:
-    try:
-        collider_geometry(actor)
-    except GeometryContractError as exc:
-        report.issues.append(
-            _actor_issue(
-                actor,
-                "error",
-                exc.code,
-                str(exc),
-                exc.field,
+def _validate_actor(
+    actor: Actor,
+    report: PhysicsPreflightReport,
+    asset_root: str | Path | None,
+) -> None:
+    mesh_path = _collision_mesh_path(actor)
+    geom_type: str | None
+    if mesh_path is not None:
+        geom_type = "mesh"
+        if asset_root is None:
+            report.issues.append(
+                _actor_issue(
+                    actor,
+                    "error",
+                    "MISSING_ASSET_ROOT",
+                    "Imported mesh validation requires the project asset root.",
+                    "properties.geometry.collision_mesh",
+                )
             )
-        )
-        return
-    geom_type = source_geom_type(actor)
+            return
+        try:
+            resolved_mesh = resolve_imported_asset_path(mesh_path, asset_root)
+        except OpenUsdImportError as exc:
+            report.issues.append(
+                _actor_issue(
+                    actor,
+                    "error",
+                    "INVALID_IMPORTED_ASSET_PATH",
+                    str(exc),
+                    "properties.geometry.collision_mesh",
+                )
+            )
+            return
+        if not resolved_mesh.is_file():
+            report.issues.append(
+                _actor_issue(
+                    actor,
+                    "error",
+                    "MISSING_COLLISION_MESH",
+                    f"Imported collision mesh does not exist: {mesh_path}",
+                    "properties.geometry.collision_mesh",
+                )
+            )
+            return
+    else:
+        geometry = actor.properties.get("geometry")
+        if isinstance(geometry, dict) and geometry.get("kind") == "mesh":
+            report.issues.append(
+                _actor_issue(
+                    actor,
+                    "error",
+                    "MISSING_COLLISION_MESH",
+                    "Imported mesh actor has no collision_mesh path.",
+                    "properties.geometry.collision_mesh",
+                )
+            )
+            return
+        try:
+            collider_geometry(actor)
+        except GeometryContractError as exc:
+            report.issues.append(
+                _actor_issue(
+                    actor,
+                    "error",
+                    exc.code,
+                    str(exc),
+                    exc.field,
+                )
+            )
+            return
+        geom_type = source_geom_type(actor)
 
     physics = actor.properties.get("physics", {})
     if not isinstance(physics, dict):
@@ -283,6 +342,14 @@ def _validate_actor(actor: Actor, report: PhysicsPreflightReport) -> None:
 
     _validate_contact_vector(actor, report, physics.get("solref", preset.solref), "solref", 2)
     _validate_contact_vector(actor, report, physics.get("solimp", preset.solimp), "solimp", 5)
+
+
+def _collision_mesh_path(actor: Actor) -> str | None:
+    geometry = actor.properties.get("geometry")
+    if not isinstance(geometry, dict) or geometry.get("kind") != "mesh":
+        return None
+    value = geometry.get("collision_mesh")
+    return str(value) if value else None
 
 
 def _friction_values(value: Any) -> list[float] | None:

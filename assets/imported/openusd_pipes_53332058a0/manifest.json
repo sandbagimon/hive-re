@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "format": "openusd",
+  "source": "assets/imported/openusd_pipes_53332058a0/Pipes.usd",
+  "source_name": "Pipes.usd",
+  "visual_cache": "assets/imported/openusd_pipes_53332058a0/visual.json",
+  "collision_mesh": "assets/imported/openusd_pipes_53332058a0/collision.obj",
+  "mesh_count": 4,
+  "vertex_count": 56856,
+  "triangle_count": 100896,
+  "bounds": {
+    "min": [
+      -16.70224609375,
+      -30.3423193359375,
+      -0.1596990966796875
+    ],
+    "max": [
+      19.058201904296876,
+      29.558642578125,
+      10.576104736328125
+    ]
+  },
+  "warnings": [
+    "No UsdPhysics rigid body was found; imported actor defaults to Static.",
+    "Collision uses the merged visual mesh; author a dedicated collider for production use."
+  ]
+}

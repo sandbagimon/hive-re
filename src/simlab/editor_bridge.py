@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 
 from simlab.models.scene import Scene
 from simlab.services.mjcf_exporter import export_scene_to_mjcf
+from simlab.services.openusd_importer import import_openusd_asset, load_visual_geometry
 from simlab.services.physics_materials import material_for_id
 from simlab.services.physics_validation import PhysicsPreflightReport, run_physics_preflight
 from simlab.services.project_service import load_scene, save_scene, validate_scene
@@ -44,6 +45,33 @@ class EditorBridge(QObject):
             metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
             assets = [self._enrich_asset(asset) for asset in metadata.get("assets", [])]
             return self._success({"assets": assets})
+        except Exception as exc:
+            return self._failure(exc)
+
+    @Slot(result=str)
+    def importOpenUsd(self) -> str:
+        path, _ = QFileDialog.getOpenFileName(
+            self.parent_widget,
+            "Import OpenUSD Asset",
+            str(self.project_root),
+            "OpenUSD (*.usd *.usda *.usdc *.usdz)",
+        )
+        if not path:
+            return self._failure("Cancelled")
+        try:
+            result = import_openusd_asset(path, self.project_root)
+            asset = self._enrich_asset(result.asset)
+            self.consoleMessage.emit(f"Imported OpenUSD asset: {asset['name']}")
+            for warning in result.warnings:
+                self.consoleMessage.emit(f"OpenUSD import warning: {warning}")
+            return self._success({"asset": asset, "warnings": result.warnings})
+        except Exception as exc:
+            return self._failure(exc)
+
+    @Slot(str, result=str)
+    def getVisualGeometry(self, cache_path: str) -> str:
+        try:
+            return self._success(load_visual_geometry(cache_path, self.project_root))
         except Exception as exc:
             return self._failure(exc)
 
@@ -95,7 +123,9 @@ class EditorBridge(QObject):
     @Slot(str, result=str)
     def preflight(self, scene_json: str) -> str:
         try:
-            report = run_physics_preflight(self._scene_from_json(scene_json))
+            report = run_physics_preflight(
+                self._scene_from_json(scene_json), asset_root=self.project_root
+            )
             return self._success(self._preflight_payload(report))
         except Exception as exc:
             return self._failure(exc)
@@ -104,11 +134,15 @@ class EditorBridge(QObject):
     def exportMjcf(self, scene_json: str) -> str:
         try:
             scene = self._scene_from_json(scene_json)
-            report = run_physics_preflight(scene)
+            report = run_physics_preflight(scene, asset_root=self.project_root)
             payload = self._preflight_payload(report)
             if not report.is_valid:
                 return self._failure("Physics preflight failed", payload)
-            path = export_scene_to_mjcf(scene, self.project_root / "exports" / "scene.xml")
+            path = export_scene_to_mjcf(
+                scene,
+                self.project_root / "exports" / "scene.xml",
+                asset_root=self.project_root,
+            )
             return self._success({"path": str(path), "issues": payload["issues"]})
         except Exception as exc:
             return self._failure(exc)
@@ -117,7 +151,7 @@ class EditorBridge(QObject):
     def runSimulation(self, scene_json: str) -> str:
         try:
             scene = self._scene_from_json(scene_json)
-            report = run_physics_preflight(scene)
+            report = run_physics_preflight(scene, asset_root=self.project_root)
             payload = self._preflight_payload(report)
             if not report.is_valid:
                 return self._failure("Physics preflight failed", payload)
@@ -142,7 +176,7 @@ class EditorBridge(QObject):
         self.simulation_timer.stop()
         try:
             scene = self._scene_from_json(scene_json)
-            report = run_physics_preflight(scene)
+            report = run_physics_preflight(scene, asset_root=self.project_root)
             payload = self._preflight_payload(report)
             if not report.is_valid:
                 return self._failure("Physics preflight failed", payload)

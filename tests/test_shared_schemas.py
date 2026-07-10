@@ -14,4 +14,7 @@ def test_shared_scene_physics_and_bridge_schemas_are_declared() -> None:
         physics["properties"]["material"]["enum"]
     )
     assert "runSimulation" in bridge["properties"]["rpc_methods"]["const"]
+    assert "importOpenUsd" in bridge["properties"]["rpc_methods"]["const"]
+    assert "getVisualGeometry" in bridge["properties"]["rpc_methods"]["const"]
     assert "simulationStateChanged" in bridge["properties"]["events"]["const"]
+    assert "meshGeometry" in scene["$defs"]

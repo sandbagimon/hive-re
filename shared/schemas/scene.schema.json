@@ -25,6 +25,27 @@
       "required": ["position", "rotation", "scale"],
       "additionalProperties": false
     },
+    "meshGeometry": {
+      "type": "object",
+      "properties": {
+        "kind": { "const": "mesh" },
+        "source_format": { "const": "openusd" },
+        "source": { "type": "string", "minLength": 1 },
+        "visual_cache": { "type": "string", "minLength": 1 },
+        "collision_mesh": { "type": "string", "minLength": 1 },
+        "bounds": {
+          "type": "object",
+          "properties": {
+            "min": { "$ref": "#/$defs/vector3" },
+            "max": { "$ref": "#/$defs/vector3" }
+          },
+          "required": ["min", "max"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["kind", "source_format", "source", "visual_cache", "collision_mesh"],
+      "additionalProperties": false
+    },
     "actor": {
       "type": "object",
       "properties": {
@@ -54,6 +75,11 @@
               "items": { "type": "number", "minimum": 0, "maximum": 1 },
               "minItems": 4,
               "maxItems": 4
+            },
+            "geometry": { "$ref": "#/$defs/meshGeometry" },
+            "import_warnings": {
+              "type": "array",
+              "items": { "type": "string" }
             },
             "physics": { "$ref": "physics.schema.json" }
           },

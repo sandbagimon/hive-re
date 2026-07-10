@@ -69,6 +69,12 @@ export class EditorStore {
     this.patch({ assets });
   }
 
+  upsertAsset(asset: AssetMetadata): void {
+    this.patch({
+      assets: [...this.state.assets.filter((item) => item.id !== asset.id), asset],
+    });
+  }
+
   loadScene(scene: Scene, path: string | null): void {
     this.undoStack = [];
     this.redoStack = [];

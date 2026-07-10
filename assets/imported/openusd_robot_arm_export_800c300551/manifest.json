@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "format": "openusd",
+  "source": "assets/imported/openusd_robot_arm_export_800c300551/Robot_Arm_Export.usd",
+  "source_name": "Robot_Arm_Export.usd",
+  "visual_cache": "assets/imported/openusd_robot_arm_export_800c300551/visual.json",
+  "collision_mesh": "assets/imported/openusd_robot_arm_export_800c300551/collision.obj",
+  "mesh_count": 113,
+  "vertex_count": 545900,
+  "triangle_count": 185704,
+  "bounds": {
+    "min": [
+      -133.7729420568487,
+      -0.24594726928989985,
+      0.0
+    ],
+    "max": [
+      -1.0171162954709712,
+      59.654053623289656,
+      125.69999292081326
+    ]
+  },
+  "warnings": [
+    "No UsdPhysics rigid body was found; imported actor defaults to Static.",
+    "Collision uses the merged visual mesh; author a dedicated collider for production use."
+  ]
+}

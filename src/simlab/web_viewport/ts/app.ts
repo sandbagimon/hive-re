@@ -5,6 +5,7 @@ import type {
   ActorProperties,
   AssetMetadata,
   ExportPayload,
+  OpenUsdImportPayload,
   PhysicsProperties,
   PreflightPayload,
   ProjectPayload,
@@ -13,6 +14,7 @@ import type {
   SimulationState,
   Transform,
   ValidationIssue,
+  VisualGeometryPayload,
 } from './types.js';
 import {
   applySimulationState,
@@ -74,7 +76,7 @@ function renderAssets(assets: AssetMetadata[]): void {
     return `<button class="asset-item" type="button" data-asset-id="${escapeHtml(asset.id)}">
       <span class="asset-swatch" style="background:${color}"></span>
       <span class="item-label">${escapeHtml(asset.name)}</span>
-      <span class="item-meta">${escapeHtml(asset.primitive ?? asset.type)}</span>
+      <span class="item-meta">${escapeHtml(asset.primitive ?? asset.source_format ?? asset.type)}</span>
     </button>`;
   }).join('') : '<div class="empty-state">No assets</div>';
   for (const button of list.querySelectorAll<HTMLButtonElement>('[data-asset-id]')) {
@@ -120,6 +122,13 @@ function renderInspector(actor: Actor | undefined): void {
   }
   const physics = actor.properties.physics ?? { dynamic: true };
   const friction = physics.friction ?? [0.8, 0.005, 0.0001];
+  const geometry = actor.properties.geometry;
+  const sourceSection = geometry ? `
+    <section class="property-group"><h3>Imported Geometry</h3>
+      <div class="property-row"><label>Format</label><input type="text" value="OpenUSD" disabled></div>
+      <div class="property-row"><label>Source</label><input type="text" value="${escapeHtml(geometry.source)}" title="${escapeHtml(geometry.source)}" disabled></div>
+      <div class="property-row"><label>Collider</label><input type="text" value="Mesh" disabled></div>
+    </section>` : '';
   inspector.innerHTML = `
     <section class="property-group"><h3>Actor</h3>
       <div class="property-row"><label>Name</label><input type="text" value="${escapeHtml(actor.name)}" data-field="name"></div>
@@ -131,6 +140,7 @@ function renderInspector(actor: Actor | undefined): void {
       ${vectorInput('Rotation', 'rotation', actor.transform.rotation)}
       ${vectorInput('Scale', 'scale', actor.transform.scale)}
     </section>
+    ${sourceSection}
     <section class="property-group"><h3>Physics</h3>
       <div class="property-row"><label>Dynamic</label><input type="checkbox" data-field="dynamic" ${physics.dynamic ? 'checked' : ''}></div>
       <div class="property-row"><label>Material</label><select data-field="material">${Object.keys(materialPresets).map((id) => `<option value="${id}" ${physics.material === id ? 'selected' : ''}>${id[0].toUpperCase()}${id.slice(1)}</option>`).join('')}</select></div>
@@ -245,6 +255,17 @@ async function handleCommand(command: string): Promise<void> {
     } else if (result.error !== 'Cancelled') showToast(result.error ?? 'Open failed', true);
   } else if (command === 'save') await saveProject(false);
   else if (command === 'save-as') await saveProject(true);
+  else if (command === 'import-openusd') {
+    const result = await bridge.call<OpenUsdImportPayload>('importOpenUsd');
+    if (result.ok && result.data) {
+      store.upsertAsset(result.data.asset);
+      store.addAsset(result.data.asset);
+      for (const warning of result.data.warnings) store.appendLog(`USD: ${warning}`);
+      showToast(`Imported ${result.data.asset.name}`);
+    } else if (result.error !== 'Cancelled') {
+      showToast(result.error ?? 'OpenUSD import failed', true);
+    }
+  }
   else if (command === 'undo') store.undo();
   else if (command === 'redo') store.redo();
   else if (command === 'clear-console') store.clearLogs();
@@ -281,6 +302,12 @@ for (const button of document.querySelectorAll<HTMLButtonElement>('[data-command
 configureViewport({
   onActorSelected: (actorId) => store.selectActor(actorId),
   onActorTransformChanged: (actorId, transform) => store.updateActorTransform(actorId, transform),
+  resolveVisualGeometry: async (cachePath) => {
+    const result = await bridge.call<VisualGeometryPayload>('getVisualGeometry', cachePath);
+    if (result.ok && result.data) return result.data;
+    store.appendLog(`Mesh cache load failed: ${result.error ?? cachePath}`);
+    return null;
+  },
 });
 
 store.subscribe((state) => {

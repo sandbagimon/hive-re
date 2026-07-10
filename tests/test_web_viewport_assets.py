@@ -28,9 +28,12 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert 'id="property-inspector"' in html
     assert 'id="console-output"' in html
     assert 'data-command="save"' in html
+    assert 'data-command="import-openusd"' in html
     assert 'data-command="run"' in html
     assert "class EditorStore" in (root / "ts" / "store.ts").read_text(encoding="utf-8")
     assert "store.undo()" in app
     assert "store.selectActor" in app
+    assert "importOpenUsd" in app
+    assert "getVisualGeometry" in app
     assert "new THREE.WireframeGeometry(mesh.geometry)" in viewport
     assert "onActorTransformChanged" in viewport
