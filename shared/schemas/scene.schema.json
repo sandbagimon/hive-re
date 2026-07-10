@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://simlab.local/schemas/scene.schema.json",
+  "title": "SimLabScene",
+  "type": "object",
+  "$defs": {
+    "vector3": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "transform": {
+      "type": "object",
+      "properties": {
+        "position": { "$ref": "#/$defs/vector3" },
+        "rotation": { "$ref": "#/$defs/vector3" },
+        "scale": {
+          "type": "array",
+          "items": { "type": "number", "exclusiveMinimum": 0 },
+          "minItems": 3,
+          "maxItems": 3
+        }
+      },
+      "required": ["position", "rotation", "scale"],
+      "additionalProperties": false
+    },
+    "actor": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^actor_[0-9]{3,}$" },
+        "name": { "type": "string", "minLength": 1 },
+        "type": {
+          "type": "string",
+          "enum": ["object", "robot", "terrain", "camera", "light"]
+        },
+        "asset_id": { "type": "string" },
+        "transform": { "$ref": "#/$defs/transform" },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "primitive": {
+              "type": "string",
+              "enum": ["box", "sphere", "cylinder", "ellipsoid", "plane"]
+            },
+            "size": {
+              "type": "array",
+              "items": { "type": "number", "exclusiveMinimum": 0 },
+              "minItems": 1,
+              "maxItems": 3
+            },
+            "rgba": {
+              "type": "array",
+              "items": { "type": "number", "minimum": 0, "maximum": 1 },
+              "minItems": 4,
+              "maxItems": 4
+            },
+            "physics": { "$ref": "physics.schema.json" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "required": ["id", "name", "type", "asset_id", "transform", "properties"],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "version": { "type": "string", "minLength": 1 },
+    "name": { "type": "string", "minLength": 1 },
+    "units": { "type": "string", "enum": ["meters"] },
+    "actors": { "type": "array", "items": { "$ref": "#/$defs/actor" } },
+    "simulation_config": {
+      "type": "object",
+      "properties": {
+        "timestep": { "type": "number", "exclusiveMinimum": 0 },
+        "duration": { "type": "number", "exclusiveMinimum": 0 }
+      },
+      "required": ["timestep", "duration"],
+      "additionalProperties": true
+    }
+  },
+  "required": ["version", "name", "units", "actors", "simulation_config"],
+  "additionalProperties": false
+}

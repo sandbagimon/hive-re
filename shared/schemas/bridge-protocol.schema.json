@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://simlab.local/schemas/bridge-protocol.schema.json",
+  "title": "SimLabBridgeProtocol",
+  "$defs": {
+    "rpcResult": {
+      "type": "object",
+      "properties": {
+        "ok": { "type": "boolean" },
+        "data": {},
+        "error": { "type": ["string", "null"] }
+      },
+      "required": ["ok"],
+      "additionalProperties": false
+    },
+    "validationIssue": {
+      "type": "object",
+      "properties": {
+        "severity": { "enum": ["error", "warning"] },
+        "code": { "type": "string" },
+        "message": { "type": "string" },
+        "actor_id": { "type": ["string", "null"] },
+        "actor_name": { "type": ["string", "null"] },
+        "field": { "type": ["string", "null"] }
+      },
+      "required": ["severity", "code", "message"],
+      "additionalProperties": false
+    },
+    "simulationState": {
+      "type": "object",
+      "properties": {
+        "time": { "type": "number" },
+        "actors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "position": {
+                "type": "array",
+                "items": { "type": "number" },
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "quaternion": {
+                "type": "array",
+                "items": { "type": "number" },
+                "minItems": 4,
+                "maxItems": 4
+              }
+            },
+            "required": ["id", "position", "quaternion"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["time", "actors"],
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "rpc_methods": {
+      "type": "array",
+      "const": [
+        "getAssets",
+        "openProject",
+        "saveProject",
+        "exportMjcf",
+        "preflight",
+        "runSimulation",
+        "pauseSimulation",
+        "stepSimulation",
+        "resetSimulation",
+        "setEditorState"
+      ]
+    },
+    "events": {
+      "type": "array",
+      "const": ["simulationStateChanged", "simulationStatusChanged", "consoleMessage"]
+    },
+    "result": { "$ref": "#/$defs/rpcResult" }
+  },
+  "required": ["rpc_methods", "events"],
+  "additionalProperties": false
+}

@@ -10,6 +10,7 @@ env/
 .mypy_cache/
 build/
 dist/
+node_modules/
 *.egg-info/
 exports/*.xml
 !exports/.gitkeep

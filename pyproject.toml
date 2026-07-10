@@ -32,7 +32,9 @@ where = ["src"]
 simlab = [
   "web_viewport/*.html",
   "web_viewport/*.css",
-  "web_viewport/*.js",
+  "web_viewport/generated/*.js",
+  "web_viewport/ts/*.ts",
+  "web_viewport/ts/*.d.ts",
   "web_viewport/vendor/*.js",
   "web_viewport/vendor/*.txt",
 ]

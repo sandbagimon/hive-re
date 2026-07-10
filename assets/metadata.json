@@ -6,6 +6,14 @@
       "type": "object",
       "primitive": "box",
       "default_properties": {
+        "physics": {
+          "dynamic": true,
+          "material": "wood",
+          "mass_mode": "density",
+          "density": 700.0,
+          "mass": 1.0,
+          "friction": [0.6, 0.004, 0.0001]
+        },
         "mass": 1.0,
         "size": [0.5, 0.5, 0.5],
         "rgba": [0.2, 0.5, 0.9, 1.0]
@@ -17,6 +25,14 @@
       "type": "object",
       "primitive": "sphere",
       "default_properties": {
+        "physics": {
+          "dynamic": true,
+          "material": "rubber",
+          "mass_mode": "density",
+          "density": 1100.0,
+          "mass": 1.0,
+          "friction": [1.2, 0.01, 0.0002]
+        },
         "mass": 1.0,
         "size": [0.5],
         "rgba": [0.9, 0.4, 0.3, 1.0]
@@ -28,9 +44,77 @@
       "type": "object",
       "primitive": "cylinder",
       "default_properties": {
+        "physics": {
+          "dynamic": true,
+          "material": "metal",
+          "mass_mode": "density",
+          "density": 7800.0,
+          "mass": 1.0,
+          "friction": [0.35, 0.003, 0.0001]
+        },
         "mass": 1.0,
         "size": [0.35, 0.8],
         "rgba": [0.3, 0.8, 0.5, 1.0]
+      }
+    },
+    {
+      "id": "primitive_ground",
+      "name": "Ground",
+      "type": "object",
+      "primitive": "box",
+      "default_properties": {
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "friction": [1.0, 0.005, 0.0001]
+        },
+        "size": [6.0, 6.0, 0.05],
+        "rgba": [0.35, 0.38, 0.42, 1.0]
+      },
+      "default_transform": {
+        "position": [0.0, 0.0, -0.05],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      }
+    },
+    {
+      "id": "primitive_table",
+      "name": "Table",
+      "type": "object",
+      "primitive": "box",
+      "default_properties": {
+        "physics": {
+          "dynamic": false,
+          "material": "wood",
+          "friction": [0.6, 0.004, 0.0001]
+        },
+        "size": [1.5, 1.0, 0.08],
+        "rgba": [0.62, 0.52, 0.38, 1.0]
+      },
+      "default_transform": {
+        "position": [0.0, 0.0, 0.45],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      }
+    },
+    {
+      "id": "primitive_ramp",
+      "name": "Ramp",
+      "type": "object",
+      "primitive": "box",
+      "default_properties": {
+        "physics": {
+          "dynamic": false,
+          "material": "wood",
+          "friction": [0.6, 0.004, 0.0001]
+        },
+        "size": [1.5, 0.6, 0.08],
+        "rgba": [0.55, 0.48, 0.72, 1.0]
+      },
+      "default_transform": {
+        "position": [0.0, 0.0, 0.35],
+        "rotation": [0.0, 0.45, 0.0],
+        "scale": [1.0, 1.0, 1.0]
       }
     }
   ]

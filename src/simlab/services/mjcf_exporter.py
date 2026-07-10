@@ -6,15 +6,11 @@ from typing import Any
 
 from simlab.models.actor import Actor
 from simlab.models.scene import Scene
-
-PRIMITIVE_GEOMS = {
-    "primitive_box": "box",
-    "primitive_sphere": "sphere",
-    "primitive_cylinder": "cylinder",
-    "box": "box",
-    "sphere": "sphere",
-    "cylinder": "cylinder",
-}
+from simlab.services.physics_materials import material_for_id
+from simlab.services.primitive_geometry import (
+    collider_geometry,
+    euler_xyz_to_mujoco_quaternion,
+)
 
 
 def scene_to_mjcf_xml(scene: Scene) -> str:
@@ -25,29 +21,50 @@ def scene_to_mjcf_xml(scene: Scene) -> str:
 
     worldbody = ET.SubElement(root, "worldbody")
     ET.SubElement(worldbody, "light", {"name": "key_light", "pos": "0 0 4"})
-    ET.SubElement(worldbody, "geom", {"name": "ground", "type": "plane", "size": "5 5 0.1"})
 
     for actor in scene.actors:
         if actor.type != "object":
             continue
-        geom_type = _geom_type_for(actor)
-        if geom_type is None:
-            continue
+        collider = collider_geometry(actor)
 
-        body = ET.SubElement(
-            worldbody,
-            "body",
-            {"name": _xml_name(actor.id), "pos": _format_vector(actor.transform.position)},
-        )
-        ET.SubElement(body, "freejoint")
         geom_attrs = {
-            "name": f"{_xml_name(actor.name)}_geom",
-            "type": geom_type,
-            "size": _format_size(actor.properties.get("size"), geom_type),
-            "mass": str(actor.properties.get("mass", 1.0)),
+            "name": f"{_xml_name(actor.id)}_geom",
+            "type": collider.geom_type,
+            "size": _format_vector(collider.size),
             "rgba": _format_vector(actor.properties.get("rgba", [0.7, 0.7, 0.7, 1.0])),
+            "friction": _format_friction(_physics_value(actor, "friction", [0.8, 0.005, 0.0001])),
         }
-        ET.SubElement(body, "geom", geom_attrs)
+        solref = _physics_value(actor, "solref", None)
+        solimp = _physics_value(actor, "solimp", None)
+        if solref is not None:
+            geom_attrs["solref"] = _format_vector(solref)
+        if solimp is not None:
+            geom_attrs["solimp"] = _format_vector(solimp)
+        if _is_dynamic(actor):
+            body = ET.SubElement(
+                worldbody,
+                "body",
+                {
+                    "name": _xml_name(actor.id),
+                    "pos": _format_vector(actor.transform.position),
+                    "quat": _format_vector(
+                        euler_xyz_to_mujoco_quaternion(actor.transform.rotation)
+                    ),
+                },
+            )
+            ET.SubElement(body, "freejoint")
+            if _physics_value(actor, "mass_mode", "mass") == "density":
+                geom_attrs["density"] = str(_physics_value(actor, "density", 1000.0))
+            else:
+                mass = _physics_value(actor, "mass", actor.properties.get("mass", 1.0))
+                geom_attrs["mass"] = str(mass)
+            ET.SubElement(body, "geom", geom_attrs)
+        else:
+            geom_attrs["pos"] = _format_vector(actor.transform.position)
+            geom_attrs["quat"] = _format_vector(
+                euler_xyz_to_mujoco_quaternion(actor.transform.rotation)
+            )
+            ET.SubElement(worldbody, "geom", geom_attrs)
 
     ET.indent(root, space="  ")
     return ET.tostring(root, encoding="unicode") + "\n"
@@ -61,24 +78,34 @@ def export_scene_to_mjcf(scene: Scene, path: str | Path) -> Path:
     return output_path
 
 
-def _geom_type_for(actor: Actor) -> str | None:
-    primitive = actor.properties.get("primitive")
-    return PRIMITIVE_GEOMS.get(str(primitive), PRIMITIVE_GEOMS.get(actor.asset_id))
+def _is_dynamic(actor: Actor) -> bool:
+    return bool(_physics_value(actor, "dynamic", True))
+
+
+def _physics_value(actor: Actor, key: str, default: Any) -> Any:
+    physics = actor.properties.get("physics")
+    if isinstance(physics, dict) and key in physics:
+        return physics[key]
+    if key in actor.properties:
+        return actor.properties[key]
+    if isinstance(physics, dict) and "material" in physics:
+        material = material_for_id(physics.get("material"))
+        material_values = material.property_values()
+        if key in material_values:
+            return material_values[key]
+    return default
 
 
 def _format_vector(value: Any) -> str:
-    return " ".join(f"{float(item):g}" for item in value)
+    return " ".join(f"{float(item):.15g}" for item in value)
 
 
-def _format_size(value: Any, geom_type: str) -> str:
-    if value is None:
-        value = [0.5, 0.5, 0.5] if geom_type == "box" else [0.5]
-    values = [float(item) for item in value]
-    if geom_type == "box":
-        return _format_vector((values + [0.5, 0.5, 0.5])[:3])
-    if geom_type == "cylinder":
-        return _format_vector((values + [0.5, 1.0])[:2])
-    return _format_vector((values + [0.5])[:1])
+def _format_friction(value: Any) -> str:
+    if isinstance(value, (int, float)):
+        values = [float(value), 0.005, 0.0001]
+    else:
+        values = [float(item) for item in value]
+    return _format_vector((values + [0.8, 0.005, 0.0001])[:3])
 
 
 def _xml_name(value: str) -> str:

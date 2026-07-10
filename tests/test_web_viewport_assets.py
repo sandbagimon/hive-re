@@ -1,29 +1,36 @@
 from pathlib import Path
 
 
-def test_web_viewport_assets_are_packaged() -> None:
+def test_typescript_editor_assets_are_packaged() -> None:
     root = Path("src/simlab/web_viewport")
 
     assert (root / "index.html").exists()
-    assert (root / "viewport.js").exists()
+    assert (root / "style.css").exists()
+    assert (root / "ts" / "app.ts").exists()
+    assert (root / "ts" / "store.ts").exists()
+    assert (root / "ts" / "bridge.ts").exists()
+    assert (root / "ts" / "viewport.ts").exists()
+    assert (root / "ts" / "geometry-contract.ts").exists()
+    assert (root / "generated" / "app.js").exists()
+    assert (root / "generated" / "viewport.js").exists()
     assert (root / "vendor" / "three.module.js").exists()
-    assert (root / "vendor" / "OrbitControls.js").exists()
-    assert (root / "vendor" / "TransformControls.js").exists()
     assert (root / "vendor" / "THREE_LICENSE.txt").exists()
 
 
-def test_web_viewport_editing_tools_are_declared() -> None:
+def test_editor_ui_and_bridge_commands_are_declared() -> None:
     root = Path("src/simlab/web_viewport")
     html = (root / "index.html").read_text(encoding="utf-8")
-    script = (root / "viewport.js").read_text(encoding="utf-8")
+    app = (root / "ts" / "app.ts").read_text(encoding="utf-8")
+    viewport = (root / "ts" / "viewport.ts").read_text(encoding="utf-8")
 
-    assert 'data-tool="translate"' in html
-    assert 'data-tool="rotate"' in html
-    assert 'data-tool="scale"' in html
-    assert 'data-action="frame"' in html
-    assert 'data-camera="front"' in html
-    assert "setTransformMode(mode)" in script
-    assert "frameSelected()" in script
-    assert "setCameraView(viewName)" in script
-    assert "selectionOutline" in script
-    assert "window.QWebChannel" in script
+    assert 'id="asset-list"' in html
+    assert 'id="scene-tree"' in html
+    assert 'id="property-inspector"' in html
+    assert 'id="console-output"' in html
+    assert 'data-command="save"' in html
+    assert 'data-command="run"' in html
+    assert "class EditorStore" in (root / "ts" / "store.ts").read_text(encoding="utf-8")
+    assert "store.undo()" in app
+    assert "store.selectActor" in app
+    assert "new THREE.WireframeGeometry(mesh.geometry)" in viewport
+    assert "onActorTransformChanged" in viewport

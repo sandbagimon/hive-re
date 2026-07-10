@@ -1,23 +1,73 @@
 {
   "version": "1.0",
-  "name": "Demo Scene",
+  "name": "Physics Playground",
   "units": "meters",
   "actors": [
     {
       "id": "actor_001",
-      "name": "Box",
+      "name": "Ground",
       "type": "object",
-      "asset_id": "primitive_box",
+      "asset_id": "primitive_ground",
       "transform": {
-        "position": [0.0, 0.0, 0.5],
+        "position": [0.0, 0.0, -0.05],
         "rotation": [0.0, 0.0, 0.0],
         "scale": [1.0, 1.0, 1.0]
       },
       "properties": {
         "primitive": "box",
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "friction": [1.0, 0.005, 0.0001]
+        },
+        "size": [6.0, 6.0, 0.05],
+        "rgba": [0.35, 0.38, 0.42, 1.0]
+      }
+    },
+    {
+      "id": "actor_002",
+      "name": "Ramp",
+      "type": "object",
+      "asset_id": "primitive_ramp",
+      "transform": {
+        "position": [0.0, 0.0, 0.35],
+        "rotation": [0.0, 0.45, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "properties": {
+        "primitive": "box",
+        "physics": {
+          "dynamic": false,
+          "material": "wood",
+          "friction": [0.6, 0.004, 0.0001]
+        },
+        "size": [1.5, 0.6, 0.08],
+        "rgba": [0.55, 0.48, 0.72, 1.0]
+      }
+    },
+    {
+      "id": "actor_003",
+      "name": "Sphere",
+      "type": "object",
+      "asset_id": "primitive_sphere",
+      "transform": {
+        "position": [-0.9, 0.0, 1.1],
+        "rotation": [0.0, 0.0, 0.0],
+        "scale": [1.0, 1.0, 1.0]
+      },
+      "properties": {
+        "primitive": "sphere",
+        "physics": {
+          "dynamic": true,
+          "material": "rubber",
+          "mass_mode": "density",
+          "density": 1100.0,
+          "mass": 1.0,
+          "friction": [1.2, 0.01, 0.0002]
+        },
         "mass": 1.0,
-        "size": [0.5, 0.5, 0.5],
-        "rgba": [0.2, 0.5, 0.9, 1.0]
+        "size": [0.25],
+        "rgba": [0.9, 0.4, 0.3, 1.0]
       }
     }
   ],

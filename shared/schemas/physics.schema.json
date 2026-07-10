@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://simlab.local/schemas/physics.schema.json",
+  "title": "PhysicsProperties",
+  "type": "object",
+  "properties": {
+    "dynamic": { "type": "boolean", "default": true },
+    "material": {
+      "type": "string",
+      "enum": ["default", "rubber", "wood", "metal", "ice"],
+      "default": "default"
+    },
+    "mass_mode": {
+      "type": "string",
+      "enum": ["mass", "density"],
+      "default": "mass"
+    },
+    "mass": { "type": "number", "exclusiveMinimum": 0, "default": 1.0 },
+    "density": { "type": "number", "exclusiveMinimum": 0, "default": 1000.0 },
+    "friction": {
+      "type": "array",
+      "items": { "type": "number", "minimum": 0 },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "solref": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "solimp": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 5,
+      "maxItems": 5
+    },
+    "roughness": { "type": "number", "minimum": 0, "maximum": 1 },
+    "metalness": { "type": "number", "minimum": 0, "maximum": 1 }
+  },
+  "required": ["dynamic"],
+  "additionalProperties": true
+}

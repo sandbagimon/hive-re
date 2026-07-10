@@ -100,12 +100,22 @@ python -m simlab.app
   - Box
   - Sphere
   - Cylinder
+  - Ground
+  - Table
+  - Ramp
 - Asset Browser 可读取 `assets/metadata.json`。
 - 双击资产或点击按钮可添加 actor 到场景。
+- Dynamic primitive 默认带 mass/friction。
+- Ground/Table/Ramp 默认是 static physics actor。
 
 ### three.js viewport 初版
 
 - 已用 `QWebEngineView` 加载本地 HTML/JS/CSS。
+- 编辑器前端已迁移为 TypeScript ES modules。
+- Asset Browser、Scene Tree、Property Inspector、Console 已迁移到 TypeScript。
+- TypeScript Editor Store 已接管 scene、selection、dirty、undo/redo。
+- Python 与前端通过结构化 QWebChannel JSON RPC 通信。
+- `MainWindow` 已缩减为单个 QWebEngineView 容器。
 - 已 vendored three.js r160。
 - 已保留 three.js MIT license 文件。
 - Viewport 当前支持：
@@ -116,6 +126,7 @@ python -m simlab.app
   - 选择状态同步到 Scene Tree 和 Property Panel。
   - translate gizmo。
   - 拖动后把 position 回写到 Python scene model。
+  - Collider Debug Overlay：dynamic/static wireframe、质心和状态图例。
 
 ### MJCF 和 MuJoCo
 
@@ -124,6 +135,20 @@ python -m simlab.app
   - box -> `<geom type="box">`
   - sphere -> `<geom type="sphere">`
   - cylinder -> `<geom type="cylinder">`
+  - plane -> `<geom type="plane">`
+- 支持 basic static/dynamic physics export：
+  - dynamic actor -> body + freejoint + geom。
+  - static actor -> fixed world geom。
+  - mass/friction 可导出。
+- Primitive geometry contract 已统一：
+  - Box half extents、Sphere radius、Cylinder radius/half-height。
+  - three.js XYZ radians 转 MuJoCo quaternion。
+  - scale 烘焙到 collider size。
+  - 非均匀 Sphere 转 Ellipsoid；Cylinder 要求 X/Y 等比缩放。
+  - exporter 不再生成隐藏 ground。
+- 已支持 Default/Rubber/Wood/Metal/Ice physics materials。
+- 已支持 explicit mass 和 material density 两种质量模式。
+- material preset 联动 friction、solref/solimp、roughness/metalness。
 - 已保留 headless MuJoCo runner，可用于命令行 smoke run。
 - UI 可导出 MJCF 并启动 in-process MuJoCo session。
 - Console Panel 可显示 simulation event。
@@ -131,6 +156,10 @@ python -m simlab.app
 - 已实现 Run/Pause/Step/Reset 基础控制。
 - 已实现 MuJoCo body pose 到 three.js viewport 的实时同步。
 - Simulation pose 会覆盖 viewport 显示，但不写回 authoring transform。
+- Run/Step/Export 前执行 physics validation preflight：
+  - 校验 dynamic/static、mass、friction 和 primitive 类型。
+  - 使用 MuJoCo 编译生成的 MJCF。
+  - UI 和 Console 显示带 actor/field 定位的错误。
 
 ### 测试
 
@@ -139,12 +168,15 @@ python -m simlab.app
   - actor add/remove/update。
   - scene save/load。
   - scene history dirty/undo/redo。
+  - asset metadata physics playground assets。
   - MJCF export。
   - MuJoCo model load。
   - MuJoCo simulation state sync。
   - web viewport asset 文件存在性。
 - 当前验证状态：
-  - `pytest`：13 passed。
+  - `pytest`：34 passed。
+  - TypeScript typecheck：passed。
+  - EditorStore Node test：passed。
   - `ruff`：passed。
 
 ## 总体架构目标
@@ -368,16 +400,31 @@ SimLab Desktop
 
 ### M5 - Physics Authoring
 
-状态：未开始。
+状态：部分开始。
 
 目标：
 
 - 让用户能编辑 MuJoCo 关键物理参数。
 
-要实现：
+已完成：
 
-- Mass/inertia editor。
-- Friction/contact parameters。
+- Ground/Table/Ramp static primitive assets。
+- Primitive actor 支持 basic `physics.dynamic`。
+- Primitive actor 支持 basic mass/friction。
+- Property Panel 可编辑 Dynamic、Mass、Friction。
+- MJCF exporter 区分 dynamic/static primitive。
+- Demo scene 已更新为 Physics Playground。
+- Primitive geometry/transform/scale contract。
+- Collider Debug Overlay。
+- Default/Rubber/Wood/Metal/Ice material presets。
+- Mass/density mode 和 contact/visual material mapping。
+- Viewport/Python/MuJoCo geometry fidelity tests。
+- Ramp -> Ground 可见接触轨迹测试。
+
+剩余任务：
+
+- Mass/inertia editor 扩展。
+- Friction/contact parameters 扩展。
 - Solver settings。
 - Timestep and integrator settings。
 - Materials。
@@ -386,7 +433,7 @@ SimLab Desktop
 - Tendons。
 - Equality constraints。
 - World gravity。
-- Terrain/plane/table primitives。
+- Terrain 和 heightfield authoring。
 
 验收标准：
 
@@ -680,6 +727,32 @@ SimLab Desktop
 - UI panel。
 - export preflight checks。
 - quick fixes。
+
+### Iteration F - Primitive Physics Playground
+
+状态：第一版已完成，仍需增强。
+
+目标：
+
+- 先让 primitive 场景具备可见的 MuJoCo 物理效果。
+
+已完成：
+
+- Ground/Table/Ramp assets。
+- Static/dynamic primitive export。
+- Dynamic/Mass/Friction property editing。
+- Physics playground demo scene。
+- Visual/physics geometry fidelity pass。
+- Collider Debug Overlay。
+- Physics material presets 和 density mode。
+- 自动 bounds/pose/contact trajectory 验收。
+
+剩余：
+
+- restitution 和高级 contact 参数编辑器。
+- timestep/gravity UI。
+- simulation speed control。
+- validation quick fixes 和独立 Validation Panel。
 
 ## Definition of Done
 

@@ -1,0 +1,14 @@
+{
+  "name": "simlab-editor",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:frontend": "node frontend-tests/store.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}
