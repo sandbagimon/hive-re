@@ -183,7 +183,7 @@ python -m simlab.app
   - OpenUSD mesh import、单位/坐标转换和 MuJoCo compile。
   - web viewport asset 文件存在性。
 - 当前验证状态：
-  - `pytest`：37 passed。
+  - `pytest`：36 passed，1 skipped（MuJoCo 条件跳过）。
   - TypeScript typecheck：passed。
   - EditorStore Node test：passed。
   - `ruff`：passed。
@@ -660,131 +660,170 @@ SimLab Desktop
 - 常用操作有快捷键和稳定反馈。
 - UI 风格完全原创，不复制目标竞品表达。
 
-## 优先级建议
+## 当前进度总览（2026-07-10 审计）
 
-近期最该做：
+```
+代码规模：  ~1,600 行 Python (services/models) + ~1,400 行 TypeScript + ~4,000 行测试
+测试：      36 passed，1 skipped
+迭代记录：  14 个迭代日志
+```
 
-1. M4 Robot Import：先定义 Robot/Link/Joint/Actuator/Sensor schema，再完成最小 MJCF import。
-2. M3 Runtime Hardening：固定步长、非阻塞 stepping、real-time factor 和长时间运行测试。
-3. M8 Controller API：建立 actuator command、observation 和 per-step callback 闭环。
-4. M6 Timeline/Recording：记录 joint/body/sensor state，并支持确定性 replay。
-5. M10 Validation Panel：把已有 preflight 扩展成依赖、层级和运行时问题的统一入口。
+| 里程碑 | 状态 | 完成度 | 说明 |
+|---------|------|--------|------|
+| M0 Simulation-First MVP | ✅ 完成 | 100% | PySide6 shell、scene model、MJCF export、headless runner |
+| M1 Local three.js Viewport | ✅ 第一版 | 80% | WebGL viewport、orbit、选择、gizmo、缺少 snap |
+| M2 Robust Scene Editing | 🔶 基础完成 | 60% | dirty/undo/redo，缺少 hierarchy、duplicate、multi-select |
+| M3 MuJoCo Live State Sync | ✅ 第一版 | 70% | Run/Pause/Step/Reset、pose sync，缺少 clock hardening |
+| M4 Robot Import | ❌ 未开始 | 0% | Gate 1 阻塞项，需要 schema + MJCF import + state bridge |
+| M5 Physics Authoring | 🔶 部分完成 | 55% | primitive physics、material presets、collider debug，缺少 solver/constraints |
+| M6 Timeline & Recording | ❌ 未开始 | 0% | 录制/回放/导出 trajectory |
+| M7 Asset Pipeline | 🔶 部分完成 | 40% | OpenUSD mesh import，缺少 texture/material、asset library、thumbnails |
+| M8 Controller API | ❌ 未开始 | 0% | per-step Python controller、observation/action |
+| M9 Experiment/Env | 🔴 仅 stub | 5% | `SimLabEnv` 占位，不可训练 |
+| M10 Diagnostics | 🔶 部分完成 | 35% | preflight validation、MJCF compile check，缺少独立 panel、soak tests |
+| M11 Packaging | ❌ 未开始 | 0% | 无 installer、无版本信息 |
+| M12 Polish | ❌ 未开始 | 0% | 视觉设计系统、快捷键系统、documentation site |
 
-理由：
+### 与竞品的差距快照
 
-- primitive authoring、MJCF export、MuJoCo 实时状态同步和编辑可靠性基础已经完成。
-- 当前 scene model 仍是平面 primitive actor 列表，无法表达真实机器人 articulation。
-- Robot schema、import、runtime state 和 controller 必须形成同一个 P0 交付链，避免只做到“看见机器人”却无法控制。
-- 传感器、ROS 2、训练环境和规模化运行建立在这条闭环之上，按差距矩阵的 Gate 2-4 继续推进。
+| 维度 | SimLab | OrcaLab | Isaac Sim/Lab | 差距等级 |
+|------|--------|---------|---------------|----------|
+| 场景编辑 | ✅ primitive + mesh | ✅ 宣称完整 | ✅ 成熟 | **小** |
+| 机器人模型 | ❌ 无 articulation | ✅ 宣称多形态 | ✅ 成熟 | **大（阻塞）** |
+| 物理仿真 | 🔶 MuJoCo primitive | ✅ 宣称高精度 | ✅ PhysX/Newton | **中** |
+| 实时渲染 | 🔶 three.js WebGL | ✅ 宣称高保真 | ✅ RTX | **中（可接受差距）** |
+| 传感器 | ❌ 无 | ✅ 宣称 RGB/Depth/IMU/Lidar | ✅ 完整 | **大** |
+| 控制器 | ❌ 无 | ✅ 宣称开放 | ✅ Python/ROS 2 | **大（阻塞）** |
+| 训练环境 | ❌ 仅 stub | ✅ 宣称并发训练 | ✅ Isaac Lab | **大** |
+| 资产生态 | 🔶 6 primitive + USD | ✅ 宣称 SimReady | ✅ 完整生态 | **中** |
+| 部署 | 🔶 源码运行 | 🔶 PyPI conda | ✅ 完整矩阵 | **小（短期不追）** |
+
+## 阶段性路线图（从 Gate 1 到 Gate 4）
+
+### 🚀 Gate 1 — Robot Simulation Closure（P0，目标 2026-Q3）
+
+**这是当前最关键的交付。** SimLab 还做不到真实机器人仿真闭环：不能导入机器人、不能控制关节、不能读取传感器。
+
+| 次序 | 任务 | 预估工作量 | 验收标准 |
+|------|------|-----------|----------|
+| 1.1 | Robot/Link/Joint/Actuator/Sensor 共享 schema | S | `shared/schemas/robotics.schema.json`，带版本 |
+| 1.2 | MJCF importer（mesh/reference/include/default 依赖解析） | L | 导入带 mesh、关节、actuator 的开源 MJCF |
+| 1.3 | Robot actor type + scene hierarchy 扩展 | M | Scene Tree 展示 robot→link→joint 层级 |
+| 1.4 | Joint/actuator/sensor runtime state bridge | M | 仿真时 joint state 同步到 viewport |
+| 1.5 | Controller per-step API（Python） | M | 写 PID 控制器，控制 joint position/velocity |
+| 1.6 | Simulation clock hardening（固定步长、RTF、非阻塞）| L | 仿真不阻塞 UI 主线程，长时间运行稳定 |
+| 1.7 | Gate 1 集成测试与演示场景 | S | 一个完整 robot 场景可编辑→导出→仿真→控制→保存 |
+
+**Gate 1 验收**：导入带 mesh 的开源机器人 MJCF → 在 viewport 中查看 link 结构 → 从 Property Panel 修改初始 joint 状态 → 运行 PID controller → viewport 关节同步 → save/reopen 行为一致。
+
+### 🔧 Gate 2 — Professional Authoring & Debugging（P1，目标 2026-Q4）
+
+| 次序 | 任务 | 优先级 |
+|------|------|--------|
+| 2.1 | Parent/child transform hierarchy + reparent | P0 |
+| 2.2 | Dedicated collision prim、convex decomposition、collision layer/mask | P0 |
+| 2.3 | World gravity、timestep、integrator、solver UI | P1 |
+| 2.4 | 独立 Validation Panel（scene + asset + runtime） | P1 |
+| 2.5 | Timeline、state recording、trajectory replay、CSV/JSON export | P1 |
+| 2.6 | Project manifest、依赖复制、资产许可证、missing asset 修复 | P1 |
+| 2.7 | Duplicate、multi-select、inline rename、context menu、autosave recovery | P1 |
+| 2.8 | URDF import | P1 |
+
+### 📡 Gate 3 — Sensor & Task Platform（P2，目标 2026-H1）
+
+| 次序 | 任务 | 优先级 |
+|------|------|--------|
+| 3.1 | Joint state、IMU、contact/force 传感器（schema + runtime + UI） | P0 |
+| 3.2 | 完整 `SimLabEnv` contract（obs/action spec、reward、termination、seed） | P0 |
+| 3.3 | Headless batch runner + metrics + seed matrix | P2 |
+| 3.4 | RGB/depth/segmentation 相机传感器（three.js 离屏渲染 MVP） | P2 |
+| 3.5 | ROS 2 bridge（clock、TF、joint states、commands） | P2 |
+| 3.6 | Domain randomization graph（pose、physics、material、light、noise） | P2 |
+| 3.7 | Episode dataset export（manifest + 同步 sensor/state/action/reward） | P2 |
+| 3.8 | 外部 RL library adapter（先接一个，不自研算法） | P2 |
+
+### ⚡ Gate 4 — Scale & High Fidelity（P3，2026-H2+）
+
+| 次序 | 任务 | 优先级 |
+|------|------|--------|
+| 4.1 | MuJoCo MJX / vectorized runtime 评估 | P3 |
+| 4.2 | OpenUSD hierarchy round-trip（multi-body USD → SimLab → MJCF → USD） | P3 |
+| 4.3 | 规模化合成数据管线（headless SDG + 断点续跑） | P3 |
+| 4.4 | SIL/HIL adapters（external clock、realtime deadline、hardware I/O） | P3 |
+| 4.5 | Windows/macOS packaging、installer、CI 矩阵 | P2 |
+| 4.6 | Performance benchmark suite、24h soak tests、崩溃恢复 | P1 |
+
+### 📊 为什么是这个顺序
+
+1. **先关门再装修**：没有 robot import + controller，再多的面板也没法做真实机器人仿真。Gate 1 的 7 项任务是 P0 硬阻塞。
+2. **传感器和训练环境建立在 controller 之上**：不先打通 joint command / observation 闭环，传感器数据和 RL env 无法验证。
+3. **碰撞/层级/诊断是专业可用性门槛**：做到 Gate 2，SimLab 才算一个能日常使用的工具（不只是 demo）。
+4. **规模化、高保真、ROS 2、分布式训练是差异化竞争**：但必须先有稳定基础；在 Gate 1-2 完成前不做过度工程化。
+5. **打包是最后一步**：先保证功能闭环，再解决分发。源码运行在开发阶段足够。
+
+### 与 OrcaLab/Isaac Sim 的差异化策略
+
+- **不追 RTX 渲染**：three.js WebGL 对机器人编辑场景足够，高保真 sensor 仿真用离线/headless 后端。
+- **不追云服务/Nucleus**：local-first、Git 友好的项目目录是核心竞争力。
+- **不追 Omniverse/Kit 扩展系统**：保持 Python/TS 两层薄架构，降低复杂度。
+- **追 MuJoCo 轻量优势**：可复现、易调试、单进程可控，比 PhysX 更适合研究和快速迭代。
+- **追开放性**：scene.json + MJCF 都是人类可读文本格式，比二进制 USD 更易于版本控制和 diff。
 
 ## 近期迭代计划
 
-### Iteration A - Simulation State Bridge
+### ✅ Iteration A - Simulation State Bridge（已完成）
 
-状态：第一版已完成。
+日期：2026-07-09。交付：`MuJoCoSimulationSession`、`SimulationState` 数据结构、viewport `applySimulationState()`、Run/Pause/Step/Reset toolbar。
 
-目标：
+### ✅ Iteration B - Viewport Editing Tools（已完成）
 
-- 改造 SimulationService，使其支持 in-process stepping。
-- 将 MuJoCo body poses 推送到 viewport。
+日期：2026-07-09。交付：translate/rotate/scale gizmo、selection outline、frame selected、camera view shortcuts。剩余：snap to grid、viewport 集成测试。
 
-交付：
+### ✅ Iteration C - Scene Editing Reliability（第一版已完成）
 
-- `MuJoCoSimulationSession`。
-- `SimulationState` 数据结构。
-- Viewport `applySimulationState()` JS API。
-- Run/Pause/Step/Reset toolbar behavior。
+日期：2026-07-09。交付：dirty state、undo/redo stack、`Ctrl+Z`/`Ctrl+Shift+Z`。剩余：duplicate actor、context menu、autosave recovery。
 
-### Iteration B - Viewport Editing Tools
+### ✅ Iteration F - Primitive Physics Playground（第一版已完成）
 
-状态：第一版已完成，仍需增强。
+日期：2026-07-10。交付：Ground/Table/Ramp assets、static/dynamic primitive export、mass/friction editing、physics material presets、Collider Debug Overlay、visual/physics geometry fidelity pass。剩余：restitution editor、timestep/gravity UI、speed control。
 
-目标：
+### ✅ TypeScript Editor Migration（已完成）
 
-- 补齐编辑器基础操作。
+日期：2026-07-10。交付：TS Editor Store 接管 scene/selection/dirty/undo/redo、QWebChannel JSON RPC bridge、MainWindow 缩减为单 QWebEngineView 容器。
 
-交付：
+### ✅ Physics Validation Preflight（已完成）
 
-- translate/rotate/scale mode。
-- selection outline。
-- frame selected。
-- camera view shortcuts。
+日期：2026-07-10。交付：Run/Step/Export 前校验 dynamic/static/mass/friction/geometry、MJCF compile 验证、actor/field 错误定位。
 
-剩余：
+### ✅ OpenUSD Asset Import（已完成）
 
-- snap to grid。
-- 更完整的 viewport smoke/integration tests。
+日期：2026-07-10。交付：`.usd/.usda/.usdc/.usdz` 导入、stage transform 与 up-axis 转换、`UsdGeomMesh` 三角化缓存、UsdPhysics 属性读取、mesh -> MJCF -> MuJoCo 闭环。
 
-### Iteration C - Scene Editing Reliability
+---
 
-状态：部分开始。
+### 🔜 Iteration D - Robot MJCF Import（下一个 P0 里程碑）
 
-目标：
+日期：2026-07-Q3。目标：支持导入开源 MJCF robot。交付：MJCF import service、Robot actor type、mesh/reference 依赖解析、Robot tree view、joint/actuator/sensor schema。
 
-- 让用户编辑不会轻易丢数据。
+### 🔜 Iteration E - Validation Panel（P1）
 
-已完成：
+日期：2026-07-Q3。目标：统一诊断入口。交付：validation report model、独立 UI panel、export preflight、quick fixes、依赖检查。
 
-- dirty state。
-- undo/redo stack。
+### 📋 Iteration G - Controller API（P0）
 
-剩余：
+日期：2026-Q3。目标：per-step Python controller 闭环。交付：observation/action buffer、per-step callback、reset callback、异常隔离、position/velocity/PID 示例。
 
-- duplicate actor。
-- context menu。
-- auto-save recovery file。
+### 📋 Iteration H - Timeline & Recording（P1）
 
-### Iteration D - Robot MJCF Import
+日期：2026-Q3。目标：仿真录制与回放。交付：timeline widget、state recording、trajectory replay、CSV/JSON export、速度控制。
 
-目标：
+### 📋 Iteration I - Sensor Platform（P0 依赖 C1/C2）
 
-- 支持导入开源 MJCF robot。
+日期：2026-Q4。目标：物理传感器采样闭环。交付：joint state、IMU、contact/force sensor、统一 timestamp/frame/frequency/noise contract。
 
-交付：
+### 📋 Iteration J - Experiment & Env API（P0 依赖 C6）
 
-- MJCF import service。
-- Robot actor。
-- Mesh/reference handling。
-- Robot tree view。
-
-### Iteration E - Validation Panel
-
-目标：
-
-- 给用户清晰反馈 scene、asset、MJCF 的问题。
-
-交付：
-
-- validation report model。
-- UI panel。
-- export preflight checks。
-- quick fixes。
-
-### Iteration F - Primitive Physics Playground
-
-状态：第一版已完成，仍需增强。
-
-目标：
-
-- 先让 primitive 场景具备可见的 MuJoCo 物理效果。
-
-已完成：
-
-- Ground/Table/Ramp assets。
-- Static/dynamic primitive export。
-- Dynamic/Mass/Friction property editing。
-- Physics playground demo scene。
-- Visual/physics geometry fidelity pass。
-- Collider Debug Overlay。
-- Physics material presets 和 density mode。
-- 自动 bounds/pose/contact trajectory 验收。
-
-剩余：
-
-- restitution 和高级 contact 参数编辑器。
-- timestep/gravity UI。
-- simulation speed control。
-- validation quick fixes 和独立 Validation Panel。
+日期：2026-Q4。目标：可训练 Gym-style 环境。交付：完整 `SimLabEnv`、`reset()/step()/close()`、observation/action spec、reward/termination hooks、seed control、headless batch runner。
 
 ## Definition of Done
 

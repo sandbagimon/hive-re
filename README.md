@@ -79,11 +79,18 @@ The tests cover the scene model, project save/load behavior, scene service actor
 
 ## Next Milestone
 
-- Preserve OpenUSD hierarchy and import Robot/Link/Joint/Actuator data.
-- Add dedicated collider selection and mesh convex decomposition.
-- Import `UsdPreviewSurface` materials and project-relative texture dependencies.
-- Introduce timeline controls and simulation state inspection.
-- Flesh out the environment API for training and evaluation workflows.
+**Gate 1 — Robot Simulation Closure（P0 阻塞项）**
+
+The most critical gap: SimLab cannot yet import real robots, control joints, or read sensor data.
+
+1. **Robot schema**: Define `shared/schemas/robotics.schema.json` with Robot/Link/Joint/Actuator/Sensor.
+2. **MJCF importer**: Parse MJCF XML, resolve mesh/material/include/compiler dependencies, reconstruct robot hierarchy.
+3. **Robot actor + scene hierarchy**: Extend the flat actor list to parent/child transforms and articulation trees.
+4. **Joint/actuator/sensor state bridge**: Stream articulation state to viewport and inspector during simulation.
+5. **Controller API**: Per-step Python callback with observation/action buffers, exception isolation, and PID example.
+6. **Clock hardening**: Decouple stepping from UI timer, support fixed timestep, real-time factor, and long-run stability.
+
+See [`docs/PRODUCT_PLAN.md`](docs/PRODUCT_PLAN.md) for the complete milestone matrix and phased roadmap.
 
 ## Third-Party Code
 
