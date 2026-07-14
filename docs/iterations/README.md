@@ -38,3 +38,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-10 TypeScript Editor Migration](2026-07-10-typescript-editor-migration.md)
 - [2026-07-10 OpenUSD Asset Import](2026-07-10-openusd-asset-import.md)
 - [2026-07-10 Platform Audit & Roadmap](2026-07-10-platform-audit-roadmap.md)
+- [2026-07-14 Codex OpenUSD Articulation Roadmap](2026-07-14-codex-usd-articulation-roadmap.md)

@@ -4,6 +4,11 @@
 状态：长期路线图
 最近评审：2026-07-10
 
+> **当前执行顺序（2026-07-14）**：长期里程碑仍由本文定义；具体开发交接、任务切分和验收顺序
+> 以 [`CODEX_EXECUTION_ROADMAP.md`](CODEX_EXECUTION_ROADMAP.md) 为准。当前先完成 OpenUSD
+> Physics/Articulation 小车的端到端垂直闭环，再复用统一 Robotics Intermediate Model 扩展 MJCF、
+> URDF 导入。
+
 ## 产品目标
 
 SimLab 的目标是做一个本地优先的机器人仿真编辑器。产品能力对标现代机器人仿真工作台，但所有实现都必须是 clean-room 的：独立品牌、独立 UI、独立资产、独立数据结构、独立业务逻辑，不复制任何 OrcaLab 的代码、素材、云服务、包名、协议、文案或视觉表达。

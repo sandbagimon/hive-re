@@ -81,6 +81,12 @@ The tests cover the scene model, project save/load behavior, scene service actor
 
 **Gate 1 — Robot Simulation Closure（P0 阻塞项）**
 
+The authoritative implementation order and handoff instructions for Codex are in
+[`docs/CODEX_EXECUTION_ROADMAP.md`](docs/CODEX_EXECUTION_ROADMAP.md). The current vertical
+slice is OpenUSD Physics/Articulation import -> robotics intermediate model -> MJCF/MuJoCo
+runtime -> WASD vehicle control. Read that document before starting the next implementation
+task; `PRODUCT_PLAN.md` remains the long-term scope document.
+
 The most critical gap: SimLab cannot yet import real robots, control joints, or read sensor data.
 
 1. **Robot schema**: Define `shared/schemas/robotics.schema.json` with Robot/Link/Joint/Actuator/Sensor.
