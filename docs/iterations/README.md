@@ -53,3 +53,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-15 External Robot Gate](2026-07-15-external-robot-gate.md)
 - [2026-07-15 Controller Safety](2026-07-15-controller-safety.md)
 - [2026-07-15 Robot Control Soak](2026-07-15-robot-control-soak.md)
+- [2026-07-15 Fixed Physics Clock](2026-07-15-fixed-physics-clock.md)

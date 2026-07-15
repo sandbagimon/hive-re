@@ -463,7 +463,15 @@ SimulationState 现包含 controller status/message/command_time/timeout，Joint
 
 实现证据见 `docs/iterations/2026-07-15-robot-control-soak.md`。
 
-## 23. 当前下一项具体任务
+## 23. Fixed Physics Clock（已完成 2026-07-15）
 
-> 将 QTimer callback 与 MuJoCo timestep 解耦，建立基于 elapsed time accumulator 的固定物理时钟；
-> 限制单帧最大 catch-up steps，并发布真实 simulation time，避免 UI 卡顿改变仿真速度。
+> QTimer callback 与 MuJoCo timestep 已解耦；SimulationService 使用 monotonic elapsed-time
+> accumulator 计算固定物理步数，并通过 `max_catch_up_steps` 限制单帧补算。
+
+Pause/Resume 会清空墙钟间隙，callback 不足一个 timestep 时只发布当前状态，不提前推进。实现证据见
+`docs/iterations/2026-07-15-fixed-physics-clock.md`。
+
+## 24. 当前下一项具体任务
+
+> 增加 runtime fault containment：捕获 MuJoCo step 异常和非有限状态，停止 QTimer、切换 paused/fault、
+> 在 Console 与 UI 发布可定位错误，避免异常从 Qt event loop 逸出。
