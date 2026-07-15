@@ -401,10 +401,17 @@ npm run test:frontend
 
 实现证据见 `docs/iterations/2026-07-15-articulation-mjcf-export.md`。
 
-## 16. 当前下一项具体任务
+## 16. Runtime Robotics State（Python 已完成 2026-07-15）
 
 > 扩展 MuJoCo SimulationState 和 Bridge，发布每个 Link world pose、joint qpos/qvel 和 actuator ctrl；
 > viewport 使用独立 simulation transform 更新 Link Group，停止/重置后恢复 authoring transform。
 
-验收：外部机械臂加载 home key、step 后状态包含稳定 Link/Joint/Actuator ID；运行时状态不修改
-Scene.robotics；Pause/Step/Reset 一致；现有 actor pose sync 保持兼容。
+已完成：外部机械臂加载 home key、step 后状态包含稳定 Link/Joint/Actuator ID；运行时状态不修改
+Scene.robotics；Reset 恢复 home；现有 actor pose sync 保持兼容。
+
+实现证据见 `docs/iterations/2026-07-15-runtime-robotics-state.md`。
+
+## 17. 当前下一项具体任务
+
+> 扩展 TypeScript SimulationState 和 viewport，消费 Link world pose、joint qpos/qvel 和 actuator ctrl；
+> simulation transform 与 authoring transform 分离，停止/重置后恢复 Scene.robotics 姿态。
