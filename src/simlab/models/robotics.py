@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-GeometryType = Literal["box", "sphere", "cylinder", "capsule", "mesh"]
+GeometryType = Literal["box", "sphere", "ellipsoid", "cylinder", "capsule", "mesh"]
 JointType = Literal["fixed", "revolute", "continuous", "prismatic"]
 ControlType = Literal["position", "velocity", "motor"]
 SensorType = Literal[

@@ -335,7 +335,7 @@ npm run test:frontend
 
 实现证据见 `docs/iterations/2026-07-15-openusd-stage-loader.md`。
 
-## 12. 当前下一项具体任务
+## 12. OpenUSD Articulation 映射（已完成 2026-07-15）
 
 下一项任务限定为 Gate 1A.2/1A.3 的首个垂直子集：
 
@@ -350,3 +350,19 @@ npm run test:frontend
 - visual geometry 与 collider 分离，并保留 local transform；
 - stable ID 不依赖显示名称，合法改名后拓扑和引用仍正确；
 - 不支持 schema 或近似转换进入 Import Report；现有单 Mesh importer 继续通过。
+
+实现证据见 `docs/iterations/2026-07-15-openusd-articulation-mapping.md`。
+
+## 13. 当前下一项具体任务
+
+> 将 articulation importer 接入项目资产缓存与正式 Import USD RPC：复制外部源文件和可解析依赖，
+> 写入 `robotics.json`、manifest 和 Import Report，注册 `robot` asset，并让 Scene 保存/重开后保留
+> RoboticsModel。暂不修改 MJCF exporter 和 simulation runtime。
+
+验收：
+
+- 通过现有 Import USD 入口选择外部机械臂时返回 `robot` asset，而不是合并为 object；
+- 项目缓存包含源 USD、robotics model、manifest 和 import report，路径均为项目相对路径；
+- 缺失 blocking dependency 不产生半成品 metadata；
+- 保存 scene 后移动项目目录仍能重开机器人结构；
+- 原有单 Mesh USD 导入结果和缓存格式保持兼容。

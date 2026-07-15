@@ -35,7 +35,7 @@
         "id": { "$ref": "#/$defs/id" },
         "name": { "type": "string", "minLength": 1 },
         "geometry_type": {
-          "enum": ["box", "sphere", "cylinder", "capsule", "mesh"]
+          "enum": ["box", "sphere", "ellipsoid", "cylinder", "capsule", "mesh"]
         },
         "transform": { "$ref": "#/$defs/transform" },
         "size": {
