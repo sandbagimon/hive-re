@@ -411,7 +411,17 @@ Scene.robotics；Reset 恢复 home；现有 actor pose sync 保持兼容。
 
 实现证据见 `docs/iterations/2026-07-15-runtime-robotics-state.md`。
 
-## 17. 当前下一项具体任务
+## 17. Runtime Link Viewport Sync（已完成 2026-07-15）
 
 > 扩展 TypeScript SimulationState 和 viewport，消费 Link world pose、joint qpos/qvel 和 actuator ctrl；
 > simulation transform 与 authoring transform 分离，停止/重置后恢复 Scene.robotics 姿态。
+
+实现证据见 `docs/iterations/2026-07-15-runtime-link-viewport-sync.md`。
+
+## 18. 当前下一项具体任务
+
+> 新增 joint-position command RPC：按 stable joint ID 接收目标，映射到 position actuator ctrl，执行
+> joint/actuator range 限幅；Session 不存在、非 position actuator 或未知 joint 时返回结构化错误。
+
+验收：设置 shoulder/elbow target 后 MuJoCo ctrl 更新，step 后 qpos 朝目标运动；越界目标被限幅；
+Reset 恢复 home target；命令不修改 Scene.robotics authoring 数据。

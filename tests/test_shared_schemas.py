@@ -20,6 +20,8 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     assert "importOpenUsd" in bridge["properties"]["rpc_methods"]["const"]
     assert "getVisualGeometry" in bridge["properties"]["rpc_methods"]["const"]
     assert "simulationStateChanged" in bridge["properties"]["events"]["const"]
+    simulation_state = bridge["$defs"]["simulationState"]
+    assert {"links", "joints", "actuators"}.issubset(simulation_state["required"])
     assert "meshGeometry" in scene["$defs"]
     assert scene["properties"]["robotics"]["$ref"] == "robotics.schema.json"
     assert robotics["title"] == "SimLabRoboticsModel"
@@ -27,3 +29,4 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
         robotics["$defs"]
     )
     Draft202012Validator.check_schema(robotics)
+    Draft202012Validator.check_schema(bridge)

@@ -174,9 +174,26 @@ export interface ActorSimulationState {
   quaternion: Quaternion;
 }
 
+export interface LinkSimulationState extends ActorSimulationState {}
+
+export interface JointSimulationState {
+  id: string;
+  qpos: number;
+  qvel: number;
+}
+
+export interface ActuatorSimulationState {
+  id: string;
+  ctrl: number;
+  force: number;
+}
+
 export interface SimulationState {
   time: number;
   actors: ActorSimulationState[];
+  links: LinkSimulationState[];
+  joints: JointSimulationState[];
+  actuators: ActuatorSimulationState[];
 }
 
 export interface ValidationIssue {

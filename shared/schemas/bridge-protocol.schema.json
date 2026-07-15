@@ -52,9 +52,24 @@
             "required": ["id", "position", "quaternion"],
             "additionalProperties": false
           }
-        }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "position": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+              "quaternion": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 }
+            },
+            "required": ["id", "position", "quaternion"],
+            "additionalProperties": false
+          }
+        },
+        "joints": { "type": "array" },
+        "actuators": { "type": "array" }
       },
-      "required": ["time", "actors"],
+      "required": ["time", "actors", "links", "joints", "actuators"],
       "additionalProperties": false
     }
   },

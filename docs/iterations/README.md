@@ -47,3 +47,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-15 Robot Tree and Viewport](2026-07-15-robot-tree-viewport.md)
 - [2026-07-15 Articulation MJCF Export](2026-07-15-articulation-mjcf-export.md)
 - [2026-07-15 Runtime Robotics State](2026-07-15-runtime-robotics-state.md)
+- [2026-07-15 Runtime Link Viewport Sync](2026-07-15-runtime-link-viewport-sync.md)

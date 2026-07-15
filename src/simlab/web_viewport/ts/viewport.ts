@@ -90,6 +90,7 @@ scene.add(selectionOutline);
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 const actorMeshes = new Map<string, any>();
+const robotLinkGroups = new Map<string, any>();
 let selectedActorId: string | null = null;
 let currentScene: Scene = {
   version: '1.0',
@@ -229,6 +230,7 @@ function addRobotActor(actor: Actor, articulation: RobotArticulation): any {
     group.userData.actorId = actor.id;
     group.userData.linkId = link.id;
     groups.set(link.id, group);
+    robotLinkGroups.set(link.id, group);
   }
   for (const link of articulation.links) {
     const group = groups.get(link.id);
@@ -306,6 +308,7 @@ function clearActors(): void {
   transformControls.detach();
   selectionOutline.visible = false;
   actorMeshes.clear();
+  robotLinkGroups.clear();
   while (actorGroup.children.length > 0) {
     const child = actorGroup.children.pop();
     if (child) disposeObject(child);
@@ -399,6 +402,21 @@ export function applySimulationState(state: SimulationState | null): void {
     mesh.position.set(...actorState.position);
     const [w, x, y, z] = actorState.quaternion;
     mesh.quaternion.set(x, y, z, w);
+  }
+  const worldPosition = new THREE.Vector3();
+  const worldQuaternion = new THREE.Quaternion();
+  const parentQuaternion = new THREE.Quaternion();
+  for (const linkState of state.links) {
+    const group = robotLinkGroups.get(linkState.id);
+    if (!group?.parent) continue;
+    group.parent.updateMatrixWorld(true);
+    worldPosition.set(...linkState.position);
+    group.position.copy(group.parent.worldToLocal(worldPosition));
+    const [w, x, y, z] = linkState.quaternion;
+    worldQuaternion.set(x, y, z, w);
+    group.parent.getWorldQuaternion(parentQuaternion);
+    group.quaternion.copy(parentQuaternion.invert().multiply(worldQuaternion));
+    group.updateMatrixWorld(true);
   }
   updateSelectionOutline();
   updateHud();
