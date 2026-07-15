@@ -152,10 +152,13 @@ function renderInspector(
   const actuatorStates = new Map(
     (simulationState?.actuators ?? []).map((item) => [item.id, item]),
   );
-  const controller = simulationState?.controller;
-  const controllerStatus = controller ? `<div class="controller-status" data-controller-status="${controller.status}">
-    <span>${controller.status.replace('_', ' ')}</span>${controller.message ? `<small>${escapeHtml(controller.message)}</small>` : ''}
-  </div>` : '';
+  const controller = simulationState?.controller ?? {
+    status: 'ready', message: null, command_time: null, timeout: null,
+  };
+  const controllerStatus = `<div class="controller-status" data-controller-status="${controller.status}">
+    <span data-controller-status-label>${controller.status.replace('_', ' ')}</span>
+    <small data-controller-message>${controller.message ? escapeHtml(controller.message) : ''}</small>
+  </div>`;
   const jointControls = articulations.flatMap((articulation) =>
     articulation.actuators.filter((item) => item.control_type === 'position').map((actuator) => {
       const joint = articulation.joints.find((item) => item.id === actuator.joint_id);
@@ -163,17 +166,19 @@ function renderInspector(
       const state = jointStates.get(joint.id);
       const target = actuatorStates.get(actuator.id)?.ctrl ?? joint.initial_position;
       return `<div class="joint-control">
-        <div class="joint-header"><label>${escapeHtml(joint.name)}</label><span>${state?.qpos.toFixed(3) ?? '—'} rad</span></div>
+        <div class="joint-header"><label>${escapeHtml(joint.name)}</label><span data-joint-position="${escapeHtml(joint.id)}">${state?.qpos.toFixed(3) ?? '—'} rad</span></div>
         <div class="joint-target-row">
-          <input type="range" min="${actuator.control_range[0]}" max="${actuator.control_range[1]}" step="0.01" value="${target}" data-joint-target="${escapeHtml(joint.id)}">
-          <input type="number" min="${actuator.control_range[0]}" max="${actuator.control_range[1]}" step="0.01" value="${target.toFixed(3)}" data-joint-target="${escapeHtml(joint.id)}">
+          <button type="button" class="joint-jog-button" title="Jog negative" data-joint-jog="${escapeHtml(joint.id)}" data-direction="-1">-</button>
+          <input type="range" min="${actuator.control_range[0]}" max="${actuator.control_range[1]}" step="0.05" value="${target}" data-joint-target="${escapeHtml(joint.id)}" data-actuator-id="${escapeHtml(actuator.id)}">
+          <button type="button" class="joint-jog-button" title="Jog positive" data-joint-jog="${escapeHtml(joint.id)}" data-direction="1">+</button>
+          <input type="number" min="${actuator.control_range[0]}" max="${actuator.control_range[1]}" step="0.05" value="${target.toFixed(3)}" data-joint-target="${escapeHtml(joint.id)}" data-actuator-id="${escapeHtml(actuator.id)}">
         </div>
-        <div class="joint-state"><span>qpos ${state?.qpos.toFixed(3) ?? '—'}</span><span>qvel ${state?.qvel.toFixed(3) ?? '—'}</span></div>
+        <div class="joint-state"><span data-joint-qpos="${escapeHtml(joint.id)}">qpos ${state?.qpos.toFixed(3) ?? '—'}</span><span data-joint-qvel="${escapeHtml(joint.id)}">qvel ${state?.qvel.toFixed(3) ?? '—'}</span></div>
       </div>`;
     }),
   ).join('');
   const robotSection = jointControls ? `
-    <section class="property-group"><div class="group-heading"><h3>Joint Control</h3><button type="button" data-joint-home>Home</button></div>
+    <section class="property-group"><div class="group-heading"><h3>Joint Control</h3><div class="joint-tools"><label>Step <input type="number" min="0.001" max="1" step="0.01" value="0.05" data-joint-step></label><button type="button" data-joint-home>Home</button></div></div>
       ${controllerStatus}
       ${jointControls}
     </section>` : '';
@@ -225,6 +230,32 @@ function renderInspector(
       if (jointId) void sendJointTargets({ [jointId]: Number(input.value) });
     });
   }
+  inspector.querySelector<HTMLInputElement>('[data-joint-step]')?.addEventListener('change', (event) => {
+    const value = Number((event.currentTarget as HTMLInputElement).value);
+    if (!Number.isFinite(value) || value <= 0) return;
+    for (const input of inspector.querySelectorAll<HTMLInputElement>('[data-joint-target]')) {
+      input.step = String(value);
+    }
+  });
+  for (const button of inspector.querySelectorAll<HTMLButtonElement>('[data-joint-jog]')) {
+    button.addEventListener('click', () => {
+      const jointId = button.dataset.jointJog;
+      const direction = Number(button.dataset.direction);
+      const step = Number(inspector.querySelector<HTMLInputElement>('[data-joint-step]')?.value);
+      const targetInput = Array.from(
+        inspector.querySelectorAll<HTMLInputElement>('input[type="number"][data-joint-target]'),
+      ).find((input) => input.dataset.jointTarget === jointId);
+      const target = Number(targetInput?.value);
+      if (
+        !jointId || !Number.isFinite(step) || step <= 0
+        || Math.abs(direction) !== 1 || !Number.isFinite(target)
+      ) {
+        showToast('Joint jog requires a positive step and finite target', true);
+        return;
+      }
+      void sendJointTargets({ [jointId]: target + direction * step });
+    });
+  }
   inspector.querySelector<HTMLButtonElement>('[data-joint-home]')?.addEventListener('click', () => {
     const targets = Object.fromEntries(
       articulations.flatMap((articulation) =>
@@ -236,6 +267,37 @@ function renderInspector(
     );
     void sendJointTargets(targets);
   });
+}
+
+function updateRuntimeInspector(simulationState: SimulationState | null): void {
+  if (!simulationState) return;
+  const inspector = element('property-inspector');
+  const controller = inspector.querySelector<HTMLElement>('[data-controller-status]');
+  if (controller) {
+    controller.dataset.controllerStatus = simulationState.controller.status;
+    const label = controller.querySelector<HTMLElement>('[data-controller-status-label]');
+    const message = controller.querySelector<HTMLElement>('[data-controller-message]');
+    if (label) label.textContent = simulationState.controller.status.replace('_', ' ');
+    if (message) message.textContent = simulationState.controller.message ?? '';
+  }
+  for (const joint of simulationState.joints) {
+    for (const item of inspector.querySelectorAll<HTMLElement>('[data-joint-position]')) {
+      if (item.dataset.jointPosition === joint.id) item.textContent = `${joint.qpos.toFixed(3)} rad`;
+    }
+    for (const item of inspector.querySelectorAll<HTMLElement>('[data-joint-qpos]')) {
+      if (item.dataset.jointQpos === joint.id) item.textContent = `qpos ${joint.qpos.toFixed(3)}`;
+    }
+    for (const item of inspector.querySelectorAll<HTMLElement>('[data-joint-qvel]')) {
+      if (item.dataset.jointQvel === joint.id) item.textContent = `qvel ${joint.qvel.toFixed(3)}`;
+    }
+  }
+  for (const actuator of simulationState.actuators) {
+    for (const input of inspector.querySelectorAll<HTMLInputElement>('[data-actuator-id]')) {
+      if (input.dataset.actuatorId === actuator.id && document.activeElement !== input) {
+        input.value = input.type === 'number' ? actuator.ctrl.toFixed(3) : String(actuator.ctrl);
+      }
+    }
+  }
 }
 
 async function sendJointTargets(targets: Record<string, number>): Promise<void> {
@@ -434,6 +496,7 @@ store.subscribe((state) => {
   }
   if (state.simulationState !== previousSimulationState) {
     applySimulationState(state.simulationState);
+    updateRuntimeInspector(state.simulationState);
     previousSimulationState = state.simulationState;
   }
   const nextSync = `${sceneJson}:${state.dirty}`;

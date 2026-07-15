@@ -493,7 +493,15 @@ Pause/Resume 会清空墙钟间隙，callback 不足一个 timestep 时只发布
 原有 Import USD 按钮继续使用文件对话框，但选择路径后复用相同 RPC 实现。实现证据见
 `docs/iterations/2026-07-15-robot-bridge-workflow.md`。
 
-## 27. 当前下一项具体任务
+## 27. Live Joint Feedback and Jog（已完成 2026-07-15）
 
-> 增加关节 Jog 控制：为选中 robot 提供小步进减/增按钮和可配置 step size，按当前 actuator ctrl
-> 计算新目标并复用 setJointTargets；支持键盘快捷键时避免输入框焦点冲突。
+> Joint Control 提供可配置 step size、每关节减/增 Jog、range 和数值输入；所有路径复用
+> setJointTargets。qpos/qvel/ctrl/controller 通过局部 DOM 更新实时刷新，不重建 Inspector。
+
+输入获得焦点时 runtime ctrl 不覆盖正在编辑的值；range/number 的原生方向键使用配置后的 step。
+实现证据见 `docs/iterations/2026-07-15-live-joint-jog.md`。
+
+## 28. 当前下一项具体任务
+
+> 增加 Robot Joint selection model：Scene Tree joint 可选择，Property Panel 只聚焦当前 joint，viewport
+> 高亮 child Link；保留选择 robot actor 时查看全部 joint 的总览模式。

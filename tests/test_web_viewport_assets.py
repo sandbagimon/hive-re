@@ -50,3 +50,5 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "data-controller-status" in app
     assert 'data-status="fault"' in style
     assert "result.data?.state" in app
+    assert "data-joint-jog" in app
+    assert "updateRuntimeInspector" in app

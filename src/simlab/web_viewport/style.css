@@ -129,11 +129,15 @@ h2 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; }
 .controller-status[data-controller-status="active"] { border-left-color: #58a976; }
 .controller-status[data-controller-status="timed_out"] { border-left-color: #d0a24f; }
 .controller-status[data-controller-status="fault"] { border-left-color: #d06464; }
+.joint-tools { display: flex; align-items: center; gap: 6px; }
+.joint-tools label { display: flex; align-items: center; gap: 4px; color: #9da8b4; font-size: 10px; }
+.joint-tools input { width: 54px; }
 .joint-control { padding: 7px 0; border-top: 1px solid #303640; }
 .joint-header, .joint-state, .joint-target-row { display: flex; align-items: center; gap: 7px; }
 .joint-header { justify-content: space-between; margin-bottom: 5px; }
 .joint-header span, .joint-state { color: #8f9baa; font-size: 10px; }
-.joint-target-row input[type="range"] { min-width: 0; flex: 1; }
+.joint-jog-button { width: 25px; min-width: 25px; height: 25px; padding: 0; font-size: 15px; line-height: 1; }
+.joint-target-row input[type="range"] { min-width: 54px; flex: 1; }
 .joint-target-row input[type="number"] { width: 70px; }
 .joint-state { justify-content: space-between; margin-top: 4px; }
 
