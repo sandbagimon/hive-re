@@ -22,6 +22,8 @@ def test_import_openusd_creates_project_asset_and_mesh_caches(tmp_path: Path) ->
     result = import_openusd_asset(FIXTURE, tmp_path)
 
     asset = result.asset
+    assert result.report is not None
+    assert result.report.has_errors is False
     properties = asset["default_properties"]
     geometry = properties["geometry"]
     physics = properties["physics"]

@@ -317,7 +317,7 @@ npm run test:frontend
 
 实现证据见 `docs/iterations/2026-07-15-robotics-intermediate-model.md`。
 
-## 11. 当前下一项具体任务
+## 11. Gate 1A.1（已完成 2026-07-15）
 
 下一项任务严格限定为 Gate 1A.1：
 
@@ -332,3 +332,21 @@ npm run test:frontend
 - 缺失 reference/payload/mesh 依赖被明确报告；
 - importer 不依赖 fixture 的文件名、Prim 名称或固定拓扑；
 - 原有单 Mesh USD 导入 API 和测试保持兼容。
+
+实现证据见 `docs/iterations/2026-07-15-openusd-stage-loader.md`。
+
+## 12. 当前下一项具体任务
+
+下一项任务限定为 Gate 1A.2/1A.3 的首个垂直子集：
+
+> 新增通用 articulation importer，将外部 USD 中的 ArticulationRoot、RigidBody、Mass、Collision、
+> Fixed/Revolute Joint 和 angular position Drive 映射到 RoboticsModel；保留 Prim path 与 stable ID，
+> 不修改 MJCF exporter、runtime 或 UI。
+
+验收：
+
+- 外部机械臂 fixture 映射为 fixed base、三个 link、两个 revolute joint 和两个 position actuator；
+- mass、center of mass、diagonal inertia、joint axis/limit、drive target/gain/max force 不丢失；
+- visual geometry 与 collider 分离，并保留 local transform；
+- stable ID 不依赖显示名称，合法改名后拓扑和引用仍正确；
+- 不支持 schema 或近似转换进入 Import Report；现有单 Mesh importer 继续通过。

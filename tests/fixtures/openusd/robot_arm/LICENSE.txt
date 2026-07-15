@@ -1,0 +1,6 @@
+SimLab OpenUSD robot arm test fixture
+
+Copyright (c) 2026 SimLab Contributors
+
+This fixture was authored specifically for the SimLab test suite and is distributed under the
+same MIT License as the repository. It is not copied from a third-party robot or simulation asset.

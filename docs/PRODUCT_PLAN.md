@@ -398,6 +398,8 @@ SimLab Desktop
 - VisualGeometry/Collider/Inertial 共享模型。
 - Python dataclass、JSON round-trip 和语义校验。
 - 旧 Scene 可选 `robotics` 字段兼容入口。
+- OpenUSD stage loader、结构化 Import Report 和依赖诊断。
+- 可再发行的外部 USD 双关节机械臂测试资产。
 
 要实现：
 
@@ -686,7 +688,7 @@ SimLab Desktop
 | M1 Local three.js Viewport | ✅ 第一版 | 80% | WebGL viewport、orbit、选择、gizmo、缺少 snap |
 | M2 Robust Scene Editing | 🔶 基础完成 | 60% | dirty/undo/redo，缺少 hierarchy、duplicate、multi-select |
 | M3 MuJoCo Live State Sync | ✅ 第一版 | 70% | Run/Pause/Step/Reset、pose sync，缺少 clock hardening |
-| M4 Robot Import | 🔶 已开始 | 15% | Robotics schema/model 已完成，外部 USD articulation 映射待实现 |
+| M4 Robot Import | 🔶 已开始 | 20% | Robotics model、USD stage/report 已完成，articulation 映射待实现 |
 | M5 Physics Authoring | 🔶 部分完成 | 55% | primitive physics、material presets、collider debug，缺少 solver/constraints |
 | M6 Timeline & Recording | ❌ 未开始 | 0% | 录制/回放/导出 trajectory |
 | M7 Asset Pipeline | 🔶 部分完成 | 40% | OpenUSD mesh import，缺少 texture/material、asset library、thumbnails |

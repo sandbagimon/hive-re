@@ -9,11 +9,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
-SUPPORTED_USD_EXTENSIONS = {".usd", ".usda", ".usdc", ".usdz"}
+from simlab.services.openusd import ImportReport, OpenUsdStageError, load_openusd_stage
 
 
 class OpenUsdImportError(RuntimeError):
     """Raised when an OpenUSD asset cannot be converted into a SimLab asset."""
+
+    def __init__(self, message: str, report: ImportReport | None = None) -> None:
+        self.report = report
+        super().__init__(message)
 
 
 @dataclass(slots=True)
@@ -21,28 +25,31 @@ class OpenUsdImportResult:
     asset: dict[str, Any]
     warnings: list[str] = field(default_factory=list)
     cache_directory: Path | None = None
+    report: ImportReport | None = None
 
 
 def import_openusd_asset(source: str | Path, project_root: str | Path) -> OpenUsdImportResult:
     """Import a USD stage as one editable rigid-body asset with cached mesh geometry."""
     source_path = Path(source).expanduser().resolve()
     root = Path(project_root).resolve()
-    if source_path.suffix.lower() not in SUPPORTED_USD_EXTENSIONS:
-        formats = ", ".join(sorted(SUPPORTED_USD_EXTENSIONS))
-        raise OpenUsdImportError(f"Unsupported OpenUSD extension. Expected one of: {formats}")
-    if not source_path.is_file():
-        raise OpenUsdImportError(f"OpenUSD file does not exist: {source_path}")
+    try:
+        stage_result = load_openusd_stage(source_path)
+    except OpenUsdStageError as exc:
+        raise OpenUsdImportError(str(exc), report=exc.report) from exc
+    if stage_result.report.has_errors:
+        issue = next(
+            item for item in stage_result.report.issues if item.severity == "error"
+        )
+        raise OpenUsdImportError(issue.message, report=stage_result.report)
 
     try:
-        from pxr import Gf, Usd, UsdGeom
+        from pxr import Gf, UsdGeom
     except ImportError as exc:
         raise OpenUsdImportError(
             "OpenUSD Python bindings are unavailable. Install the 'usd-core' package."
         ) from exc
 
-    stage = Usd.Stage.Open(str(source_path))
-    if stage is None:
-        raise OpenUsdImportError(f"OpenUSD could not open stage: {source_path}")
+    stage = stage_result.stage
 
     asset_id = _asset_id(source_path)
     cache_dir = root / "assets" / "imported" / asset_id
@@ -51,7 +58,9 @@ def import_openusd_asset(source: str | Path, project_root: str | Path) -> OpenUs
     if source_path != copied_source:
         shutil.copy2(source_path, copied_source)
 
-    warnings: list[str] = []
+    warnings = [
+        issue.message for issue in stage_result.report.issues if issue.severity == "warning"
+    ]
     positions, indices, display_color = _extract_stage_mesh(stage, Gf, UsdGeom, warnings)
     if not positions or not indices:
         raise OpenUsdImportError("The OpenUSD stage contains no triangulatable UsdGeomMesh data.")
@@ -109,7 +118,12 @@ def import_openusd_asset(source: str | Path, project_root: str | Path) -> OpenUs
         },
     }
     _upsert_asset_metadata(root / "assets" / "metadata.json", asset)
-    return OpenUsdImportResult(asset=asset, warnings=warnings, cache_directory=cache_dir)
+    return OpenUsdImportResult(
+        asset=asset,
+        warnings=warnings,
+        cache_directory=cache_dir,
+        report=stage_result.report,
+    )
 
 
 def load_visual_geometry(cache_path: str, project_root: str | Path) -> dict[str, Any]:

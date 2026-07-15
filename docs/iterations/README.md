@@ -41,3 +41,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-14 Codex OpenUSD Articulation Roadmap](2026-07-14-codex-usd-articulation-roadmap.md)
 - [2026-07-15 Robot Arm Vertical Slice](2026-07-15-robot-arm-vertical-slice.md)
 - [2026-07-15 Robotics Intermediate Model](2026-07-15-robotics-intermediate-model.md)
+- [2026-07-15 OpenUSD Stage Loader](2026-07-15-openusd-stage-loader.md)
