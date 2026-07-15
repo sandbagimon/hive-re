@@ -456,7 +456,14 @@ SimulationState 现包含 controller status/message/command_time/timeout，Joint
 
 实现证据见 `docs/iterations/2026-07-15-controller-safety.md`。
 
-## 22. 当前下一项具体任务
+## 22. External Robot Control Soak（已完成 2026-07-15）
 
-> 增加外部机械臂短时 soak test，持续执行交替 target 和 step，检查 time、qpos/qvel、Link pose、
-> actuator ctrl/force 全部有限且不越限；输出可定位的 failure context。
+> 外部机械臂持续执行 40 轮交替 target、累计 2,000 个 MuJoCo step，逐段检查 time、qpos/qvel、
+> Link pose、actuator ctrl/force 全部有限且不越限，并输出带 cycle 和 stable ID 的 failure context。
+
+实现证据见 `docs/iterations/2026-07-15-robot-control-soak.md`。
+
+## 23. 当前下一项具体任务
+
+> 将 QTimer callback 与 MuJoCo timestep 解耦，建立基于 elapsed time accumulator 的固定物理时钟；
+> 限制单帧最大 catch-up steps，并发布真实 simulation time，避免 UI 卡顿改变仿真速度。

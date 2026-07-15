@@ -52,3 +52,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-15 Joint Control UI](2026-07-15-joint-control-ui.md)
 - [2026-07-15 External Robot Gate](2026-07-15-external-robot-gate.md)
 - [2026-07-15 Controller Safety](2026-07-15-controller-safety.md)
+- [2026-07-15 Robot Control Soak](2026-07-15-robot-control-soak.md)
