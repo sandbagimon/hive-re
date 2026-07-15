@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://simlab.local/schemas/robotics.schema.json",
+  "title": "SimLabRoboticsModel",
+  "type": "object",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_.:-]*$"
+    },
+    "vector3": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "quaternion": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "transform": {
+      "type": "object",
+      "properties": {
+        "position": { "$ref": "#/$defs/vector3" },
+        "quaternion": { "$ref": "#/$defs/quaternion" }
+      },
+      "required": ["position", "quaternion"],
+      "additionalProperties": false
+    },
+    "geometryBase": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1 },
+        "geometry_type": {
+          "enum": ["box", "sphere", "cylinder", "capsule", "mesh"]
+        },
+        "transform": { "$ref": "#/$defs/transform" },
+        "size": {
+          "type": "array",
+          "items": { "type": "number", "exclusiveMinimum": 0 },
+          "minItems": 1,
+          "maxItems": 3
+        },
+        "asset_uri": { "type": ["string", "null"] },
+        "source_prim_path": { "type": ["string", "null"] }
+      },
+      "required": ["id", "name", "geometry_type", "transform", "size"],
+      "additionalProperties": true
+    },
+    "visualGeometry": {
+      "allOf": [
+        { "$ref": "#/$defs/geometryBase" },
+        {
+          "type": "object",
+          "properties": {
+            "rgba": {
+              "type": "array",
+              "items": { "type": "number", "minimum": 0, "maximum": 1 },
+              "minItems": 4,
+              "maxItems": 4
+            },
+            "roughness": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+            "metalness": { "type": ["number", "null"], "minimum": 0, "maximum": 1 }
+          },
+          "required": ["rgba"]
+        }
+      ]
+    },
+    "collider": {
+      "allOf": [
+        { "$ref": "#/$defs/geometryBase" },
+        {
+          "type": "object",
+          "properties": {
+            "friction": {
+              "type": "array",
+              "items": { "type": "number", "minimum": 0 },
+              "minItems": 3,
+              "maxItems": 3
+            },
+            "restitution": { "type": "number", "minimum": 0, "maximum": 1 }
+          },
+          "required": ["friction", "restitution"]
+        }
+      ]
+    },
+    "inertial": {
+      "type": "object",
+      "properties": {
+        "mass": { "type": "number", "exclusiveMinimum": 0 },
+        "center_of_mass": { "$ref": "#/$defs/vector3" },
+        "diagonal_inertia": {
+          "type": ["array", "null"],
+          "items": { "type": "number", "exclusiveMinimum": 0 },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "full_inertia": {
+          "type": ["array", "null"],
+          "items": { "type": "number" },
+          "minItems": 6,
+          "maxItems": 6
+        }
+      },
+      "required": ["mass", "center_of_mass", "diagonal_inertia", "full_inertia"],
+      "additionalProperties": false
+    },
+    "link": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1 },
+        "parent_link_id": { "type": ["string", "null"] },
+        "transform": { "$ref": "#/$defs/transform" },
+        "visual_geometries": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/visualGeometry" }
+        },
+        "colliders": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/collider" }
+        },
+        "inertial": { "anyOf": [{ "$ref": "#/$defs/inertial" }, { "type": "null" }] },
+        "source_prim_path": { "type": ["string", "null"] }
+      },
+      "required": [
+        "id",
+        "name",
+        "parent_link_id",
+        "transform",
+        "visual_geometries",
+        "colliders",
+        "inertial"
+      ],
+      "additionalProperties": false
+    },
+    "jointLimits": {
+      "type": "object",
+      "properties": {
+        "lower": { "type": ["number", "null"] },
+        "upper": { "type": ["number", "null"] },
+        "effort": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "velocity": { "type": ["number", "null"], "exclusiveMinimum": 0 }
+      },
+      "required": ["lower", "upper", "effort", "velocity"],
+      "additionalProperties": false
+    },
+    "joint": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "enum": ["fixed", "revolute", "continuous", "prismatic"] },
+        "parent_link_id": { "$ref": "#/$defs/id" },
+        "child_link_id": { "$ref": "#/$defs/id" },
+        "origin": { "$ref": "#/$defs/transform" },
+        "axis": { "$ref": "#/$defs/vector3" },
+        "limits": { "anyOf": [{ "$ref": "#/$defs/jointLimits" }, { "type": "null" }] },
+        "initial_position": { "type": "number" },
+        "source_prim_path": { "type": ["string", "null"] }
+      },
+      "required": [
+        "id",
+        "name",
+        "type",
+        "parent_link_id",
+        "child_link_id",
+        "origin",
+        "axis",
+        "limits",
+        "initial_position"
+      ],
+      "additionalProperties": false
+    },
+    "actuator": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1 },
+        "joint_id": { "$ref": "#/$defs/id" },
+        "control_type": { "enum": ["position", "velocity", "motor"] },
+        "control_range": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "stiffness": { "type": "number", "minimum": 0 },
+        "damping": { "type": "number", "minimum": 0 },
+        "max_force": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "source_prim_path": { "type": ["string", "null"] }
+      },
+      "required": [
+        "id",
+        "name",
+        "joint_id",
+        "control_type",
+        "control_range",
+        "stiffness",
+        "damping",
+        "max_force"
+      ],
+      "additionalProperties": false
+    },
+    "sensor": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1 },
+        "sensor_type": {
+          "enum": ["joint_position", "joint_velocity", "actuator_force", "contact", "imu"]
+        },
+        "link_id": { "type": ["string", "null"] },
+        "joint_id": { "type": ["string", "null"] },
+        "update_rate_hz": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "source_prim_path": { "type": ["string", "null"] }
+      },
+      "required": ["id", "name", "sensor_type", "link_id", "joint_id", "update_rate_hz"],
+      "additionalProperties": false
+    },
+    "articulation": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "name": { "type": "string", "minLength": 1 },
+        "root_link_id": { "$ref": "#/$defs/id" },
+        "fixed_base": { "type": "boolean" },
+        "source_uri": { "type": ["string", "null"] },
+        "source_prim_path": { "type": ["string", "null"] },
+        "links": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/link" } },
+        "joints": { "type": "array", "items": { "$ref": "#/$defs/joint" } },
+        "actuators": { "type": "array", "items": { "$ref": "#/$defs/actuator" } },
+        "sensors": { "type": "array", "items": { "$ref": "#/$defs/sensor" } }
+      },
+      "required": [
+        "id",
+        "name",
+        "root_link_id",
+        "fixed_base",
+        "links",
+        "joints",
+        "actuators",
+        "sensors"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "version": { "const": "1.0" },
+    "articulations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/articulation" }
+    }
+  },
+  "required": ["version", "articulations"],
+  "additionalProperties": false
+}

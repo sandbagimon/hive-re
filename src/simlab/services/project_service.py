@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from simlab.models.scene import Scene
+from simlab.services.robotics_validation import validate_robotics_model
 
 
 class ProjectValidationError(ValueError):
@@ -18,6 +19,9 @@ def validate_scene(scene: Scene) -> None:
     actor_ids = [actor.id for actor in scene.actors]
     if len(actor_ids) != len(set(actor_ids)):
         raise ProjectValidationError("Actor ids must be unique")
+
+    if scene.robotics is not None:
+        validate_robotics_model(scene.robotics)
 
     for actor in scene.actors:
         for name, vector in actor.transform.to_dict().items():

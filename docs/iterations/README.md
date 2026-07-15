@@ -39,3 +39,5 @@ YYYY-MM-DD-短标题.md
 - [2026-07-10 OpenUSD Asset Import](2026-07-10-openusd-asset-import.md)
 - [2026-07-10 Platform Audit & Roadmap](2026-07-10-platform-audit-roadmap.md)
 - [2026-07-14 Codex OpenUSD Articulation Roadmap](2026-07-14-codex-usd-articulation-roadmap.md)
+- [2026-07-15 Robot Arm Vertical Slice](2026-07-15-robot-arm-vertical-slice.md)
+- [2026-07-15 Robotics Intermediate Model](2026-07-15-robotics-intermediate-model.md)

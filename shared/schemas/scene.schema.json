@@ -95,6 +95,7 @@
     "name": { "type": "string", "minLength": 1 },
     "units": { "type": "string", "enum": ["meters"] },
     "actors": { "type": "array", "items": { "$ref": "#/$defs/actor" } },
+    "robotics": { "$ref": "robotics.schema.json" },
     "simulation_config": {
       "type": "object",
       "properties": {

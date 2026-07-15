@@ -4,9 +4,9 @@
 状态：长期路线图
 最近评审：2026-07-10
 
-> **当前执行顺序（2026-07-14）**：长期里程碑仍由本文定义；具体开发交接、任务切分和验收顺序
+> **当前执行顺序（2026-07-15）**：长期里程碑仍由本文定义；具体开发交接、任务切分和验收顺序
 > 以 [`CODEX_EXECUTION_ROADMAP.md`](CODEX_EXECUTION_ROADMAP.md) 为准。当前先完成 OpenUSD
-> Physics/Articulation 小车的端到端垂直闭环，再复用统一 Robotics Intermediate Model 扩展 MJCF、
+> Physics/Articulation 外部机器人手臂资产的端到端垂直闭环，再复用统一 Robotics Intermediate Model 扩展 MJCF、
 > URDF 导入。
 
 ## 产品目标
@@ -386,15 +386,22 @@ SimLab Desktop
 
 ### M4 - Robot Import and Robotics Model
 
-状态：未开始。
+状态：进行中。
 
 目标：
 
 - 支持真实机器人模型，而不只是 primitive objects。
 
-要实现：
+已完成：
 
 - Robot/Link/Joint/Actuator/Sensor 共享 schema。
+- VisualGeometry/Collider/Inertial 共享模型。
+- Python dataclass、JSON round-trip 和语义校验。
+- 旧 Scene 可选 `robotics` 字段兼容入口。
+
+要实现：
+
+- 外部 OpenUSD articulation、rigid body、joint 和 drive 映射。
 - Robot actor type。
 - Import MJCF。
 - Import URDF。
@@ -411,7 +418,7 @@ SimLab Desktop
 
 验收标准：
 
-- 可导入一个开源机器人 MJCF/URDF。
+- 可从磁盘导入一个外部 OpenUSD 机器人手臂资产。
 - 可在 viewport 中查看机器人结构。
 - 可在 Property Panel 中查看 joints、actuators、sensors。
 - 可导出可加载的 MJCF。
@@ -665,12 +672,12 @@ SimLab Desktop
 - 常用操作有快捷键和稳定反馈。
 - UI 风格完全原创，不复制目标竞品表达。
 
-## 当前进度总览（2026-07-10 审计）
+## 当前进度总览（2026-07-15 审计）
 
 ```
 代码规模：  ~1,600 行 Python (services/models) + ~1,400 行 TypeScript + ~4,000 行测试
-测试：      36 passed，1 skipped
-迭代记录：  14 个迭代日志
+测试：      47 passed，1 skipped
+迭代记录：  16 个迭代日志
 ```
 
 | 里程碑 | 状态 | 完成度 | 说明 |
@@ -679,7 +686,7 @@ SimLab Desktop
 | M1 Local three.js Viewport | ✅ 第一版 | 80% | WebGL viewport、orbit、选择、gizmo、缺少 snap |
 | M2 Robust Scene Editing | 🔶 基础完成 | 60% | dirty/undo/redo，缺少 hierarchy、duplicate、multi-select |
 | M3 MuJoCo Live State Sync | ✅ 第一版 | 70% | Run/Pause/Step/Reset、pose sync，缺少 clock hardening |
-| M4 Robot Import | ❌ 未开始 | 0% | Gate 1 阻塞项，需要 schema + MJCF import + state bridge |
+| M4 Robot Import | 🔶 已开始 | 15% | Robotics schema/model 已完成，外部 USD articulation 映射待实现 |
 | M5 Physics Authoring | 🔶 部分完成 | 55% | primitive physics、material presets、collider debug，缺少 solver/constraints |
 | M6 Timeline & Recording | ❌ 未开始 | 0% | 录制/回放/导出 trajectory |
 | M7 Asset Pipeline | 🔶 部分完成 | 40% | OpenUSD mesh import，缺少 texture/material、asset library、thumbnails |
@@ -694,7 +701,7 @@ SimLab Desktop
 | 维度 | SimLab | OrcaLab | Isaac Sim/Lab | 差距等级 |
 |------|--------|---------|---------------|----------|
 | 场景编辑 | ✅ primitive + mesh | ✅ 宣称完整 | ✅ 成熟 | **小** |
-| 机器人模型 | ❌ 无 articulation | ✅ 宣称多形态 | ✅ 成熟 | **大（阻塞）** |
+| 机器人模型 | 🔶 有中间模型，无 importer/runtime | ✅ 宣称多形态 | ✅ 成熟 | **大（阻塞）** |
 | 物理仿真 | 🔶 MuJoCo primitive | ✅ 宣称高精度 | ✅ PhysX/Newton | **中** |
 | 实时渲染 | 🔶 three.js WebGL | ✅ 宣称高保真 | ✅ RTX | **中（可接受差距）** |
 | 传感器 | ❌ 无 | ✅ 宣称 RGB/Depth/IMU/Lidar | ✅ 完整 | **大** |
@@ -711,15 +718,18 @@ SimLab Desktop
 
 | 次序 | 任务 | 预估工作量 | 验收标准 |
 |------|------|-----------|----------|
-| 1.1 | Robot/Link/Joint/Actuator/Sensor 共享 schema | S | `shared/schemas/robotics.schema.json`，带版本 |
-| 1.2 | MJCF importer（mesh/reference/include/default 依赖解析） | L | 导入带 mesh、关节、actuator 的开源 MJCF |
+| 1.1 | ✅ Robotics Intermediate Model 与共享 schema | S | 版本、round-trip、引用校验和旧 Scene 兼容已验证 |
+| 1.2 | 外部 OpenUSD articulation importer 与 Import Report | L | 从磁盘导入 link/joint/drive/collider/inertial |
 | 1.3 | Robot actor type + scene hierarchy 扩展 | M | Scene Tree 展示 robot→link→joint 层级 |
-| 1.4 | Joint/actuator/sensor runtime state bridge | M | 仿真时 joint state 同步到 viewport |
-| 1.5 | Controller per-step API（Python） | M | 写 PID 控制器，控制 joint position/velocity |
-| 1.6 | Simulation clock hardening（固定步长、RTF、非阻塞）| L | 仿真不阻塞 UI 主线程，长时间运行稳定 |
-| 1.7 | Gate 1 集成测试与演示场景 | S | 一个完整 robot 场景可编辑→导出→仿真→控制→保存 |
+| 1.4 | Articulation 到 MJCF 转换 | L | 外部 USD 手臂导出后可由 MuJoCo 编译 |
+| 1.5 | Joint/actuator/sensor runtime state bridge | M | 仿真时 joint state 同步到 viewport |
+| 1.6 | Joint-space Controller API | M | UI 位置目标驱动至少两个 joint |
+| 1.7 | Simulation clock hardening（固定步长、RTF、非阻塞）| L | 仿真不阻塞 UI 主线程，长时间运行稳定 |
+| 1.8 | Gate 1 集成测试与外部资产演示 | S | 外部机械臂可导入→仿真→控制→保存 |
 
-**Gate 1 验收**：导入带 mesh 的开源机器人 MJCF → 在 viewport 中查看 link 结构 → 从 Property Panel 修改初始 joint 状态 → 运行 PID controller → viewport 关节同步 → save/reopen 行为一致。
+**Gate 1 验收**：从磁盘导入外部 OpenUSD 机器人手臂 → 在 viewport 中查看 link 结构 → 从 Property
+Panel 修改 joint position target → MuJoCo 在重力、限位和碰撞约束下运行 → viewport 关节同步 →
+save/reopen 行为一致。
 
 ### 🔧 Gate 2 — Professional Authoring & Debugging（P1，目标 2026-Q4）
 
@@ -806,9 +816,10 @@ SimLab Desktop
 
 ---
 
-### 🔜 Iteration D - Robot MJCF Import（下一个 P0 里程碑）
+### 🔜 Iteration D - External OpenUSD Robot Arm Import（下一个 P0 里程碑）
 
-日期：2026-07-Q3。目标：支持导入开源 MJCF robot。交付：MJCF import service、Robot actor type、mesh/reference 依赖解析、Robot tree view、joint/actuator/sensor schema。
+日期：2026-07-Q3。目标：支持从磁盘导入外部 OpenUSD 机器人手臂。交付：Import Report、stage/dependency
+loader、Prim hierarchy、UsdPhysics articulation/joint/drive/collider/inertial 映射和 Robot actor。
 
 ### 🔜 Iteration E - Validation Panel（P1）
 

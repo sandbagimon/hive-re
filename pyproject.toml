@@ -14,6 +14,7 @@ dependencies = [
   "PySide6>=6.7",
   "mujoco>=3.1",
   "usd-core>=25.5",
+  "jsonschema>=4.23",
 ]
 
 [project.optional-dependencies]
@@ -28,6 +29,9 @@ simlab = "simlab.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.data-files]
+"share/simlab/schemas" = ["shared/schemas/*.json"]
 
 [tool.setuptools.package-data]
 simlab = [

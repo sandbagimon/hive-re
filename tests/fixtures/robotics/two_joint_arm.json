@@ -1,0 +1,234 @@
+{
+  "version": "1.0",
+  "articulations": [
+    {
+      "id": "arm_demo",
+      "name": "Two Joint Arm",
+      "root_link_id": "link_base",
+      "fixed_base": true,
+      "source_uri": "fixtures/external/two_joint_arm.usda",
+      "source_prim_path": "/World/Arm",
+      "links": [
+        {
+          "id": "link_base",
+          "name": "Base",
+          "parent_link_id": null,
+          "transform": {
+            "position": [0.0, 0.0, 0.0],
+            "quaternion": [0.0, 0.0, 0.0, 1.0]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_base",
+              "name": "Base Visual",
+              "geometry_type": "cylinder",
+              "transform": {
+                "position": [0.0, 0.0, 0.1],
+                "quaternion": [0.0, 0.0, 0.0, 1.0]
+              },
+              "size": [0.2, 0.1],
+              "asset_uri": null,
+              "source_prim_path": "/World/Arm/Base/Visual",
+              "rgba": [0.2, 0.25, 0.3, 1.0],
+              "roughness": 0.6,
+              "metalness": 0.2
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_base",
+              "name": "Base Collider",
+              "geometry_type": "cylinder",
+              "transform": {
+                "position": [0.0, 0.0, 0.1],
+                "quaternion": [0.0, 0.0, 0.0, 1.0]
+              },
+              "size": [0.2, 0.1],
+              "asset_uri": null,
+              "source_prim_path": "/World/Arm/Base/Collision",
+              "friction": [1.0, 0.005, 0.0001],
+              "restitution": 0.0
+            }
+          ],
+          "inertial": null,
+          "source_prim_path": "/World/Arm/Base"
+        },
+        {
+          "id": "link_upper_arm",
+          "name": "Upper Arm",
+          "parent_link_id": "link_base",
+          "transform": {
+            "position": [0.0, 0.0, 0.2],
+            "quaternion": [0.0, 0.0, 0.0, 1.0]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_upper_arm",
+              "name": "Upper Arm Visual",
+              "geometry_type": "box",
+              "transform": {
+                "position": [0.0, 0.0, 0.3],
+                "quaternion": [0.0, 0.0, 0.0, 1.0]
+              },
+              "size": [0.06, 0.06, 0.3],
+              "asset_uri": null,
+              "source_prim_path": "/World/Arm/UpperArm/Visual",
+              "rgba": [0.75, 0.25, 0.15, 1.0],
+              "roughness": 0.5,
+              "metalness": 0.1
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_upper_arm",
+              "name": "Upper Arm Collider",
+              "geometry_type": "box",
+              "transform": {
+                "position": [0.0, 0.0, 0.3],
+                "quaternion": [0.0, 0.0, 0.0, 1.0]
+              },
+              "size": [0.06, 0.06, 0.3],
+              "asset_uri": null,
+              "source_prim_path": "/World/Arm/UpperArm/Collision",
+              "friction": [0.8, 0.005, 0.0001],
+              "restitution": 0.0
+            }
+          ],
+          "inertial": {
+            "mass": 2.0,
+            "center_of_mass": [0.0, 0.0, 0.3],
+            "diagonal_inertia": [0.07, 0.07, 0.01],
+            "full_inertia": null
+          },
+          "source_prim_path": "/World/Arm/UpperArm"
+        },
+        {
+          "id": "link_forearm",
+          "name": "Forearm",
+          "parent_link_id": "link_upper_arm",
+          "transform": {
+            "position": [0.0, 0.0, 0.6],
+            "quaternion": [0.0, 0.0, 0.0, 1.0]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_forearm",
+              "name": "Forearm Visual",
+              "geometry_type": "box",
+              "transform": {
+                "position": [0.0, 0.0, 0.25],
+                "quaternion": [0.0, 0.0, 0.0, 1.0]
+              },
+              "size": [0.05, 0.05, 0.25],
+              "asset_uri": null,
+              "source_prim_path": "/World/Arm/Forearm/Visual",
+              "rgba": [0.85, 0.4, 0.15, 1.0],
+              "roughness": 0.5,
+              "metalness": 0.1
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_forearm",
+              "name": "Forearm Collider",
+              "geometry_type": "box",
+              "transform": {
+                "position": [0.0, 0.0, 0.25],
+                "quaternion": [0.0, 0.0, 0.0, 1.0]
+              },
+              "size": [0.05, 0.05, 0.25],
+              "asset_uri": null,
+              "source_prim_path": "/World/Arm/Forearm/Collision",
+              "friction": [0.8, 0.005, 0.0001],
+              "restitution": 0.0
+            }
+          ],
+          "inertial": {
+            "mass": 1.25,
+            "center_of_mass": [0.0, 0.0, 0.25],
+            "diagonal_inertia": [0.03, 0.03, 0.006],
+            "full_inertia": null
+          },
+          "source_prim_path": "/World/Arm/Forearm"
+        }
+      ],
+      "joints": [
+        {
+          "id": "joint_shoulder",
+          "name": "Shoulder",
+          "type": "revolute",
+          "parent_link_id": "link_base",
+          "child_link_id": "link_upper_arm",
+          "origin": {
+            "position": [0.0, 0.0, 0.2],
+            "quaternion": [0.0, 0.0, 0.0, 1.0]
+          },
+          "axis": [0.0, 1.0, 0.0],
+          "limits": {
+            "lower": -1.57,
+            "upper": 1.57,
+            "effort": 80.0,
+            "velocity": 2.0
+          },
+          "initial_position": 0.0,
+          "source_prim_path": "/World/Arm/ShoulderJoint"
+        },
+        {
+          "id": "joint_elbow",
+          "name": "Elbow",
+          "type": "revolute",
+          "parent_link_id": "link_upper_arm",
+          "child_link_id": "link_forearm",
+          "origin": {
+            "position": [0.0, 0.0, 0.6],
+            "quaternion": [0.0, 0.0, 0.0, 1.0]
+          },
+          "axis": [0.0, 1.0, 0.0],
+          "limits": {
+            "lower": -2.2,
+            "upper": 0.2,
+            "effort": 50.0,
+            "velocity": 2.5
+          },
+          "initial_position": -0.4,
+          "source_prim_path": "/World/Arm/ElbowJoint"
+        }
+      ],
+      "actuators": [
+        {
+          "id": "actuator_shoulder",
+          "name": "Shoulder Position Drive",
+          "joint_id": "joint_shoulder",
+          "control_type": "position",
+          "control_range": [-1.57, 1.57],
+          "stiffness": 120.0,
+          "damping": 12.0,
+          "max_force": 80.0,
+          "source_prim_path": "/World/Arm/ShoulderJoint.drive:angular"
+        },
+        {
+          "id": "actuator_elbow",
+          "name": "Elbow Position Drive",
+          "joint_id": "joint_elbow",
+          "control_type": "position",
+          "control_range": [-2.2, 0.2],
+          "stiffness": 90.0,
+          "damping": 9.0,
+          "max_force": 50.0,
+          "source_prim_path": "/World/Arm/ElbowJoint.drive:angular"
+        }
+      ],
+      "sensors": [
+        {
+          "id": "sensor_shoulder_position",
+          "name": "Shoulder Position",
+          "sensor_type": "joint_position",
+          "link_id": null,
+          "joint_id": "joint_shoulder",
+          "update_rate_hz": 100.0,
+          "source_prim_path": null
+        }
+      ]
+    }
+  ]
+}
