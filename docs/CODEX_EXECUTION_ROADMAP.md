@@ -478,7 +478,14 @@ Pause/Resume 会清空墙钟间隙，callback 不足一个 timestep 时只发布
 
 实现证据见 `docs/iterations/2026-07-15-runtime-fault-containment.md`。
 
-## 25. 当前下一项具体任务
+## 25. Robot Reset/Home State Sync（已完成 2026-07-15）
 
-> 完善 robot Reset/Home 交互闭环：Reset 返回并发布 Home runtime state，而不是直接丢弃 state；
-> 区分 Stop 与 Reset，确保 viewport、joint feedback、controller badge 在同一帧恢复 Home。
+> Reset 现在保留已编译 session，返回并发布 Home runtime state，切换为 Paused；viewport、joint
+> feedback 和 controller badge 在同一操作中恢复。Stop 独立用于场景失效、切换和关闭。
+
+实现证据见 `docs/iterations/2026-07-15-robot-reset-state-sync.md`。
+
+## 26. 当前下一项具体任务
+
+> 建立无需原生文件对话框的可测试 Import USD path RPC，并添加完整 Bridge workflow：外部路径导入、
+> actor 创建、Run、Joint target、fixed-clock frame、Pause、Reset，覆盖真实 UI 使用的 RPC 边界。

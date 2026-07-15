@@ -97,7 +97,7 @@ class EditorBridge(QObject):
             return self._failure("Cancelled")
         try:
             scene = load_scene(path)
-            self._reset_simulation()
+            self._stop_simulation()
             self.current_path = Path(path)
             self.synced_scene_json = json.dumps(scene.to_dict())
             self.dirty = False
@@ -198,8 +198,15 @@ class EditorBridge(QObject):
 
     @Slot(result=str)
     def resetSimulation(self) -> str:
-        self._reset_simulation()
-        return self._success()
+        self.simulation_timer.stop()
+        state = self.simulation_service.reset()
+        if state is None:
+            self.simulationStatusChanged.emit("stopped")
+            return self._success({"state": None})
+        payload = state.to_dict()
+        self.simulationStateChanged.emit(json.dumps(payload))
+        self.simulationStatusChanged.emit("paused")
+        return self._success({"state": payload})
 
     @Slot(str, str, result=str)
     def setJointTargets(self, scene_json: str, targets_json: str) -> str:
@@ -223,7 +230,7 @@ class EditorBridge(QObject):
     def setEditorState(self, scene_json: str, dirty: bool, current_path: str) -> None:
         scene_changed = scene_json != self.synced_scene_json
         if scene_changed and self.simulation_service.session is not None:
-            self._reset_simulation()
+            self._stop_simulation()
         self.synced_scene_json = scene_json
         self.dirty = dirty
         self.current_path = Path(current_path) if current_path else None
@@ -253,7 +260,7 @@ class EditorBridge(QObject):
         return bool(response.get("ok"))
 
     def shutdown(self) -> None:
-        self._reset_simulation()
+        self._stop_simulation()
 
     def _advance_simulation(self) -> None:
         try:
@@ -268,10 +275,9 @@ class EditorBridge(QObject):
             return
         self.simulationStateChanged.emit(json.dumps(state.to_dict()))
 
-    def _reset_simulation(self) -> None:
+    def _stop_simulation(self) -> None:
         self.simulation_timer.stop()
-        if self.simulation_service.session is not None:
-            self.simulation_service.reset()
+        self.simulation_service.stop()
         self.simulationStatusChanged.emit("stopped")
 
     def _scene_from_json(self, scene_json: str) -> Scene:

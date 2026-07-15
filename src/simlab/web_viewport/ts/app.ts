@@ -380,8 +380,14 @@ async function handleCommand(command: string): Promise<void> {
     if (result.ok && result.data) store.setSimulation('paused', result.data.state);
     else showToast(result.error ?? 'Simulation step failed', true);
   } else if (command === 'reset') {
-    await bridge.call('resetSimulation');
-    store.setSimulation('stopped', null);
+    const result = await bridge.call<RunPayload>('resetSimulation');
+    if (result.ok && result.data?.state) {
+      store.setSimulation('paused', result.data.state);
+    } else if (result.ok) {
+      store.setSimulation('stopped', null);
+    } else {
+      showToast(result.error ?? 'Simulation reset failed', true);
+    }
   }
 }
 

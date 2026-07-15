@@ -115,16 +115,23 @@ class SimulationService:
         self.console(f"Updated {len(targets)} joint target(s).")
         return state
 
-    def reset(self) -> None:
+    def reset(self) -> SimulationState | None:
         if self.session is None:
             self.console("No simulation is loaded.")
-            return
-        self.session.reset()
-        self.session = None
+            return None
+        state = self.session.reset()
         self.running = False
         self._last_wall_time = None
         self._time_accumulator = 0.0
         self.console("Simulation reset.")
+        return state
+
+    def stop(self) -> None:
+        self.session = None
+        self.running = False
+        self._last_wall_time = None
+        self._time_accumulator = 0.0
+        self.console("Simulation stopped.")
 
     def _create_session(self, scene: Scene) -> MuJoCoSimulationSession:
         export_path = self.project_root / "exports" / "scene.xml"

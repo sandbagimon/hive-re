@@ -344,8 +344,16 @@ async function handleCommand(command) {
             showToast(result.error ?? 'Simulation step failed', true);
     }
     else if (command === 'reset') {
-        await bridge.call('resetSimulation');
-        store.setSimulation('stopped', null);
+        const result = await bridge.call('resetSimulation');
+        if (result.ok && result.data?.state) {
+            store.setSimulation('paused', result.data.state);
+        }
+        else if (result.ok) {
+            store.setSimulation('stopped', null);
+        }
+        else {
+            showToast(result.error ?? 'Simulation reset failed', true);
+        }
     }
 }
 for (const button of document.querySelectorAll('[data-command]')) {

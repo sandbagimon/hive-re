@@ -48,3 +48,4 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "setJointTargets" in app
     assert "data-controller-status" in app
     assert 'data-status="fault"' in style
+    assert "result.data?.state" in app

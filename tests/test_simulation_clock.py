@@ -107,3 +107,24 @@ def test_simulation_clock_stops_after_runtime_step_failure(tmp_path) -> None:
 
     assert service.running is False
     assert service.step_frame() is None
+
+
+def test_simulation_reset_preserves_loaded_session_and_returns_home(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    clock = FakeClock()
+    scene = _scene()
+    service = SimulationService(tmp_path, lambda _: None, clock=clock)
+    service.start(scene)
+    loaded_session = service.session
+    clock.advance(0.02)
+    service.step_frame()
+
+    reset = service.reset()
+
+    assert reset is not None and reset.time == 0.0
+    assert service.session is loaded_session
+    assert service.running is False
+    assert service.step_frame() is None
+
+    service.stop()
+    assert service.session is None

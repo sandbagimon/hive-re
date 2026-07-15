@@ -55,3 +55,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-15 Robot Control Soak](2026-07-15-robot-control-soak.md)
 - [2026-07-15 Fixed Physics Clock](2026-07-15-fixed-physics-clock.md)
 - [2026-07-15 Runtime Fault Containment](2026-07-15-runtime-fault-containment.md)
+- [2026-07-15 Robot Reset State Sync](2026-07-15-robot-reset-state-sync.md)

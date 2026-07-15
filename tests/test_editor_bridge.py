@@ -157,3 +157,39 @@ def test_editor_bridge_contains_runtime_fault_from_timer(tmp_path: Path) -> None
     assert bridge.simulation_timer.isActive() is False
     assert statuses == ["fault"]
     assert messages == ["Simulation fault: non-finite joint state"]
+
+
+def test_editor_bridge_reset_publishes_robot_home_state(tmp_path: Path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+    )
+    shoulder = imported.robotics_model.articulations[0].joints[0]
+    bridge = _bridge(tmp_path)
+    statuses: list[str] = []
+    states: list[dict] = []
+    bridge.simulationStatusChanged.connect(statuses.append)
+    bridge.simulationStateChanged.connect(lambda value: states.append(json.loads(value)))
+    bridge.setJointTargets(json.dumps(scene.to_dict()), json.dumps({shoulder.id: 0.5}))
+
+    response = json.loads(bridge.resetSimulation())
+
+    assert response["ok"] is True
+    assert response["data"]["state"]["time"] == 0.0
+    assert response["data"]["state"]["controller"]["status"] == "ready"
+    assert response["data"]["state"]["joints"][0]["qpos"] == shoulder.initial_position
+    assert bridge.simulation_service.session is not None
+    assert statuses == ["paused"]
+    assert states[-1] == response["data"]["state"]
