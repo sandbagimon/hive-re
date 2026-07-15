@@ -48,7 +48,7 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
 
     worldbody = ET.SubElement(root, "worldbody")
     ET.SubElement(worldbody, "light", {"name": "key_light", "pos": "0 0 4"})
-    robot_actuators: list[tuple[str, Any]] = []
+    robot_actuators: list[tuple[str, Any, float]] = []
     home_positions: list[float] = []
 
     for actor in scene.actors:
@@ -137,7 +137,7 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
 
     if robot_actuators:
         actuator_element = ET.SubElement(root, "actuator")
-        for joint_name, actuator in robot_actuators:
+        for joint_name, actuator, _ in robot_actuators:
             attrs = {
                 "name": _xml_name(actuator.id),
                 "joint": joint_name,
@@ -163,10 +163,14 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                 ET.SubElement(actuator_element, "motor", attrs)
     if home_positions:
         keyframe = ET.SubElement(root, "keyframe")
+        home_controls = [initial for _, _, initial in robot_actuators]
+        key_attrs = {"name": "home", "qpos": _format_vector(home_positions)}
+        if home_controls:
+            key_attrs["ctrl"] = _format_vector(home_controls)
         ET.SubElement(
             keyframe,
             "key",
-            {"name": "home", "qpos": _format_vector(home_positions)},
+            key_attrs,
         )
 
     ET.indent(root, space="  ")
@@ -212,7 +216,7 @@ def _append_collider(body: Any, collider: Collider) -> None:
 def _append_articulation(
     parent: Any,
     articulation: Articulation,
-    exported_actuators: list[tuple[str, Any]],
+    exported_actuators: list[tuple[str, Any, float]],
     home_positions: list[float],
 ) -> None:
     links = {link.id: link for link in articulation.links}
@@ -267,7 +271,12 @@ def _append_articulation(
     for actuator in articulation.actuators:
         joint_name = joint_names.get(actuator.joint_id)
         if joint_name is not None:
-            exported_actuators.append((joint_name, actuator))
+            initial = next(
+                joint.initial_position
+                for joint in articulation.joints
+                if joint.id == actuator.joint_id
+            )
+            exported_actuators.append((joint_name, actuator, initial))
 
 
 def _physics_value(actor: Actor, key: str, default: Any) -> Any:

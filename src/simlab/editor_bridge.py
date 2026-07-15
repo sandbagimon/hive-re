@@ -201,6 +201,22 @@ class EditorBridge(QObject):
         self._reset_simulation()
         return self._success()
 
+    @Slot(str, str, result=str)
+    def setJointTargets(self, scene_json: str, targets_json: str) -> str:
+        try:
+            scene = self._scene_from_json(scene_json)
+            targets = json.loads(targets_json)
+            if not isinstance(targets, dict):
+                raise ValueError("Joint targets must be a JSON object")
+            numeric_targets = {str(key): float(value) for key, value in targets.items()}
+            state = self.simulation_service.set_joint_position_targets(
+                scene, numeric_targets
+            )
+            self.simulationStateChanged.emit(json.dumps(state.to_dict()))
+            return self._success({"state": state.to_dict()})
+        except Exception as exc:
+            return self._failure(exc)
+
     @Slot(str, bool, str)
     def setEditorState(self, scene_json: str, dirty: bool, current_path: str) -> None:
         scene_changed = scene_json != self.synced_scene_json

@@ -68,3 +68,38 @@ def test_robot_session_publishes_home_link_joint_and_actuator_state(tmp_path) ->
     assert {item["id"] for item in payload["links"]} == {
         link.id for link in imported.robotics_model.articulations[0].links
     }
+
+
+def test_robot_session_clamps_joint_targets_and_reset_restores_home(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+    )
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+    shoulder, elbow = imported.robotics_model.articulations[0].joints
+
+    commanded = session.set_joint_position_targets(
+        {shoulder.id: 99.0, elbow.id: -1.0}
+    )
+    stepped = session.step(steps=20)
+
+    assert commanded.actuators[0].ctrl == pytest.approx(1.57079632679)
+    assert commanded.actuators[1].ctrl == pytest.approx(-1.0)
+    assert stepped.joints[0].qpos > 0
+    reset = session.reset()
+    assert reset.joints[1].qpos == pytest.approx(-0.4)
+    assert reset.actuators[1].ctrl == pytest.approx(-0.4)
+    with pytest.raises(ValueError, match="No position actuator"):
+        session.set_joint_position_targets({"joint_missing": 0.0})

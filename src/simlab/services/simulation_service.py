@@ -50,6 +50,16 @@ class SimulationService:
             return None
         return self.session.step()
 
+    def set_joint_position_targets(
+        self, scene: Scene, targets: dict[str, float]
+    ) -> SimulationState:
+        if self.session is None:
+            self.session = self._create_session(scene)
+            self.console(f"Loaded MuJoCo model: {self.session.xml_path}")
+        state = self.session.set_joint_position_targets(targets)
+        self.console(f"Updated {len(targets)} joint target(s).")
+        return state
+
     def reset(self) -> None:
         if self.session is None:
             self.console("No simulation is loaded.")

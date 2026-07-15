@@ -257,6 +257,7 @@ export interface PythonBridgeObject {
   pauseSimulation(callback: (result: string) => void): void;
   stepSimulation(sceneJson: string, callback: (result: string) => void): void;
   resetSimulation(callback: (result: string) => void): void;
+  setJointTargets(sceneJson: string, targetsJson: string, callback: (result: string) => void): void;
   setEditorState(sceneJson: string, dirty: boolean, currentPath: string): void;
   simulationStateChanged: QtSignal<[string]>;
   simulationStatusChanged: QtSignal<[string]>;

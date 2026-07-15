@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -88,6 +89,7 @@ class MuJoCoSimulationSession:
         self.data = mujoco.MjData(self.model)
         self._body_ids = self._map_actor_bodies(scene)
         self._link_ids, self._joint_ids, self._actuator_ids = self._map_robotics(scene)
+        self._joint_position_actuators = self._map_joint_position_actuators(scene)
         self._reset_to_home()
         mujoco.mj_forward(self.model, self.data)
 
@@ -99,6 +101,20 @@ class MuJoCoSimulationSession:
     def reset(self) -> SimulationState:
         self._reset_to_home()
         self._mujoco.mj_forward(self.model, self.data)
+        return self.state()
+
+    def set_joint_position_targets(self, targets: dict[str, float]) -> SimulationState:
+        for joint_id, target in targets.items():
+            actuator_id = self._joint_position_actuators.get(joint_id)
+            if actuator_id is None:
+                raise ValueError(f"No position actuator is mapped to joint: {joint_id}")
+            value = float(target)
+            if not math.isfinite(value):
+                raise ValueError(f"Joint target must be finite: {joint_id}")
+            if self.model.actuator_ctrllimited[actuator_id]:
+                lower, upper = self.model.actuator_ctrlrange[actuator_id]
+                value = max(float(lower), min(float(upper), value))
+            self.data.ctrl[actuator_id] = value
         return self.state()
 
     def state(self) -> SimulationState:
@@ -190,3 +206,16 @@ class MuJoCoSimulationSession:
             self._mujoco.mj_resetDataKeyframe(self.model, self.data, key_id)
         else:
             self._mujoco.mj_resetData(self.model, self.data)
+
+    def _map_joint_position_actuators(self, scene: Scene) -> dict[str, int]:
+        result: dict[str, int] = {}
+        if scene.robotics is None:
+            return result
+        for articulation in scene.robotics.articulations:
+            for actuator in articulation.actuators:
+                if actuator.control_type != "position":
+                    continue
+                mujoco_id = self._actuator_ids.get(actuator.id)
+                if mujoco_id is not None:
+                    result[actuator.joint_id] = mujoco_id
+        return result

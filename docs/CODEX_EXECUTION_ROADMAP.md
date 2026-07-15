@@ -418,10 +418,20 @@ Scene.robotics；Reset 恢复 home；现有 actor pose sync 保持兼容。
 
 实现证据见 `docs/iterations/2026-07-15-runtime-link-viewport-sync.md`。
 
-## 18. 当前下一项具体任务
+## 18. Joint Position Command RPC（已完成 2026-07-15）
 
 > 新增 joint-position command RPC：按 stable joint ID 接收目标，映射到 position actuator ctrl，执行
 > joint/actuator range 限幅；Session 不存在、非 position actuator 或未知 joint 时返回结构化错误。
 
 验收：设置 shoulder/elbow target 后 MuJoCo ctrl 更新，step 后 qpos 朝目标运动；越界目标被限幅；
 Reset 恢复 home target；命令不修改 Scene.robotics authoring 数据。
+
+实现证据见 `docs/iterations/2026-07-15-joint-position-command.md`。
+
+## 19. 当前下一项具体任务
+
+> 在 robot Property Panel 增加每个 position joint 的 slider、目标数值、qpos/qvel 反馈和 Home；目标
+> 通过 setJointTargets RPC 发送，只有 simulation state 改变，不写 authoring joint initial_position。
+
+验收：用户可独立控制 shoulder/elbow，UI 范围来自 joint/actuator limit，状态反馈实时更新；Home
+恢复目标，Run/Pause/Step/Reset 与控制一致。

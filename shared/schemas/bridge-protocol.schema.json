@@ -89,6 +89,7 @@
         "pauseSimulation",
         "stepSimulation",
         "resetSimulation",
+        "setJointTargets",
         "setEditorState"
       ]
     },
