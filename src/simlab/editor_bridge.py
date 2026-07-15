@@ -256,7 +256,13 @@ class EditorBridge(QObject):
         self._reset_simulation()
 
     def _advance_simulation(self) -> None:
-        state = self.simulation_service.step_frame()
+        try:
+            state = self.simulation_service.step_frame()
+        except Exception as exc:
+            self.simulation_timer.stop()
+            self.consoleMessage.emit(f"Simulation fault: {exc}")
+            self.simulationStatusChanged.emit("fault")
+            return
         if state is None:
             self.simulation_timer.stop()
             return

@@ -9,6 +9,10 @@ from simlab.models.scene import Scene
 from simlab.services.mjcf_exporter import export_scene_to_mjcf
 
 
+class SimulationRuntimeError(RuntimeError):
+    """Raised when MuJoCo publishes a non-finite runtime state."""
+
+
 @dataclass(slots=True)
 class ActorSimulationState:
     actor_id: str
@@ -178,7 +182,7 @@ class MuJoCoSimulationSession:
             )
             for actuator_id, mujoco_id in self._actuator_ids.items()
         ]
-        return SimulationState(
+        state = SimulationState(
             time=float(self.data.time),
             actors=actor_states,
             links=link_states,
@@ -191,6 +195,8 @@ class MuJoCoSimulationSession:
                 timeout=self._control_timeout or None,
             ),
         )
+        self._validate_finite_state(state)
+        return state
 
     def _map_actor_bodies(self, scene: Scene) -> dict[str, int]:
         body_ids: dict[str, int] = {}
@@ -291,3 +297,38 @@ class MuJoCoSimulationSession:
                 if mujoco_id is not None:
                     result[actuator.joint_id] = mujoco_id
         return result
+
+    def _validate_finite_state(self, state: SimulationState) -> None:
+        invalid: str | None = None
+        if not math.isfinite(state.time):
+            invalid = "simulation time"
+        for actor in state.actors:
+            invalid = invalid or self._invalid_pose("actor", actor)
+        for link in state.links:
+            invalid = invalid or self._invalid_pose("link", link)
+        for joint in state.joints:
+            if not math.isfinite(joint.qpos):
+                invalid = invalid or f"joint {joint.joint_id} qpos"
+            if not math.isfinite(joint.qvel):
+                invalid = invalid or f"joint {joint.joint_id} qvel"
+        for actuator in state.actuators:
+            if not math.isfinite(actuator.ctrl):
+                invalid = invalid or f"actuator {actuator.actuator_id} ctrl"
+            if not math.isfinite(actuator.force):
+                invalid = invalid or f"actuator {actuator.actuator_id} force"
+        if invalid is None:
+            return
+        message = f"MuJoCo produced a non-finite value for {invalid} at t={state.time}."
+        self._controller_status = "fault"
+        self._controller_message = message
+        raise SimulationRuntimeError(message)
+
+    @staticmethod
+    def _invalid_pose(kind: str, state: ActorSimulationState) -> str | None:
+        for field_name, values in (
+            ("position", state.position),
+            ("quaternion", state.quaternion),
+        ):
+            if not all(math.isfinite(value) for value in values):
+                return f"{kind} {state.actor_id} {field_name}"
+        return None

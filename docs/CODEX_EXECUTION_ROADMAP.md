@@ -471,7 +471,14 @@ SimulationState 现包含 controller status/message/command_time/timeout，Joint
 Pause/Resume 会清空墙钟间隙，callback 不足一个 timestep 时只发布当前状态，不提前推进。实现证据见
 `docs/iterations/2026-07-15-fixed-physics-clock.md`。
 
-## 24. 当前下一项具体任务
+## 24. Runtime Fault Containment（已完成 2026-07-15）
 
-> 增加 runtime fault containment：捕获 MuJoCo step 异常和非有限状态，停止 QTimer、切换 paused/fault、
-> 在 Console 与 UI 发布可定位错误，避免异常从 Qt event loop 逸出。
+> MuJoCo step 异常和非有限状态会停止 SimulationService clock 与 QTimer，保留最后有效画面，
+> 切换 simulation badge 到 Fault，并在 Console 发布带 stable ID 的错误。
+
+实现证据见 `docs/iterations/2026-07-15-runtime-fault-containment.md`。
+
+## 25. 当前下一项具体任务
+
+> 完善 robot Reset/Home 交互闭环：Reset 返回并发布 Home runtime state，而不是直接丢弃 state；
+> 区分 Stop 与 Reset，确保 viewport、joint feedback、controller badge 在同一帧恢复 Home。

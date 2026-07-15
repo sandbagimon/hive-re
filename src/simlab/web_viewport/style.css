@@ -57,6 +57,7 @@ button.primary { border-color: #4d8e78; background: #276a57; }
 }
 #simulation-badge[data-status="running"] { border-color: #4ca980; color: #70ddb0; }
 #simulation-badge[data-status="paused"] { border-color: #d09b45; color: #ffd166; }
+#simulation-badge[data-status="fault"] { border-color: #c45d5d; color: #ff8c8c; }
 
 #workspace {
   display: grid;

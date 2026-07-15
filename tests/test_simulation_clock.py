@@ -87,3 +87,23 @@ def test_simulation_clock_rejects_invalid_catch_up_limit(tmp_path, value) -> Non
 
     with pytest.raises(ValueError, match="max_catch_up_steps"):
         service.start(scene)
+
+
+def test_simulation_clock_stops_after_runtime_step_failure(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    clock = FakeClock()
+    service = SimulationService(tmp_path, lambda _: None, clock=clock)
+    service.start(_scene())
+    assert service.session is not None
+
+    def fail_step(steps: int = 1):
+        raise RuntimeError(f"step failed after request for {steps}")
+
+    service.session.step = fail_step
+    clock.advance(0.01)
+
+    with pytest.raises(RuntimeError, match="step failed"):
+        service.step_frame()
+
+    assert service.running is False
+    assert service.step_frame() is None

@@ -137,3 +137,23 @@ def test_editor_bridge_returns_controller_fault_state(tmp_path: Path) -> None:
 
     assert response["ok"] is False
     assert response["data"]["state"]["controller"]["status"] == "fault"
+
+
+def test_editor_bridge_contains_runtime_fault_from_timer(tmp_path: Path) -> None:
+    bridge = _bridge(tmp_path)
+    statuses: list[str] = []
+    messages: list[str] = []
+    bridge.simulationStatusChanged.connect(statuses.append)
+    bridge.consoleMessage.connect(messages.append)
+
+    def fail_frame():
+        raise RuntimeError("non-finite joint state")
+
+    bridge.simulation_service.step_frame = fail_frame
+    bridge.simulation_timer.start()
+
+    bridge._advance_simulation()
+
+    assert bridge.simulation_timer.isActive() is False
+    assert statuses == ["fault"]
+    assert messages == ["Simulation fault: non-finite joint state"]

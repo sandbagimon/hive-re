@@ -4,7 +4,7 @@ export type ActorType = 'object' | 'robot' | 'terrain' | 'camera' | 'light';
 export type PrimitiveType = 'box' | 'sphere' | 'cylinder' | 'ellipsoid' | 'plane';
 export type MaterialId = 'default' | 'rubber' | 'wood' | 'metal' | 'ice';
 export type MassMode = 'mass' | 'density';
-export type SimulationStatus = 'stopped' | 'running' | 'paused';
+export type SimulationStatus = 'stopped' | 'running' | 'paused' | 'fault';
 
 export interface Transform {
   position: Vector3;

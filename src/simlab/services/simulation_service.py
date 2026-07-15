@@ -72,28 +72,38 @@ class SimulationService:
     def step_frame(self) -> SimulationState | None:
         if not self.running or self.session is None:
             return None
-        now = self.clock()
-        if self._last_wall_time is None:
+        try:
+            now = self.clock()
+            if self._last_wall_time is None:
+                self._last_wall_time = now
+                return self.session.state()
+            elapsed = max(0.0, now - self._last_wall_time)
             self._last_wall_time = now
-            return self.session.state()
-        elapsed = max(0.0, now - self._last_wall_time)
-        self._last_wall_time = now
-        timestep = float(self.session.model.opt.timestep)
-        maximum_budget = timestep * self.max_catch_up_steps
-        self._time_accumulator = min(
-            self._time_accumulator + elapsed,
-            maximum_budget,
-        )
-        steps = min(
-            int(math.floor((self._time_accumulator + timestep * 1e-9) / timestep)),
-            self.max_catch_up_steps,
-        )
-        if steps < 1:
-            return self.session.state()
-        self._time_accumulator = max(
-            0.0, self._time_accumulator - steps * timestep
-        )
-        return self.session.step(steps)
+            timestep = float(self.session.model.opt.timestep)
+            maximum_budget = timestep * self.max_catch_up_steps
+            self._time_accumulator = min(
+                self._time_accumulator + elapsed,
+                maximum_budget,
+            )
+            steps = min(
+                int(
+                    math.floor(
+                        (self._time_accumulator + timestep * 1e-9) / timestep
+                    )
+                ),
+                self.max_catch_up_steps,
+            )
+            if steps < 1:
+                return self.session.state()
+            self._time_accumulator = max(
+                0.0, self._time_accumulator - steps * timestep
+            )
+            return self.session.step(steps)
+        except Exception:
+            self.running = False
+            self._last_wall_time = None
+            self._time_accumulator = 0.0
+            raise
 
     def set_joint_position_targets(
         self, scene: Scene, targets: dict[str, float]

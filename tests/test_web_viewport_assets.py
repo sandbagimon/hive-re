@@ -20,6 +20,7 @@ def test_typescript_editor_assets_are_packaged() -> None:
 def test_editor_ui_and_bridge_commands_are_declared() -> None:
     root = Path("src/simlab/web_viewport")
     html = (root / "index.html").read_text(encoding="utf-8")
+    style = (root / "style.css").read_text(encoding="utf-8")
     app = (root / "ts" / "app.ts").read_text(encoding="utf-8")
     viewport = (root / "ts" / "viewport.ts").read_text(encoding="utf-8")
 
@@ -46,3 +47,4 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "data-joint-target" in app
     assert "setJointTargets" in app
     assert "data-controller-status" in app
+    assert 'data-status="fault"' in style

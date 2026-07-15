@@ -694,14 +694,14 @@ SimLab Desktop
 | M0 Simulation-First MVP | ✅ 完成 | 100% | PySide6 shell、scene model、MJCF export、headless runner |
 | M1 Local three.js Viewport | ✅ 第一版 | 80% | WebGL viewport、orbit、选择、gizmo、缺少 snap |
 | M2 Robust Scene Editing | 🔶 基础完成 | 60% | dirty/undo/redo，缺少 hierarchy、duplicate、multi-select |
-| M3 MuJoCo Live State Sync | ✅ 第一版 | 85% | Run/Pause/Step/Reset、pose sync、固定时钟与 catch-up cap |
+| M3 MuJoCo Live State Sync | ✅ 第一版 | 90% | pose sync、固定时钟、catch-up cap 与 runtime fault containment |
 | M4 Robot Import | ✅ 第一版 | 90% | 外部 USD 导入、保存重开、MJCF、Link sync 与 joint control 已贯通 |
 | M5 Physics Authoring | 🔶 部分完成 | 55% | primitive physics、material presets、collider debug，缺少 solver/constraints |
 | M6 Timeline & Recording | ❌ 未开始 | 0% | 录制/回放/导出 trajectory |
 | M7 Asset Pipeline | 🔶 部分完成 | 40% | OpenUSD mesh import，缺少 texture/material、asset library、thumbnails |
 | M8 Controller API | 🔶 已开始 | 55% | joint RPC/UI、原子更新、watchdog 与 fault 状态已完成 |
 | M9 Experiment/Env | 🔴 仅 stub | 5% | `SimLabEnv` 占位，不可训练 |
-| M10 Diagnostics | 🔶 部分完成 | 45% | preflight、MJCF compile 和 robot control soak，缺少独立 panel |
+| M10 Diagnostics | 🔶 部分完成 | 50% | preflight、soak、非有限 state 检查与 UI fault，缺少独立 panel |
 | M11 Packaging | ❌ 未开始 | 0% | 无 installer、无版本信息 |
 | M12 Polish | ❌ 未开始 | 0% | 视觉设计系统、快捷键系统、documentation site |
 

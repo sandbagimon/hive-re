@@ -4,7 +4,10 @@ from simlab.models.actor import Actor
 from simlab.models.scene import Scene
 from simlab.models.transform import Transform
 from simlab.services.openusd_importer import import_openusd_asset
-from simlab.services.simulation_session import MuJoCoSimulationSession
+from simlab.services.simulation_session import (
+    MuJoCoSimulationSession,
+    SimulationRuntimeError,
+)
 
 
 def test_mujoco_simulation_session_returns_actor_pose_state(tmp_path) -> None:
@@ -165,3 +168,30 @@ def test_robot_control_watchdog_returns_targets_home(tmp_path) -> None:
     assert [state.ctrl for state in timed_out.actuators] == pytest.approx(
         [shoulder.initial_position, elbow.initial_position]
     )
+
+
+def test_robot_session_rejects_non_finite_runtime_state_with_context(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+    )
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+    joint_id = imported.robotics_model.articulations[0].joints[0].id
+    session.data.qpos[0] = float("nan")
+
+    with pytest.raises(SimulationRuntimeError, match=rf"joint {joint_id} qpos"):
+        session.state()
+
+    assert session._controller_status == "fault"
