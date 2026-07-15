@@ -37,3 +37,7 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "getVisualGeometry" in app
     assert "new THREE.WireframeGeometry(mesh.geometry)" in viewport
     assert "onActorTransformChanged" in viewport
+    assert "addRobotActor" in viewport
+    assert "link.visual_geometries" in viewport
+    assert "scene.robotics?.articulations" in app
+    assert "tree-subitem joint" in app

@@ -78,10 +78,31 @@ export interface RobotLink {
   name: string;
   parent_link_id: string | null;
   transform: { position: Vector3; quaternion: Quaternion };
-  visual_geometries: unknown[];
-  colliders: unknown[];
+  visual_geometries: RobotVisualGeometry[];
+  colliders: RobotCollider[];
   inertial: unknown | null;
   source_prim_path?: string | null;
+}
+
+export interface RobotGeometry {
+  id: string;
+  name: string;
+  geometry_type: 'box' | 'sphere' | 'ellipsoid' | 'cylinder' | 'capsule' | 'mesh';
+  transform: { position: Vector3; quaternion: Quaternion };
+  size: number[];
+  asset_uri: string | null;
+  source_prim_path?: string | null;
+}
+
+export interface RobotVisualGeometry extends RobotGeometry {
+  rgba: [number, number, number, number];
+  roughness: number | null;
+  metalness: number | null;
+}
+
+export interface RobotCollider extends RobotGeometry {
+  friction: [number, number, number];
+  restitution: number;
 }
 
 export interface RobotJoint {

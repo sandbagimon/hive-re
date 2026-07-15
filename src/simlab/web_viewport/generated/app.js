@@ -55,12 +55,27 @@ function renderAssets(assets) {
 function renderSceneTree(scene, selectedActorId) {
     element('actor-count').textContent = String(scene.actors.length);
     const tree = element('scene-tree');
-    tree.innerHTML = scene.actors.length ? scene.actors.map((actor) => `
+    tree.innerHTML = scene.actors.length ? scene.actors.map((actor) => {
+        const articulationIds = actor.properties.articulation_ids;
+        const articulations = scene.robotics?.articulations.filter((item) => articulationIds?.includes(item.id)) ?? [];
+        const robotRows = articulations.map((articulation) => `
+      <div class="robot-tree" data-robot-id="${escapeHtml(articulation.id)}">
+        ${articulation.links.map((link) => `
+          <div class="tree-subitem link" title="${escapeHtml(link.id)}">
+            <span class="item-icon"></span><span class="item-label">${escapeHtml(link.name)}</span>
+          </div>`).join('')}
+        ${articulation.joints.map((joint) => `
+          <div class="tree-subitem joint" title="${escapeHtml(joint.id)}">
+            <span class="item-icon"></span><span class="item-label">${escapeHtml(joint.name)}</span>
+          </div>`).join('')}
+      </div>`).join('');
+        return `
     <button class="tree-item ${actor.id === selectedActorId ? 'selected' : ''}" type="button" data-actor-id="${escapeHtml(actor.id)}">
       <span class="item-icon"></span>
       <span class="item-label">${escapeHtml(actor.name)}</span>
       <span class="delete-actor" data-delete-id="${escapeHtml(actor.id)}" title="Delete">×</span>
-    </button>`).join('') : '<div class="empty-state">Scene is empty</div>';
+    </button>${robotRows}`;
+    }).join('') : '<div class="empty-state">Scene is empty</div>';
     for (const button of tree.querySelectorAll('[data-actor-id]')) {
         button.addEventListener('click', (event) => {
             const deleteTarget = event.target.closest('[data-delete-id]');

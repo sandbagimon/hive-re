@@ -369,7 +369,7 @@ npm run test:frontend
 
 实现证据见 `docs/iterations/2026-07-15-openusd-robot-project-import.md`。
 
-## 14. 当前下一项具体任务
+## 14. Robot Tree and Viewport（已完成 2026-07-15）
 
 > 在 TypeScript Scene Tree 和 three.js viewport 中读取 Scene.robotics：展示 Robot/Link/Joint 层级，
 > 按 Link local transform 渲染 primitive VisualGeometry，并保持 robot actor 的 authoring transform。
@@ -382,3 +382,19 @@ npm run test:frontend
 - robot actor translate/rotate/scale 作用于 articulation root；
 - 选择 robot/link/joint 不破坏现有 actor selection、undo/redo 和 dirty state；
 - 普通 primitive/mesh actor 渲染与编辑保持兼容。
+
+实现证据见 `docs/iterations/2026-07-15-robot-tree-viewport.md`。
+
+## 15. 当前下一项具体任务
+
+> 扩展 MJCF exporter，将 Scene.robotics 中的 Articulation/Link/Joint/Collider/Inertial/Actuator
+> 转换为 nested body、joint、geom、inertial 和 actuator；外部机械臂必须能由 MuJoCo 编译。
+> 暂不实现 runtime joint state bridge 和控制 UI。
+
+验收：
+
+- fixed-base articulation 生成嵌套 body，不额外创建 freejoint；
+- revolute joint axis/range、初始 qpos、link mass/inertia 和 primitive collider 尺寸正确；
+- position actuator 的 ctrlrange、kp 和 force range 正确；
+- fixture 生成的 MJCF 可由 `mujoco.MjModel.from_xml_string()` 编译；
+- primitive/object exporter 与现有 visual/physics fidelity 测试保持兼容。

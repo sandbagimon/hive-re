@@ -150,6 +150,61 @@ function geometryFromPayload(payload) {
     geometry.computeBoundingSphere();
     return geometry;
 }
+function geometryForRobotVisual(visual) {
+    const size = visual.size;
+    if (visual.geometry_type === 'sphere') {
+        return new THREE.SphereGeometry(size[0] ?? 0.5, 32, 20);
+    }
+    if (visual.geometry_type === 'ellipsoid') {
+        return new THREE.SphereGeometry(1, 32, 20).scale(size[0] ?? 0.5, size[1] ?? 0.5, size[2] ?? 0.5);
+    }
+    if (visual.geometry_type === 'cylinder' || visual.geometry_type === 'capsule') {
+        const geometry = new THREE.CylinderGeometry(size[0] ?? 0.25, size[0] ?? 0.25, (size[1] ?? 0.5) * 2, 32);
+        geometry.rotateX(Math.PI / 2);
+        return geometry;
+    }
+    return new THREE.BoxGeometry((size[0] ?? 0.5) * 2, (size[1] ?? 0.5) * 2, (size[2] ?? 0.5) * 2);
+}
+function addRobotActor(actor, articulation) {
+    const root = new THREE.Group();
+    root.position.set(...actor.transform.position);
+    root.rotation.set(...actor.transform.rotation);
+    root.scale.set(...actor.transform.scale);
+    root.name = actor.name;
+    root.userData.actorId = actor.id;
+    root.userData.actor = actor;
+    const groups = new Map();
+    for (const link of articulation.links) {
+        const group = new THREE.Group();
+        group.name = link.name;
+        group.position.set(...link.transform.position);
+        group.quaternion.set(...link.transform.quaternion);
+        group.userData.actorId = actor.id;
+        group.userData.linkId = link.id;
+        groups.set(link.id, group);
+    }
+    for (const link of articulation.links) {
+        const group = groups.get(link.id);
+        const parent = link.parent_link_id ? groups.get(link.parent_link_id) : root;
+        parent?.add(group);
+        for (const visual of link.visual_geometries) {
+            const rgba = visual.rgba ?? [0.7, 0.7, 0.7, 1];
+            const mesh = new THREE.Mesh(geometryForRobotVisual(visual), new THREE.MeshStandardMaterial({
+                color: new THREE.Color(rgba[0], rgba[1], rgba[2]),
+                roughness: visual.roughness ?? 0.55,
+                metalness: visual.metalness ?? 0.05,
+                transparent: rgba[3] < 1,
+                opacity: rgba[3],
+            }));
+            mesh.position.set(...visual.transform.position);
+            mesh.quaternion.set(...visual.transform.quaternion);
+            mesh.userData.actorId = actor.id;
+            mesh.userData.linkId = link.id;
+            group.add(mesh);
+        }
+    }
+    return root;
+}
 function actorIsDynamic(actor) {
     return actor.properties.physics?.dynamic ?? true;
 }
@@ -201,6 +256,16 @@ export function setViewportScene(sceneData) {
     currentScene = sceneData;
     clearActors();
     for (const actor of currentScene.actors) {
+        if (actor.type === 'robot') {
+            const articulationIds = actor.properties.articulation_ids;
+            const articulation = currentScene.robotics?.articulations.find((item) => articulationIds?.includes(item.id));
+            if (!articulation)
+                continue;
+            const robot = addRobotActor(actor, articulation);
+            actorGroup.add(robot);
+            actorMeshes.set(actor.id, robot);
+            continue;
+        }
         if (actor.type !== 'object')
             continue;
         const mesh = new THREE.Mesh(geometryForActor(actor), materialForActor(actor));
@@ -232,9 +297,13 @@ export function setViewportScene(sceneData) {
 }
 export function selectViewportActor(actorId, notify = false) {
     selectedActorId = actorId;
-    for (const [id, mesh] of actorMeshes.entries()) {
-        mesh.material.emissive = new THREE.Color(id === selectedActorId ? 0x2b6cb0 : 0);
-        mesh.material.emissiveIntensity = id === selectedActorId ? 0.45 : 0;
+    for (const [id, object] of actorMeshes.entries()) {
+        object.traverse((mesh) => {
+            if (!mesh.material?.emissive)
+                return;
+            mesh.material.emissive = new THREE.Color(id === selectedActorId ? 0x2b6cb0 : 0);
+            mesh.material.emissiveIntensity = id === selectedActorId ? 0.45 : 0;
+        });
     }
     const selectedMesh = selectedActorId ? actorMeshes.get(selectedActorId) : null;
     if (selectedMesh && !simulationState)
@@ -358,7 +427,7 @@ renderer.domElement.addEventListener('pointerdown', (event) => {
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
-    const hits = raycaster.intersectObjects([...actorMeshes.values()], false);
+    const hits = raycaster.intersectObjects([...actorMeshes.values()], true);
     selectViewportActor(hits[0]?.object?.userData.actorId ?? null, true);
 });
 toolbar.addEventListener('click', (event) => {

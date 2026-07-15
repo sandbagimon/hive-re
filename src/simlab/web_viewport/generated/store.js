@@ -106,6 +106,12 @@ export class EditorStore {
             return;
         const scene = cloneScene(this.state.scene);
         scene.actors = scene.actors.filter((item) => item.id !== actorId);
+        const articulationIds = actor.properties.articulation_ids;
+        if (scene.robotics && articulationIds) {
+            scene.robotics.articulations = scene.robotics.articulations.filter((item) => !articulationIds.includes(item.id));
+            if (scene.robotics.articulations.length === 0)
+                delete scene.robotics;
+        }
         this.commit(scene, this.state.selectedActorId === actorId ? null : this.state.selectedActorId);
         this.appendLog(`Deleted actor: ${actor.name}`);
     }
