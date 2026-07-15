@@ -428,10 +428,18 @@ Reset 恢复 home target；命令不修改 Scene.robotics authoring 数据。
 
 实现证据见 `docs/iterations/2026-07-15-joint-position-command.md`。
 
-## 19. 当前下一项具体任务
+## 19. Joint Control UI（已完成 2026-07-15）
 
 > 在 robot Property Panel 增加每个 position joint 的 slider、目标数值、qpos/qvel 反馈和 Home；目标
 > 通过 setJointTargets RPC 发送，只有 simulation state 改变，不写 authoring joint initial_position。
 
 验收：用户可独立控制 shoulder/elbow，UI 范围来自 joint/actuator limit，状态反馈实时更新；Home
 恢复目标，Run/Pause/Step/Reset 与控制一致。
+
+实现证据见 `docs/iterations/2026-07-15-joint-control-ui.md`。
+
+## 20. 当前下一项具体任务
+
+> 完成 Gate 1 端到端验收：通过真实 Import USD 选择外部机械臂，操作 shoulder/elbow，持续 step
+> 并验证 qpos/link pose 变化、限位、Home、Pause/Reset、保存重开；补充 controller timeout/exception
+> safety 和短时 soak test。

@@ -122,6 +122,14 @@ h2 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; }
 .item-meta { color: #85919f; font-size: 10px; }
 .delete-actor { min-width: 26px; min-height: 24px; padding: 1px; color: #d58c8c; }
 .empty-state { padding: 18px 10px; color: #7f8b98; font-size: 12px; text-align: center; }
+.group-heading { display: flex; align-items: center; justify-content: space-between; }
+.joint-control { padding: 7px 0; border-top: 1px solid #303640; }
+.joint-header, .joint-state, .joint-target-row { display: flex; align-items: center; gap: 7px; }
+.joint-header { justify-content: space-between; margin-bottom: 5px; }
+.joint-header span, .joint-state { color: #8f9baa; font-size: 10px; }
+.joint-target-row input[type="range"] { min-width: 0; flex: 1; }
+.joint-target-row input[type="number"] { width: 70px; }
+.joint-state { justify-content: space-between; margin-top: 4px; }
 
 #viewport-panel { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: #171a1f; }
 #viewport { display: block; width: 100%; height: 100%; }

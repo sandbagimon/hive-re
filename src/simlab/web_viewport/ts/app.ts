@@ -131,7 +131,11 @@ function vectorInput(label: string, field: string, values: number[]): string {
     `<input type="number" step="0.01" value="${value}" data-vector="${field}" data-index="${index}">`).join('')}</div></div>`;
 }
 
-function renderInspector(actor: Actor | undefined): void {
+function renderInspector(
+  actor: Actor | undefined,
+  scene: Scene,
+  simulationState: SimulationState | null,
+): void {
   const inspector = element('property-inspector');
   if (!actor) {
     inspector.innerHTML = '<div class="empty-state">No actor selected</div>';
@@ -140,6 +144,34 @@ function renderInspector(actor: Actor | undefined): void {
   const physics = actor.properties.physics ?? { dynamic: true };
   const friction = physics.friction ?? [0.8, 0.005, 0.0001];
   const geometry = actor.properties.geometry;
+  const articulationIds = actor.properties.articulation_ids as string[] | undefined;
+  const articulations = scene.robotics?.articulations.filter(
+    (item) => articulationIds?.includes(item.id),
+  ) ?? [];
+  const jointStates = new Map((simulationState?.joints ?? []).map((item) => [item.id, item]));
+  const actuatorStates = new Map(
+    (simulationState?.actuators ?? []).map((item) => [item.id, item]),
+  );
+  const jointControls = articulations.flatMap((articulation) =>
+    articulation.actuators.filter((item) => item.control_type === 'position').map((actuator) => {
+      const joint = articulation.joints.find((item) => item.id === actuator.joint_id);
+      if (!joint) return '';
+      const state = jointStates.get(joint.id);
+      const target = actuatorStates.get(actuator.id)?.ctrl ?? joint.initial_position;
+      return `<div class="joint-control">
+        <div class="joint-header"><label>${escapeHtml(joint.name)}</label><span>${state?.qpos.toFixed(3) ?? '—'} rad</span></div>
+        <div class="joint-target-row">
+          <input type="range" min="${actuator.control_range[0]}" max="${actuator.control_range[1]}" step="0.01" value="${target}" data-joint-target="${escapeHtml(joint.id)}">
+          <input type="number" min="${actuator.control_range[0]}" max="${actuator.control_range[1]}" step="0.01" value="${target.toFixed(3)}" data-joint-target="${escapeHtml(joint.id)}">
+        </div>
+        <div class="joint-state"><span>qpos ${state?.qpos.toFixed(3) ?? '—'}</span><span>qvel ${state?.qvel.toFixed(3) ?? '—'}</span></div>
+      </div>`;
+    }),
+  ).join('');
+  const robotSection = jointControls ? `
+    <section class="property-group"><div class="group-heading"><h3>Joint Control</h3><button type="button" data-joint-home>Home</button></div>
+      ${jointControls}
+    </section>` : '';
   const sourceSection = geometry ? `
     <section class="property-group"><h3>Imported Geometry</h3>
       <div class="property-row"><label>Format</label><input type="text" value="OpenUSD" disabled></div>
@@ -158,6 +190,7 @@ function renderInspector(actor: Actor | undefined): void {
       ${vectorInput('Scale', 'scale', actor.transform.scale)}
     </section>
     ${sourceSection}
+    ${robotSection}
     <section class="property-group"><h3>Physics</h3>
       <div class="property-row"><label>Dynamic</label><input type="checkbox" data-field="dynamic" ${physics.dynamic ? 'checked' : ''}></div>
       <div class="property-row"><label>Material</label><select data-field="material">${Object.keys(materialPresets).map((id) => `<option value="${id}" ${physics.material === id ? 'selected' : ''}>${id[0].toUpperCase()}${id.slice(1)}</option>`).join('')}</select></div>
@@ -181,6 +214,36 @@ function renderInspector(actor: Actor | undefined): void {
       store.updateActorTransform(actorId, transform);
     });
   }
+  for (const input of inspector.querySelectorAll<HTMLInputElement>('[data-joint-target]')) {
+    input.addEventListener('change', () => {
+      const jointId = input.dataset.jointTarget;
+      if (jointId) void sendJointTargets({ [jointId]: Number(input.value) });
+    });
+  }
+  inspector.querySelector<HTMLButtonElement>('[data-joint-home]')?.addEventListener('click', () => {
+    const targets = Object.fromEntries(
+      articulations.flatMap((articulation) =>
+        articulation.actuators.filter((actuator) => actuator.control_type === 'position')
+          .map((actuator) => articulation.joints.find((joint) => joint.id === actuator.joint_id))
+          .filter((joint) => joint !== undefined)
+          .map((joint) => [joint.id, joint.initial_position] as const),
+      ),
+    );
+    void sendJointTargets(targets);
+  });
+}
+
+async function sendJointTargets(targets: Record<string, number>): Promise<void> {
+  const result = await bridge.call<RunPayload>(
+    'setJointTargets',
+    JSON.stringify(store.current.scene),
+    JSON.stringify(targets),
+  );
+  if (!result.ok || !result.data) {
+    showToast(result.error ?? 'Joint control failed', true);
+    return;
+  }
+  store.setSimulation('paused', result.data.state);
 }
 
 function updateProperty(actorId: string, input: HTMLInputElement | HTMLSelectElement): void {
@@ -242,7 +305,11 @@ function render(): void {
   (element('redo-button') as HTMLButtonElement).disabled = !state.canRedo;
   renderAssets(state.assets);
   renderSceneTree(state.scene, state.selectedActorId);
-  renderInspector(state.scene.actors.find((actor) => actor.id === state.selectedActorId));
+  renderInspector(
+    state.scene.actors.find((actor) => actor.id === state.selectedActorId),
+    state.scene,
+    state.simulationState,
+  );
   renderValidation(state.validationIssues);
   renderConsole(state.logs);
 }

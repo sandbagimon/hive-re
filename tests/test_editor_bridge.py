@@ -5,6 +5,9 @@ import pytest
 from PySide6.QtWidgets import QApplication, QFileDialog, QWidget
 
 from simlab.editor_bridge import EditorBridge
+from simlab.models.actor import Actor
+from simlab.models.scene import Scene
+from simlab.services.openusd_importer import import_openusd_asset
 from simlab.services.project_service import load_scene
 
 
@@ -76,3 +79,32 @@ def test_editor_bridge_imports_external_usd_robot(
     assert response["ok"] is True
     assert response["data"]["asset"]["type"] == "robot"
     assert len(response["data"]["robotics"]["articulations"][0]["joints"]) == 2
+
+
+def test_editor_bridge_sets_robot_joint_target(tmp_path: Path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    assert imported.robotics_model is not None
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+    )
+    joint_id = imported.robotics_model.articulations[0].joints[0].id
+    bridge = _bridge(tmp_path)
+
+    response = json.loads(
+        bridge.setJointTargets(json.dumps(scene.to_dict()), json.dumps({joint_id: 0.5}))
+    )
+
+    assert response["ok"] is True
+    assert response["data"]["state"]["actuators"][0]["ctrl"] == pytest.approx(0.5)

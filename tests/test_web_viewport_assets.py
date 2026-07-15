@@ -43,3 +43,5 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "tree-subitem joint" in app
     assert "for (const linkState of state.links)" in viewport
     assert "parent.worldToLocal" in viewport
+    assert "data-joint-target" in app
+    assert "setJointTargets" in app
