@@ -385,7 +385,7 @@ npm run test:frontend
 
 实现证据见 `docs/iterations/2026-07-15-robot-tree-viewport.md`。
 
-## 15. 当前下一项具体任务
+## 15. Articulation to MJCF（已完成 2026-07-15）
 
 > 扩展 MJCF exporter，将 Scene.robotics 中的 Articulation/Link/Joint/Collider/Inertial/Actuator
 > 转换为 nested body、joint、geom、inertial 和 actuator；外部机械臂必须能由 MuJoCo 编译。
@@ -398,3 +398,13 @@ npm run test:frontend
 - position actuator 的 ctrlrange、kp 和 force range 正确；
 - fixture 生成的 MJCF 可由 `mujoco.MjModel.from_xml_string()` 编译；
 - primitive/object exporter 与现有 visual/physics fidelity 测试保持兼容。
+
+实现证据见 `docs/iterations/2026-07-15-articulation-mjcf-export.md`。
+
+## 16. 当前下一项具体任务
+
+> 扩展 MuJoCo SimulationState 和 Bridge，发布每个 Link world pose、joint qpos/qvel 和 actuator ctrl；
+> viewport 使用独立 simulation transform 更新 Link Group，停止/重置后恢复 authoring transform。
+
+验收：外部机械臂加载 home key、step 后状态包含稳定 Link/Joint/Actuator ID；运行时状态不修改
+Scene.robotics；Pause/Step/Reset 一致；现有 actor pose sync 保持兼容。

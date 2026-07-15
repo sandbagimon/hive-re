@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from simlab.models.actor import Actor
+from simlab.models.robotics import Articulation, Collider, Link
 from simlab.models.scene import Scene
 from simlab.services.openusd_importer import resolve_imported_asset_path
 from simlab.services.physics_materials import material_for_id
@@ -47,6 +48,8 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
 
     worldbody = ET.SubElement(root, "worldbody")
     ET.SubElement(worldbody, "light", {"name": "key_light", "pos": "0 0 4"})
+    robot_actuators: list[tuple[str, Any]] = []
+    home_positions: list[float] = []
 
     for actor in scene.actors:
         if actor.type != "object":
@@ -92,6 +95,10 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                 },
             )
             ET.SubElement(body, "freejoint")
+            home_positions.extend(actor.transform.position)
+            home_positions.extend(
+                euler_xyz_to_mujoco_quaternion(actor.transform.rotation)
+            )
             if _physics_value(actor, "mass_mode", "mass") == "density":
                 geom_attrs["density"] = str(_physics_value(actor, "density", 1000.0))
             else:
@@ -104,6 +111,63 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                 euler_xyz_to_mujoco_quaternion(actor.transform.rotation)
             )
             ET.SubElement(worldbody, "geom", geom_attrs)
+
+    if scene.robotics is not None:
+        articulations = {item.id: item for item in scene.robotics.articulations}
+        for actor in scene.actors:
+            if actor.type != "robot":
+                continue
+            ids = actor.properties.get("articulation_ids", [])
+            for articulation_id in ids:
+                articulation = articulations.get(str(articulation_id))
+                if articulation is None:
+                    continue
+                wrapper = ET.SubElement(
+                    worldbody,
+                    "body",
+                    {
+                        "name": _xml_name(actor.id),
+                        "pos": _format_vector(actor.transform.position),
+                        "quat": _format_vector(
+                            euler_xyz_to_mujoco_quaternion(actor.transform.rotation)
+                        ),
+                    },
+                )
+                _append_articulation(wrapper, articulation, robot_actuators, home_positions)
+
+    if robot_actuators:
+        actuator_element = ET.SubElement(root, "actuator")
+        for joint_name, actuator in robot_actuators:
+            attrs = {
+                "name": _xml_name(actuator.id),
+                "joint": joint_name,
+                "ctrlrange": _format_vector(actuator.control_range),
+                "ctrllimited": "true",
+            }
+            if actuator.max_force is not None:
+                attrs.update(
+                    {
+                        "forcerange": _format_vector(
+                            [-actuator.max_force, actuator.max_force]
+                        ),
+                        "forcelimited": "true",
+                    }
+                )
+            if actuator.control_type == "position":
+                attrs["kp"] = str(actuator.stiffness)
+                ET.SubElement(actuator_element, "position", attrs)
+            elif actuator.control_type == "velocity":
+                attrs["kv"] = str(actuator.damping)
+                ET.SubElement(actuator_element, "velocity", attrs)
+            else:
+                ET.SubElement(actuator_element, "motor", attrs)
+    if home_positions:
+        keyframe = ET.SubElement(root, "keyframe")
+        ET.SubElement(
+            keyframe,
+            "key",
+            {"name": "home", "qpos": _format_vector(home_positions)},
+        )
 
     ET.indent(root, space="  ")
     return ET.tostring(root, encoding="unicode") + "\n"
@@ -124,6 +188,86 @@ def export_scene_to_mjcf(
 
 def _is_dynamic(actor: Actor) -> bool:
     return bool(_physics_value(actor, "dynamic", True))
+
+
+def _mujoco_quaternion(value: list[float]) -> list[float]:
+    x, y, z, w = value
+    return [w, x, y, z]
+
+
+def _append_collider(body: Any, collider: Collider) -> None:
+    geom_type = collider.geometry_type
+    attrs = {
+        "name": _xml_name(collider.id),
+        "type": geom_type if geom_type != "capsule" else "capsule",
+        "size": _format_vector(collider.size),
+        "pos": _format_vector(collider.transform.position),
+        "quat": _format_vector(_mujoco_quaternion(collider.transform.quaternion)),
+        "friction": _format_vector(collider.friction),
+        "rgba": "0.55 0.62 0.7 1",
+    }
+    ET.SubElement(body, "geom", attrs)
+
+
+def _append_articulation(
+    parent: Any,
+    articulation: Articulation,
+    exported_actuators: list[tuple[str, Any]],
+    home_positions: list[float],
+) -> None:
+    links = {link.id: link for link in articulation.links}
+    joints_by_child = {joint.child_link_id: joint for joint in articulation.joints}
+    children: dict[str, list[Link]] = {link.id: [] for link in articulation.links}
+    for link in articulation.links:
+        if link.parent_link_id in children:
+            children[link.parent_link_id].append(link)
+
+    joint_names: dict[str, str] = {}
+
+    def append_link(parent_body: Any, link: Link) -> None:
+        body = ET.SubElement(
+            parent_body,
+            "body",
+            {
+                "name": _xml_name(link.id),
+                "pos": _format_vector(link.transform.position),
+                "quat": _format_vector(_mujoco_quaternion(link.transform.quaternion)),
+            },
+        )
+        joint = joints_by_child.get(link.id)
+        if joint is not None and joint.type != "fixed":
+            joint_name = _xml_name(joint.id)
+            attrs = {
+                "name": joint_name,
+                "type": "hinge" if joint.type in {"revolute", "continuous"} else "slide",
+                "axis": _format_vector(joint.axis),
+            }
+            if joint.limits and joint.limits.lower is not None and joint.limits.upper is not None:
+                attrs["range"] = _format_vector([joint.limits.lower, joint.limits.upper])
+                attrs["limited"] = "true"
+            ET.SubElement(body, "joint", attrs)
+            joint_names[joint.id] = joint_name
+            home_positions.append(joint.initial_position)
+        if link.inertial is not None:
+            inertial_attrs = {
+                "mass": str(link.inertial.mass),
+                "pos": _format_vector(link.inertial.center_of_mass),
+            }
+            if link.inertial.diagonal_inertia is not None:
+                inertial_attrs["diaginertia"] = _format_vector(
+                    link.inertial.diagonal_inertia
+                )
+            ET.SubElement(body, "inertial", inertial_attrs)
+        for collider in link.colliders:
+            _append_collider(body, collider)
+        for child in children[link.id]:
+            append_link(body, child)
+
+    append_link(parent, links[articulation.root_link_id])
+    for actuator in articulation.actuators:
+        joint_name = joint_names.get(actuator.joint_id)
+        if joint_name is not None:
+            exported_actuators.append((joint_name, actuator))
 
 
 def _physics_value(actor: Actor, key: str, default: Any) -> Any:

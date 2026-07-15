@@ -6,6 +6,7 @@ from simlab.models.actor import Actor
 from simlab.models.scene import Scene
 from simlab.models.transform import Transform
 from simlab.services.mjcf_exporter import export_scene_to_mjcf, scene_to_mjcf_xml
+from simlab.services.openusd_importer import import_openusd_asset
 
 
 def _scene_with_primitives() -> Scene:
@@ -190,3 +191,80 @@ def test_exported_mjcf_can_load_with_mujoco_when_installed(tmp_path) -> None:
     model = mujoco.MjModel.from_xml_path(str(output))
 
     assert model.nbody >= 4
+
+
+def test_external_usd_robot_exports_compilable_articulation(tmp_path) -> None:
+    mujoco = pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    assert imported.robotics_model is not None
+    scene = Scene(
+        name="External Arm Physics",
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+    )
+
+    xml = scene_to_mjcf_xml(scene, asset_root=tmp_path)
+    root = ET.fromstring(xml)
+    joints = root.findall(".//joint")
+    actuators = root.findall("./actuator/position")
+
+    assert len(joints) == 2
+    assert len(root.findall(".//freejoint")) == 0
+    assert joints[0].attrib["type"] == "hinge"
+    assert [float(value) for value in joints[0].attrib["range"].split()] == pytest.approx(
+        [-1.57079632679, 1.57079632679]
+    )
+    assert len(actuators) == 2
+    assert actuators[0].attrib["kp"] == "120.0"
+    assert [float(value) for value in actuators[0].attrib["ctrlrange"].split()] == pytest.approx(
+        [-1.5707963267948966, 1.5707963267948966]
+    )
+    model = mujoco.MjModel.from_xml_string(xml)
+    assert model.njnt == 2
+    assert model.nu == 2
+    assert model.nbody == 5
+    assert model.key_qpos[0, 1] == pytest.approx(-0.4)
+
+
+def test_robot_and_free_body_home_keyframe_has_complete_qpos(tmp_path) -> None:
+    mujoco = pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_ball",
+                name="Ball",
+                type="object",
+                asset_id="primitive_sphere",
+                transform=Transform(position=[1, 2, 3]),
+                properties={"primitive": "sphere", "size": [0.2]},
+            ),
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            ),
+        ],
+        robotics=imported.robotics_model,
+    )
+
+    model = mujoco.MjModel.from_xml_string(scene_to_mjcf_xml(scene, asset_root=tmp_path))
+
+    assert model.nq == 9
+    assert model.key_qpos.shape == (1, 9)
+    assert model.key_qpos[0, :3] == pytest.approx([1, 2, 3])
+    assert model.key_qpos[0, -1] == pytest.approx(-0.4)

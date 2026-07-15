@@ -404,6 +404,7 @@ SimLab Desktop
 - stage units、Y-up/Z-up、关节角度与惯量单位转换。
 - 正式 Import USD robot asset、项目相对缓存、manifest/report 和 Scene robotics 持久化。
 - TypeScript Scene Tree 的 Robot/Link/Joint 展示和 three.js 逐 Link primitive visual 渲染。
+- Articulation/Link/Joint/Collider/Inertial/Actuator 到可编译 MJCF 的转换和 home keyframe。
 
 要实现：
 
@@ -692,7 +693,7 @@ SimLab Desktop
 | M1 Local three.js Viewport | ✅ 第一版 | 80% | WebGL viewport、orbit、选择、gizmo、缺少 snap |
 | M2 Robust Scene Editing | 🔶 基础完成 | 60% | dirty/undo/redo，缺少 hierarchy、duplicate、multi-select |
 | M3 MuJoCo Live State Sync | ✅ 第一版 | 70% | Run/Pause/Step/Reset、pose sync，缺少 clock hardening |
-| M4 Robot Import | 🔶 已开始 | 55% | 外部 USD robot 可见并可保存，MJCF/runtime/control 待接入 |
+| M4 Robot Import | 🔶 已开始 | 65% | 外部 USD robot 可编译 MuJoCo，runtime state/control 待接入 |
 | M5 Physics Authoring | 🔶 部分完成 | 55% | primitive physics、material presets、collider debug，缺少 solver/constraints |
 | M6 Timeline & Recording | ❌ 未开始 | 0% | 录制/回放/导出 trajectory |
 | M7 Asset Pipeline | 🔶 部分完成 | 40% | OpenUSD mesh import，缺少 texture/material、asset library、thumbnails |
