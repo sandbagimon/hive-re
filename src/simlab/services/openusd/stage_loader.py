@@ -168,8 +168,17 @@ def load_openusd_stage(source: str | Path) -> StageLoadResult:
         )
 
     locations = _dependency_locations(stage)
-    _, resolved_assets, unresolved_assets = UsdUtils.ComputeAllDependencies(str(source_path))
-    report.resolved_dependencies = sorted({str(path) for path in resolved_assets})
+    layers, resolved_assets, unresolved_assets = UsdUtils.ComputeAllDependencies(
+        str(source_path)
+    )
+    resolved_layers = {
+        str(layer.realPath or layer.identifier)
+        for layer in layers
+        if str(layer.realPath or layer.identifier) != str(source_path)
+    }
+    report.resolved_dependencies = sorted(
+        resolved_layers | {str(path) for path in resolved_assets}
+    )
     report.unresolved_dependencies = sorted({str(path) for path in unresolved_assets})
     for dependency in report.unresolved_dependencies:
         location = locations.get(dependency) or _diagnostic_dependency_location(

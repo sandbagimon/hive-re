@@ -55,11 +55,81 @@ export interface Actor {
   properties: ActorProperties;
 }
 
+export interface RoboticsModel {
+  version: string;
+  articulations: RobotArticulation[];
+}
+
+export interface RobotArticulation {
+  id: string;
+  name: string;
+  root_link_id: string;
+  fixed_base: boolean;
+  source_uri?: string | null;
+  source_prim_path?: string | null;
+  links: RobotLink[];
+  joints: RobotJoint[];
+  actuators: RobotActuator[];
+  sensors: RobotSensor[];
+}
+
+export interface RobotLink {
+  id: string;
+  name: string;
+  parent_link_id: string | null;
+  transform: { position: Vector3; quaternion: Quaternion };
+  visual_geometries: unknown[];
+  colliders: unknown[];
+  inertial: unknown | null;
+  source_prim_path?: string | null;
+}
+
+export interface RobotJoint {
+  id: string;
+  name: string;
+  type: 'fixed' | 'revolute' | 'continuous' | 'prismatic';
+  parent_link_id: string;
+  child_link_id: string;
+  origin: { position: Vector3; quaternion: Quaternion };
+  axis: Vector3;
+  limits: {
+    lower: number | null;
+    upper: number | null;
+    effort: number | null;
+    velocity: number | null;
+  } | null;
+  initial_position: number;
+  source_prim_path?: string | null;
+}
+
+export interface RobotActuator {
+  id: string;
+  name: string;
+  joint_id: string;
+  control_type: 'position' | 'velocity' | 'motor';
+  control_range: [number, number];
+  stiffness: number;
+  damping: number;
+  max_force: number | null;
+  source_prim_path?: string | null;
+}
+
+export interface RobotSensor {
+  id: string;
+  name: string;
+  sensor_type: string;
+  link_id: string | null;
+  joint_id: string | null;
+  update_rate_hz: number | null;
+  source_prim_path?: string | null;
+}
+
 export interface Scene {
   version: string;
   name: string;
   units: 'meters';
   actors: Actor[];
+  robotics?: RoboticsModel;
   simulation_config: {
     timestep: number;
     duration: number;
@@ -125,6 +195,7 @@ export interface ExportPayload {
 export interface OpenUsdImportPayload {
   asset: AssetMetadata;
   warnings: string[];
+  robotics?: RoboticsModel | null;
 }
 
 export interface VisualGeometryPayload {

@@ -259,7 +259,7 @@ async function handleCommand(command: string): Promise<void> {
     const result = await bridge.call<OpenUsdImportPayload>('importOpenUsd');
     if (result.ok && result.data) {
       store.upsertAsset(result.data.asset);
-      store.addAsset(result.data.asset);
+      store.addAsset(result.data.asset, result.data.robotics);
       for (const warning of result.data.warnings) store.appendLog(`USD: ${warning}`);
       showToast(`Imported ${result.data.asset.name}`);
     } else if (result.error !== 'Cancelled') {

@@ -229,7 +229,7 @@ async function handleCommand(command) {
         const result = await bridge.call('importOpenUsd');
         if (result.ok && result.data) {
             store.upsertAsset(result.data.asset);
-            store.addAsset(result.data.asset);
+            store.addAsset(result.data.asset, result.data.robotics);
             for (const warning of result.data.warnings)
                 store.appendLog(`USD: ${warning}`);
             showToast(`Imported ${result.data.asset.name}`);

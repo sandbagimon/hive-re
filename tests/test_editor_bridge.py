@@ -58,3 +58,21 @@ def test_editor_bridge_imports_openusd_and_serves_visual_geometry(
     geometry_response = json.loads(bridge.getVisualGeometry(cache_path))
     assert geometry_response["ok"] is True
     assert len(geometry_response["data"]["positions"]) == 12
+
+
+def test_editor_bridge_imports_external_usd_robot(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    pytest.importorskip("pxr")
+    source = Path(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda"
+    ).resolve()
+    monkeypatch.setattr(QFileDialog, "getOpenFileName", lambda *args: (str(source), ""))
+    bridge = _bridge(tmp_path)
+
+    response = json.loads(bridge.importOpenUsd())
+
+    assert response["ok"] is True
+    assert response["data"]["asset"]["type"] == "robot"
+    assert len(response["data"]["robotics"]["articulations"][0]["joints"]) == 2

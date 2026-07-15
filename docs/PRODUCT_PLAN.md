@@ -402,6 +402,7 @@ SimLab Desktop
 - 可再发行的外部 USD 双关节机械臂测试资产。
 - OpenUSD ArticulationRoot/RigidBody/Mass/Collision/Joint/Drive 到 RoboticsModel 的通用映射。
 - stage units、Y-up/Z-up、关节角度与惯量单位转换。
+- 正式 Import USD robot asset、项目相对缓存、manifest/report 和 Scene robotics 持久化。
 
 要实现：
 
@@ -690,7 +691,7 @@ SimLab Desktop
 | M1 Local three.js Viewport | ✅ 第一版 | 80% | WebGL viewport、orbit、选择、gizmo、缺少 snap |
 | M2 Robust Scene Editing | 🔶 基础完成 | 60% | dirty/undo/redo，缺少 hierarchy、duplicate、multi-select |
 | M3 MuJoCo Live State Sync | ✅ 第一版 | 70% | Run/Pause/Step/Reset、pose sync，缺少 clock hardening |
-| M4 Robot Import | 🔶 已开始 | 35% | USD articulation 映射已完成，项目缓存/UI/MuJoCo 待接入 |
+| M4 Robot Import | 🔶 已开始 | 45% | 外部 USD robot 可进入 Scene，层级 viewport/MuJoCo 待接入 |
 | M5 Physics Authoring | 🔶 部分完成 | 55% | primitive physics、material presets、collider debug，缺少 solver/constraints |
 | M6 Timeline & Recording | ❌ 未开始 | 0% | 录制/回放/导出 trajectory |
 | M7 Asset Pipeline | 🔶 部分完成 | 40% | OpenUSD mesh import，缺少 texture/material、asset library、thumbnails |

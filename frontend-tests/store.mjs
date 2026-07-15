@@ -43,4 +43,16 @@ store.selectActor(null);
 assert.equal(store.current.selectedActorId, null);
 assert.equal(store.current.dirty, true);
 
+const robot = { id: 'external_arm', name: 'Arm', type: 'robot', default_properties: {} };
+const robotics = {
+  version: '1.0',
+  articulations: [{
+    id: 'arm_001', name: 'Arm', root_link_id: 'base', fixed_base: true,
+    links: [], joints: [], actuators: [], sensors: [],
+  }],
+};
+store.addAsset(robot, robotics);
+assert.equal(store.current.scene.actors.at(-1).type, 'robot');
+assert.equal(store.current.scene.robotics.articulations[0].id, 'arm_001');
+
 console.log('EditorStore add/undo/redo/dirty/selection: passed');

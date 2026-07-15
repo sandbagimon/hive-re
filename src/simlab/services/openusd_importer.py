@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-import hashlib
 import json
 import math
-import re
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
+from simlab.models.robotics import RoboticsModel
 from simlab.services.openusd import ImportReport, OpenUsdStageError, load_openusd_stage
+from simlab.services.openusd.asset_cache import openusd_asset_id, upsert_asset_metadata
+from simlab.services.openusd.robot_asset_importer import import_openusd_robot_asset
 
 
 class OpenUsdImportError(RuntimeError):
@@ -26,6 +27,7 @@ class OpenUsdImportResult:
     warnings: list[str] = field(default_factory=list)
     cache_directory: Path | None = None
     report: ImportReport | None = None
+    robotics_model: RoboticsModel | None = None
 
 
 def import_openusd_asset(source: str | Path, project_root: str | Path) -> OpenUsdImportResult:
@@ -41,6 +43,24 @@ def import_openusd_asset(source: str | Path, project_root: str | Path) -> OpenUs
             item for item in stage_result.report.issues if item.severity == "error"
         )
         raise OpenUsdImportError(issue.message, report=stage_result.report)
+    if any(
+        "PhysicsArticulationRootAPI" in prim.GetAppliedSchemas()
+        for prim in stage_result.stage.Traverse()
+    ):
+        try:
+            robot = import_openusd_robot_asset(source_path, root)
+        except Exception as exc:
+            report = getattr(exc, "report", stage_result.report)
+            raise OpenUsdImportError(str(exc), report=report) from exc
+        return OpenUsdImportResult(
+            asset=robot.asset,
+            warnings=[
+                issue.message for issue in robot.report.issues if issue.severity == "warning"
+            ],
+            cache_directory=robot.cache_directory,
+            report=robot.report,
+            robotics_model=robot.model,
+        )
 
     try:
         from pxr import Gf, UsdGeom
@@ -51,7 +71,7 @@ def import_openusd_asset(source: str | Path, project_root: str | Path) -> OpenUs
 
     stage = stage_result.stage
 
-    asset_id = _asset_id(source_path)
+    asset_id = openusd_asset_id(source_path)
     cache_dir = root / "assets" / "imported" / asset_id
     cache_dir.mkdir(parents=True, exist_ok=True)
     copied_source = cache_dir / source_path.name
@@ -117,7 +137,7 @@ def import_openusd_asset(source: str | Path, project_root: str | Path) -> OpenUs
             "import_warnings": warnings,
         },
     }
-    _upsert_asset_metadata(root / "assets" / "metadata.json", asset)
+    upsert_asset_metadata(root / "assets" / "metadata.json", asset)
     return OpenUsdImportResult(
         asset=asset,
         warnings=warnings,
@@ -312,21 +332,6 @@ def _validate_mesh_data(positions: list[Any], indices: list[Any]) -> None:
     )
     if not valid_indices:
         raise OpenUsdImportError("Mesh triangle indices reference an invalid vertex.")
-
-
-def _upsert_asset_metadata(path: Path, asset: dict[str, Any]) -> None:
-    data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"assets": []}
-    assets = data.setdefault("assets", [])
-    assets[:] = [item for item in assets if item.get("id") != asset["id"]]
-    assets.append(asset)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-
-
-def _asset_id(path: Path) -> str:
-    cleaned = re.sub(r"[^a-z0-9]+", "_", path.stem.lower()).strip("_") or "asset"
-    digest = hashlib.sha256(path.read_bytes()).hexdigest()[:10]
-    return f"openusd_{cleaned}_{digest}"
 
 
 def _finite_number(value: Any) -> bool:

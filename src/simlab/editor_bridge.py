@@ -64,7 +64,17 @@ class EditorBridge(QObject):
             self.consoleMessage.emit(f"Imported OpenUSD asset: {asset['name']}")
             for warning in result.warnings:
                 self.consoleMessage.emit(f"OpenUSD import warning: {warning}")
-            return self._success({"asset": asset, "warnings": result.warnings})
+            return self._success(
+                {
+                    "asset": asset,
+                    "warnings": result.warnings,
+                    "robotics": (
+                        result.robotics_model.to_dict()
+                        if result.robotics_model is not None
+                        else None
+                    ),
+                }
+            )
         except Exception as exc:
             return self._failure(exc)
 

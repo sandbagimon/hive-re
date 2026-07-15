@@ -68,7 +68,7 @@ export class EditorStore {
     selectActor(actorId) {
         this.patch({ selectedActorId: actorId });
     }
-    addAsset(asset) {
+    addAsset(asset, robotics) {
         const scene = cloneScene(this.state.scene);
         const actor = {
             id: this.nextActorId(scene),
@@ -86,6 +86,17 @@ export class EditorStore {
             actor.properties.primitive = asset.primitive;
         }
         scene.actors.push(actor);
+        if (robotics) {
+            const existing = scene.robotics?.articulations ?? [];
+            const importedIds = new Set(robotics.articulations.map((item) => item.id));
+            scene.robotics = {
+                version: robotics.version,
+                articulations: [
+                    ...existing.filter((item) => !importedIds.has(item.id)),
+                    ...structuredClone(robotics.articulations),
+                ],
+            };
+        }
         this.commit(scene, actor.id);
         this.appendLog(`Added actor: ${actor.name}`);
     }

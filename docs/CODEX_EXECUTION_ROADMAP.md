@@ -353,7 +353,7 @@ npm run test:frontend
 
 实现证据见 `docs/iterations/2026-07-15-openusd-articulation-mapping.md`。
 
-## 13. 当前下一项具体任务
+## 13. Robot Project Import（已完成 2026-07-15）
 
 > 将 articulation importer 接入项目资产缓存与正式 Import USD RPC：复制外部源文件和可解析依赖，
 > 写入 `robotics.json`、manifest 和 Import Report，注册 `robot` asset，并让 Scene 保存/重开后保留
@@ -366,3 +366,19 @@ npm run test:frontend
 - 缺失 blocking dependency 不产生半成品 metadata；
 - 保存 scene 后移动项目目录仍能重开机器人结构；
 - 原有单 Mesh USD 导入结果和缓存格式保持兼容。
+
+实现证据见 `docs/iterations/2026-07-15-openusd-robot-project-import.md`。
+
+## 14. 当前下一项具体任务
+
+> 在 TypeScript Scene Tree 和 three.js viewport 中读取 Scene.robotics：展示 Robot/Link/Joint 层级，
+> 按 Link local transform 渲染 primitive VisualGeometry，并保持 robot actor 的 authoring transform。
+> 暂不接 MJCF/runtime，也不把 simulation pose 写回 authoring 数据。
+
+验收：
+
+- 导入外部 fixture 后 Scene Tree 展开显示 3 links 和 2 joints；
+- viewport 显示 base、upper arm、forearm，层级变换与 USD/RoboticsModel 一致；
+- robot actor translate/rotate/scale 作用于 articulation root；
+- 选择 robot/link/joint 不破坏现有 actor selection、undo/redo 和 dirty state；
+- 普通 primitive/mesh actor 渲染与编辑保持兼容。
