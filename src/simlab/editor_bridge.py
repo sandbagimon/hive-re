@@ -215,7 +215,9 @@ class EditorBridge(QObject):
             self.simulationStateChanged.emit(json.dumps(state.to_dict()))
             return self._success({"state": state.to_dict()})
         except Exception as exc:
-            return self._failure(exc)
+            session = self.simulation_service.session
+            data = {"state": session.state().to_dict()} if session is not None else None
+            return self._failure(exc, data)
 
     @Slot(str, bool, str)
     def setEditorState(self, scene_json: str, dirty: bool, current_path: str) -> None:

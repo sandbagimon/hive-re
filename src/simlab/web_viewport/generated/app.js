@@ -105,6 +105,10 @@ function renderInspector(actor, scene, simulationState) {
     const articulations = scene.robotics?.articulations.filter((item) => articulationIds?.includes(item.id)) ?? [];
     const jointStates = new Map((simulationState?.joints ?? []).map((item) => [item.id, item]));
     const actuatorStates = new Map((simulationState?.actuators ?? []).map((item) => [item.id, item]));
+    const controller = simulationState?.controller;
+    const controllerStatus = controller ? `<div class="controller-status" data-controller-status="${controller.status}">
+    <span>${controller.status.replace('_', ' ')}</span>${controller.message ? `<small>${escapeHtml(controller.message)}</small>` : ''}
+  </div>` : '';
     const jointControls = articulations.flatMap((articulation) => articulation.actuators.filter((item) => item.control_type === 'position').map((actuator) => {
         const joint = articulation.joints.find((item) => item.id === actuator.joint_id);
         if (!joint)
@@ -122,6 +126,7 @@ function renderInspector(actor, scene, simulationState) {
     })).join('');
     const robotSection = jointControls ? `
     <section class="property-group"><div class="group-heading"><h3>Joint Control</h3><button type="button" data-joint-home>Home</button></div>
+      ${controllerStatus}
       ${jointControls}
     </section>` : '';
     const sourceSection = geometry ? `
@@ -184,6 +189,8 @@ function renderInspector(actor, scene, simulationState) {
 async function sendJointTargets(targets) {
     const result = await bridge.call('setJointTargets', JSON.stringify(store.current.scene), JSON.stringify(targets));
     if (!result.ok || !result.data) {
+        if (result.data?.state)
+            store.setSimulation('paused', result.data.state);
         showToast(result.error ?? 'Joint control failed', true);
         return;
     }

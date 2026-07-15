@@ -123,6 +123,11 @@ h2 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; }
 .delete-actor { min-width: 26px; min-height: 24px; padding: 1px; color: #d58c8c; }
 .empty-state { padding: 18px 10px; color: #7f8b98; font-size: 12px; text-align: center; }
 .group-heading { display: flex; align-items: center; justify-content: space-between; }
+.controller-status { display: flex; justify-content: space-between; gap: 8px; padding: 5px 7px; margin-bottom: 5px; border-left: 3px solid #70889f; background: #252b33; color: #b6c0cb; font-size: 10px; text-transform: capitalize; }
+.controller-status small { color: #9aa5b1; text-align: right; text-transform: none; }
+.controller-status[data-controller-status="active"] { border-left-color: #58a976; }
+.controller-status[data-controller-status="timed_out"] { border-left-color: #d0a24f; }
+.controller-status[data-controller-status="fault"] { border-left-color: #d06464; }
 .joint-control { padding: 7px 0; border-top: 1px solid #303640; }
 .joint-header, .joint-state, .joint-target-row { display: flex; align-items: center; gap: 7px; }
 .joint-header { justify-content: space-between; margin-bottom: 5px; }

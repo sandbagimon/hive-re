@@ -446,7 +446,17 @@ Reset 恢复 home target；命令不修改 Scene.robotics authoring 数据。
 验收同时修复三项阻断机械臂运动的 MJCF 契约：显式声明弧度单位、排除直接相连 Link 的碰撞、
 传递 USD drive damping。实现证据见 `docs/iterations/2026-07-15-external-robot-gate.md`。
 
-## 21. 当前下一项具体任务
+## 21. Controller Safety State（已完成 2026-07-15）
 
-> 补充 controller command 原子更新、timeout/fault 状态和短时 soak test；验证异常命令不留下部分
-> ctrl 更新，控制输入中断后机械臂进入明确的安全目标。
+> 补充 controller command 原子更新和 timeout/fault 状态；验证异常命令不留下部分 ctrl 更新，
+> 启用 watchdog 后控制输入中断会恢复 Home target。
+
+SimulationState 现包含 controller status/message/command_time/timeout，Joint Control UI 会显示明确状态。
+`simulation_config.control_timeout` 默认关闭，设置正数后按仿真时间启用 watchdog。
+
+实现证据见 `docs/iterations/2026-07-15-controller-safety.md`。
+
+## 22. 当前下一项具体任务
+
+> 增加外部机械臂短时 soak test，持续执行交替 target 和 step，检查 time、qpos/qvel、Link pose、
+> actuator ctrl/force 全部有限且不越限；输出可定位的 failure context。

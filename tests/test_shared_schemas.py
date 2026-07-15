@@ -22,7 +22,9 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     assert "setJointTargets" in bridge["properties"]["rpc_methods"]["const"]
     assert "simulationStateChanged" in bridge["properties"]["events"]["const"]
     simulation_state = bridge["$defs"]["simulationState"]
-    assert {"links", "joints", "actuators"}.issubset(simulation_state["required"])
+    assert {"links", "joints", "actuators", "controller"}.issubset(
+        simulation_state["required"]
+    )
     assert "meshGeometry" in scene["$defs"]
     assert scene["properties"]["robotics"]["$ref"] == "robotics.schema.json"
     assert robotics["title"] == "SimLabRoboticsModel"

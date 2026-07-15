@@ -103,3 +103,65 @@ def test_robot_session_clamps_joint_targets_and_reset_restores_home(tmp_path) ->
     assert reset.actuators[1].ctrl == pytest.approx(-0.4)
     with pytest.raises(ValueError, match="No position actuator"):
         session.set_joint_position_targets({"joint_missing": 0.0})
+
+
+def test_robot_joint_commands_are_atomic_and_publish_fault_state(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+    )
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+    shoulder = imported.robotics_model.articulations[0].joints[0]
+    before = [state.ctrl for state in session.state().actuators]
+
+    with pytest.raises(ValueError, match="joint_missing"):
+        session.set_joint_position_targets({shoulder.id: 0.5, "joint_missing": 0.0})
+
+    fault = session.state()
+    assert [state.ctrl for state in fault.actuators] == before
+    assert fault.controller.status == "fault"
+    assert "joint_missing" in (fault.controller.message or "")
+
+
+def test_robot_control_watchdog_returns_targets_home(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+        simulation_config={"timestep": 0.01, "control_timeout": 0.05},
+    )
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+    shoulder, elbow = imported.robotics_model.articulations[0].joints
+
+    active = session.set_joint_position_targets({shoulder.id: 0.5, elbow.id: -1.0})
+    timed_out = session.step(steps=10)
+
+    assert active.controller.status == "active"
+    assert active.controller.timeout == pytest.approx(0.05)
+    assert timed_out.controller.status == "timed_out"
+    assert [state.ctrl for state in timed_out.actuators] == pytest.approx(
+        [shoulder.initial_position, elbow.initial_position]
+    )

@@ -108,3 +108,32 @@ def test_editor_bridge_sets_robot_joint_target(tmp_path: Path) -> None:
 
     assert response["ok"] is True
     assert response["data"]["state"]["actuators"][0]["ctrl"] == pytest.approx(0.5)
+
+
+def test_editor_bridge_returns_controller_fault_state(tmp_path: Path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+    )
+    bridge = _bridge(tmp_path)
+
+    response = json.loads(
+        bridge.setJointTargets(
+            json.dumps(scene.to_dict()), json.dumps({"joint_missing": 0.5})
+        )
+    )
+
+    assert response["ok"] is False
+    assert response["data"]["state"]["controller"]["status"] == "fault"

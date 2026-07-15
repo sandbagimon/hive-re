@@ -188,12 +188,20 @@ export interface ActuatorSimulationState {
   force: number;
 }
 
+export interface ControllerSimulationState {
+  status: 'ready' | 'active' | 'timed_out' | 'fault';
+  message: string | null;
+  command_time: number | null;
+  timeout: number | null;
+}
+
 export interface SimulationState {
   time: number;
   actors: ActorSimulationState[];
   links: LinkSimulationState[];
   joints: JointSimulationState[];
   actuators: ActuatorSimulationState[];
+  controller: ControllerSimulationState;
 }
 
 export interface ValidationIssue {

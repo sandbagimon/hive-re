@@ -29,7 +29,7 @@ interface AssetsPayload {
 
 interface RunPayload {
   state: SimulationState;
-  issues: ValidationIssue[];
+  issues?: ValidationIssue[];
 }
 
 const materialPresets: Record<string, Partial<PhysicsProperties>> = {
@@ -152,6 +152,10 @@ function renderInspector(
   const actuatorStates = new Map(
     (simulationState?.actuators ?? []).map((item) => [item.id, item]),
   );
+  const controller = simulationState?.controller;
+  const controllerStatus = controller ? `<div class="controller-status" data-controller-status="${controller.status}">
+    <span>${controller.status.replace('_', ' ')}</span>${controller.message ? `<small>${escapeHtml(controller.message)}</small>` : ''}
+  </div>` : '';
   const jointControls = articulations.flatMap((articulation) =>
     articulation.actuators.filter((item) => item.control_type === 'position').map((actuator) => {
       const joint = articulation.joints.find((item) => item.id === actuator.joint_id);
@@ -170,6 +174,7 @@ function renderInspector(
   ).join('');
   const robotSection = jointControls ? `
     <section class="property-group"><div class="group-heading"><h3>Joint Control</h3><button type="button" data-joint-home>Home</button></div>
+      ${controllerStatus}
       ${jointControls}
     </section>` : '';
   const sourceSection = geometry ? `
@@ -240,6 +245,7 @@ async function sendJointTargets(targets: Record<string, number>): Promise<void> 
     JSON.stringify(targets),
   );
   if (!result.ok || !result.data) {
+    if (result.data?.state) store.setSimulation('paused', result.data.state);
     showToast(result.error ?? 'Joint control failed', true);
     return;
   }

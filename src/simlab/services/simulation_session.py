@@ -49,12 +49,31 @@ class ActuatorSimulationState:
 
 
 @dataclass(slots=True)
+class ControllerSimulationState:
+    status: str = "ready"
+    message: str | None = None
+    command_time: float | None = None
+    timeout: float | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "status": self.status,
+            "message": self.message,
+            "command_time": self.command_time,
+            "timeout": self.timeout,
+        }
+
+
+@dataclass(slots=True)
 class SimulationState:
     time: float
     actors: list[ActorSimulationState]
     links: list[LinkSimulationState] = field(default_factory=list)
     joints: list[JointSimulationState] = field(default_factory=list)
     actuators: list[ActuatorSimulationState] = field(default_factory=list)
+    controller: ControllerSimulationState = field(
+        default_factory=ControllerSimulationState
+    )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -63,6 +82,7 @@ class SimulationState:
             "links": [link.to_dict() for link in self.links],
             "joints": [joint.to_dict() for joint in self.joints],
             "actuators": [actuator.to_dict() for actuator in self.actuators],
+            "controller": self.controller.to_dict(),
         }
 
 
@@ -90,11 +110,17 @@ class MuJoCoSimulationSession:
         self._body_ids = self._map_actor_bodies(scene)
         self._link_ids, self._joint_ids, self._actuator_ids = self._map_robotics(scene)
         self._joint_position_actuators = self._map_joint_position_actuators(scene)
+        self._control_timeout = self._read_control_timeout(scene)
+        self._controller_status = "ready"
+        self._controller_message: str | None = None
+        self._last_command_time: float | None = None
         self._reset_to_home()
+        self._home_controls = self.data.ctrl.copy()
         mujoco.mj_forward(self.model, self.data)
 
     def step(self, steps: int = 1) -> SimulationState:
         for _ in range(max(steps, 1)):
+            self._apply_control_watchdog()
             self._mujoco.mj_step(self.model, self.data)
         return self.state()
 
@@ -104,17 +130,18 @@ class MuJoCoSimulationSession:
         return self.state()
 
     def set_joint_position_targets(self, targets: dict[str, float]) -> SimulationState:
-        for joint_id, target in targets.items():
-            actuator_id = self._joint_position_actuators.get(joint_id)
-            if actuator_id is None:
-                raise ValueError(f"No position actuator is mapped to joint: {joint_id}")
-            value = float(target)
-            if not math.isfinite(value):
-                raise ValueError(f"Joint target must be finite: {joint_id}")
-            if self.model.actuator_ctrllimited[actuator_id]:
-                lower, upper = self.model.actuator_ctrlrange[actuator_id]
-                value = max(float(lower), min(float(upper), value))
+        try:
+            updates = self._validate_joint_position_targets(targets)
+        except (TypeError, ValueError) as exc:
+            self._controller_status = "fault"
+            self._controller_message = str(exc)
+            raise
+        for actuator_id, value in updates:
             self.data.ctrl[actuator_id] = value
+        if updates:
+            self._controller_status = "active"
+            self._controller_message = None
+            self._last_command_time = float(self.data.time)
         return self.state()
 
     def state(self) -> SimulationState:
@@ -157,6 +184,12 @@ class MuJoCoSimulationSession:
             links=link_states,
             joints=joint_states,
             actuators=actuator_states,
+            controller=ControllerSimulationState(
+                status=self._controller_status,
+                message=self._controller_message,
+                command_time=self._last_command_time,
+                timeout=self._control_timeout or None,
+            ),
         )
 
     def _map_actor_bodies(self, scene: Scene) -> dict[str, int]:
@@ -206,6 +239,45 @@ class MuJoCoSimulationSession:
             self._mujoco.mj_resetDataKeyframe(self.model, self.data, key_id)
         else:
             self._mujoco.mj_resetData(self.model, self.data)
+        self._controller_status = "ready"
+        self._controller_message = None
+        self._last_command_time = None
+
+    def _validate_joint_position_targets(
+        self, targets: dict[str, float]
+    ) -> list[tuple[int, float]]:
+        updates: list[tuple[int, float]] = []
+        for joint_id, target in targets.items():
+            actuator_id = self._joint_position_actuators.get(joint_id)
+            if actuator_id is None:
+                raise ValueError(f"No position actuator is mapped to joint: {joint_id}")
+            value = float(target)
+            if not math.isfinite(value):
+                raise ValueError(f"Joint target must be finite: {joint_id}")
+            if self.model.actuator_ctrllimited[actuator_id]:
+                lower, upper = self.model.actuator_ctrlrange[actuator_id]
+                value = max(float(lower), min(float(upper), value))
+            updates.append((actuator_id, value))
+        return updates
+
+    def _apply_control_watchdog(self) -> None:
+        if (
+            self._control_timeout <= 0
+            or self._controller_status != "active"
+            or self._last_command_time is None
+            or self.data.time - self._last_command_time < self._control_timeout
+        ):
+            return
+        self.data.ctrl[:] = self._home_controls
+        self._controller_status = "timed_out"
+        self._controller_message = "Joint command timed out; targets returned to Home."
+
+    @staticmethod
+    def _read_control_timeout(scene: Scene) -> float:
+        value = float(scene.simulation_config.get("control_timeout", 0.0))
+        if not math.isfinite(value) or value < 0:
+            raise ValueError("simulation_config.control_timeout must be finite and >= 0")
+        return value
 
     def _map_joint_position_actuators(self, scene: Scene) -> dict[str, int]:
         result: dict[str, int] = {}

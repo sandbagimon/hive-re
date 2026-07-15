@@ -67,9 +67,20 @@
           }
         },
         "joints": { "type": "array" },
-        "actuators": { "type": "array" }
+        "actuators": { "type": "array" },
+        "controller": {
+          "type": "object",
+          "properties": {
+            "status": { "enum": ["ready", "active", "timed_out", "fault"] },
+            "message": { "type": ["string", "null"] },
+            "command_time": { "type": ["number", "null"] },
+            "timeout": { "type": ["number", "null"] }
+          },
+          "required": ["status", "message", "command_time", "timeout"],
+          "additionalProperties": false
+        }
       },
-      "required": ["time", "actors", "links", "joints", "actuators"],
+      "required": ["time", "actors", "links", "joints", "actuators", "controller"],
       "additionalProperties": false
     }
   },
