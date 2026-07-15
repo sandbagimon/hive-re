@@ -58,6 +58,10 @@ class EditorBridge(QObject):
         )
         if not path:
             return self._failure("Cancelled")
+        return self.importOpenUsdPath(path)
+
+    @Slot(str, result=str)
+    def importOpenUsdPath(self, path: str) -> str:
         try:
             result = import_openusd_asset(path, self.project_root)
             asset = self._enrich_asset(result.asset)

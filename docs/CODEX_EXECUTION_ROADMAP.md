@@ -485,7 +485,15 @@ Pause/Resume 会清空墙钟间隙，callback 不足一个 timestep 时只发布
 
 实现证据见 `docs/iterations/2026-07-15-robot-reset-state-sync.md`。
 
-## 26. 当前下一项具体任务
+## 26. Path-Based Robot Bridge Workflow（已完成 2026-07-15）
 
-> 建立无需原生文件对话框的可测试 Import USD path RPC，并添加完整 Bridge workflow：外部路径导入、
-> actor 创建、Run、Joint target、fixed-clock frame、Pause、Reset，覆盖真实 UI 使用的 RPC 边界。
+> `importOpenUsdPath` 提供无需原生文件对话框的可测试导入边界；完整 Bridge workflow 已覆盖外部
+> 路径导入、actor 创建、Run、Joint target、fixed-clock frame、Pause 和 Reset。
+
+原有 Import USD 按钮继续使用文件对话框，但选择路径后复用相同 RPC 实现。实现证据见
+`docs/iterations/2026-07-15-robot-bridge-workflow.md`。
+
+## 27. 当前下一项具体任务
+
+> 增加关节 Jog 控制：为选中 robot 提供小步进减/增按钮和可配置 step size，按当前 actuator ctrl
+> 计算新目标并复用 setJointTargets；支持键盘快捷键时避免输入框焦点冲突。

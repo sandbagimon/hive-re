@@ -91,6 +91,7 @@
       "const": [
         "getAssets",
         "importOpenUsd",
+        "importOpenUsdPath",
         "getVisualGeometry",
         "openProject",
         "saveProject",

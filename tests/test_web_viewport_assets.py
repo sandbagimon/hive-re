@@ -35,6 +35,7 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "store.undo()" in app
     assert "store.selectActor" in app
     assert "importOpenUsd" in app
+    assert "importOpenUsdPath" in (root / "ts" / "types.ts").read_text(encoding="utf-8")
     assert "getVisualGeometry" in app
     assert "new THREE.WireframeGeometry(mesh.geometry)" in viewport
     assert "onActorTransformChanged" in viewport

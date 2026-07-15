@@ -81,6 +81,69 @@ def test_editor_bridge_imports_external_usd_robot(
     assert len(response["data"]["robotics"]["articulations"][0]["joints"]) == 2
 
 
+def test_editor_bridge_external_robot_rpc_workflow(tmp_path: Path) -> None:
+    pytest.importorskip("mujoco")
+    source = Path(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda"
+    ).resolve()
+    bridge = _bridge(tmp_path)
+    wall_time = [100.0]
+    bridge.simulation_service.clock = lambda: wall_time[0]
+    statuses: list[str] = []
+    states: list[dict] = []
+    bridge.simulationStatusChanged.connect(statuses.append)
+    bridge.simulationStateChanged.connect(lambda value: states.append(json.loads(value)))
+
+    imported = json.loads(bridge.importOpenUsdPath(str(source)))
+    assert imported["ok"] is True
+    asset = imported["data"]["asset"]
+    scene = Scene.from_dict(
+        {
+            "version": "1.0",
+            "name": "Bridge Robot Workflow",
+            "units": "meters",
+            "actors": [
+                {
+                    "id": "actor_external_arm",
+                    "name": "External Arm",
+                    "type": "robot",
+                    "asset_id": asset["id"],
+                    "properties": asset["default_properties"],
+                }
+            ],
+            "robotics": imported["data"]["robotics"],
+            "simulation_config": {"timestep": 0.01, "max_catch_up_steps": 4},
+        }
+    )
+    articulation = scene.robotics.articulations[0]
+    shoulder, elbow = articulation.joints
+
+    started = json.loads(bridge.runSimulation(json.dumps(scene.to_dict())))
+    commanded = json.loads(
+        bridge.setJointTargets(
+            json.dumps(scene.to_dict()),
+            json.dumps({shoulder.id: 0.6, elbow.id: -1.0}),
+        )
+    )
+    for _ in range(40):
+        wall_time[0] += 0.02
+        bridge._advance_simulation()
+    paused = json.loads(bridge.pauseSimulation())
+    reset = json.loads(bridge.resetSimulation())
+
+    assert started["ok"] is True
+    assert commanded["data"]["state"]["controller"]["status"] == "active"
+    assert paused["ok"] is True
+    assert states[-2]["time"] == pytest.approx(0.8)
+    assert abs(states[-2]["joints"][0]["qpos"]) > 0.1
+    assert reset["data"]["state"]["time"] == 0.0
+    assert reset["data"]["state"]["joints"][0]["qpos"] == pytest.approx(
+        shoulder.initial_position
+    )
+    assert statuses[0] == "running"
+    assert statuses[-2:] == ["paused", "paused"]
+
+
 def test_editor_bridge_sets_robot_joint_target(tmp_path: Path) -> None:
     pytest.importorskip("mujoco")
     imported = import_openusd_asset(

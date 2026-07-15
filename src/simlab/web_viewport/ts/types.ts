@@ -256,6 +256,7 @@ export interface QtSignal<T extends unknown[]> {
 export interface PythonBridgeObject {
   getAssets(callback: (result: string) => void): void;
   importOpenUsd(callback: (result: string) => void): void;
+  importOpenUsdPath(path: string, callback: (result: string) => void): void;
   getVisualGeometry(cachePath: string, callback: (result: string) => void): void;
   openProject(callback: (result: string) => void): void;
   saveProject(sceneJson: string, saveAs: boolean, callback: (result: string) => void): void;
