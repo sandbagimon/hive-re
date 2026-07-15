@@ -18,6 +18,7 @@ from simlab.services.primitive_geometry import (
 def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> str:
     """Convert a SimLab scene into an MJCF XML string."""
     root = ET.Element("mujoco", {"model": scene.name})
+    ET.SubElement(root, "compiler", {"angle": "radian"})
     option = ET.SubElement(root, "option")
     option.set("timestep", str(scene.simulation_config.get("timestep", 0.01)))
 
@@ -49,6 +50,7 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
     worldbody = ET.SubElement(root, "worldbody")
     ET.SubElement(worldbody, "light", {"name": "key_light", "pos": "0 0 4"})
     robot_actuators: list[tuple[str, Any, float]] = []
+    robot_contact_excludes: list[tuple[str, str]] = []
     home_positions: list[float] = []
 
     for actor in scene.actors:
@@ -133,7 +135,22 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                         ),
                     },
                 )
-                _append_articulation(wrapper, articulation, robot_actuators, home_positions)
+                _append_articulation(
+                    wrapper,
+                    articulation,
+                    robot_actuators,
+                    robot_contact_excludes,
+                    home_positions,
+                )
+
+    if robot_contact_excludes:
+        contact_element = ET.SubElement(root, "contact")
+        for parent_name, child_name in robot_contact_excludes:
+            ET.SubElement(
+                contact_element,
+                "exclude",
+                {"body1": parent_name, "body2": child_name},
+            )
 
     if robot_actuators:
         actuator_element = ET.SubElement(root, "actuator")
@@ -155,6 +172,8 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                 )
             if actuator.control_type == "position":
                 attrs["kp"] = str(actuator.stiffness)
+                if actuator.damping > 0:
+                    attrs["kv"] = str(actuator.damping)
                 ET.SubElement(actuator_element, "position", attrs)
             elif actuator.control_type == "velocity":
                 attrs["kv"] = str(actuator.damping)
@@ -217,6 +236,7 @@ def _append_articulation(
     parent: Any,
     articulation: Articulation,
     exported_actuators: list[tuple[str, Any, float]],
+    contact_excludes: list[tuple[str, str]],
     home_positions: list[float],
 ) -> None:
     links = {link.id: link for link in articulation.links}
@@ -252,6 +272,10 @@ def _append_articulation(
             ET.SubElement(body, "joint", attrs)
             joint_names[joint.id] = joint_name
             home_positions.append(joint.initial_position)
+        if link.parent_link_id is not None:
+            contact_excludes.append(
+                (_xml_name(link.parent_link_id), _xml_name(link.id))
+            )
         if link.inertial is not None:
             inertial_attrs = {
                 "mass": str(link.inertial.mass),

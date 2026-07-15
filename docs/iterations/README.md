@@ -50,3 +50,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-15 Runtime Link Viewport Sync](2026-07-15-runtime-link-viewport-sync.md)
 - [2026-07-15 Joint Position Command](2026-07-15-joint-position-command.md)
 - [2026-07-15 Joint Control UI](2026-07-15-joint-control-ui.md)
+- [2026-07-15 External Robot Gate](2026-07-15-external-robot-gate.md)

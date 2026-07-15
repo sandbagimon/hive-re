@@ -438,8 +438,15 @@ Reset 恢复 home target；命令不修改 Scene.robotics authoring 数据。
 
 实现证据见 `docs/iterations/2026-07-15-joint-control-ui.md`。
 
-## 20. 当前下一项具体任务
+## 20. External Robot Gate 1 Physics Workflow（已完成 2026-07-15）
 
-> 完成 Gate 1 端到端验收：通过真实 Import USD 选择外部机械臂，操作 shoulder/elbow，持续 step
-> 并验证 qpos/link pose 变化、限位、Home、Pause/Reset、保存重开；补充 controller timeout/exception
-> safety 和短时 soak test。
+> 从外部 USD 文件开始，完成缓存、scene 保存重开、preflight、MJCF 编译、shoulder/elbow target、
+> 持续 step、link pose、限位和 Reset home 的自动化验收。
+
+验收同时修复三项阻断机械臂运动的 MJCF 契约：显式声明弧度单位、排除直接相连 Link 的碰撞、
+传递 USD drive damping。实现证据见 `docs/iterations/2026-07-15-external-robot-gate.md`。
+
+## 21. 当前下一项具体任务
+
+> 补充 controller command 原子更新、timeout/fault 状态和短时 soak test；验证异常命令不留下部分
+> ctrl 更新，控制输入中断后机械臂进入明确的安全目标。

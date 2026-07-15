@@ -217,6 +217,7 @@ def test_external_usd_robot_exports_compilable_articulation(tmp_path) -> None:
     root = ET.fromstring(xml)
     joints = root.findall(".//joint")
     actuators = root.findall("./actuator/position")
+    contact_excludes = root.findall("./contact/exclude")
 
     assert len(joints) == 2
     assert len(root.findall(".//freejoint")) == 0
@@ -225,7 +226,16 @@ def test_external_usd_robot_exports_compilable_articulation(tmp_path) -> None:
         [-1.57079632679, 1.57079632679]
     )
     assert len(actuators) == 2
+    assert len(contact_excludes) == 2
+    assert {
+        (item.attrib["body1"], item.attrib["body2"])
+        for item in contact_excludes
+    } == {
+        (joint.parent_link_id, joint.child_link_id)
+        for joint in imported.robotics_model.articulations[0].joints
+    }
     assert actuators[0].attrib["kp"] == "120.0"
+    assert actuators[0].attrib["kv"] == "12.0"
     assert [float(value) for value in actuators[0].attrib["ctrlrange"].split()] == pytest.approx(
         [-1.5707963267948966, 1.5707963267948966]
     )
@@ -233,6 +243,9 @@ def test_external_usd_robot_exports_compilable_articulation(tmp_path) -> None:
     assert model.njnt == 2
     assert model.nu == 2
     assert model.nbody == 5
+    assert model.jnt_range[0] == pytest.approx(
+        [-1.5707963267948966, 1.5707963267948966]
+    )
     assert model.key_qpos[0, 1] == pytest.approx(-0.4)
 
 
