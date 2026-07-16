@@ -904,8 +904,20 @@ Store typed sample 逐字段一致，并确认运动角速度非零；Reset 后 
 
 实现证据见 `docs/iterations/2026-07-16-qt-imu-inspector.md`。
 
-## 66. 当前下一项具体任务
+## 66. Typed IMU Recording Contract（已完成 2026-07-16）
 
 > 扩展 Recording Contract 为 typed sensor events：保留现有 joint_state columns，并为 IMU 增加 link_id、
 > time、sequence、orientation xyzw、angular_velocity xyz、linear_acceleration xyz stable columns；Recorder
-> 接收 joint_state/imu union，Session 允许 IMU sensor_ids，UI checkbox 与 Qt JSON/CSV E2E 同步扩展。
+> 接收 joint_state/imu union，并保持旧 joint sensor payload 可迁移。
+
+Recording 根级已增加 sensor_types；sample.sensors 为带 sensor_type 的 joint_state/imu union。IMU CSV 每个
+stable ID 固定 13 列，未 emitted 行全部为空；旧 payload 缺 sensor_types/sensor_type 时从内容推断为
+joint_state。Recorder 校验 sensor IDs/types 完全匹配并验证所有 vector 数值有限。
+
+实现证据见 `docs/iterations/2026-07-16-typed-imu-recording-contract.md`。
+
+## 67. 当前下一项具体任务
+
+> 接入 IMU Recording Runtime/UI：Session 对 selected sensor_ids 传入类型映射，合并 joint/imu emitted tuple；
+> Recording Panel 展示两类 sensor checkbox。扩展 Qt E2E 同时选择 joint-state 与 IMU，验证各自 50Hz
+> cadence、event count、JSON typed payload 和 CSV 5+13 stable columns。

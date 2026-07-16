@@ -5,17 +5,20 @@ from typing import TYPE_CHECKING
 
 from simlab.models.recording import (
     ActuatorRecordingState,
+    ImuRecordingState,
     JointRecordingState,
     JointStateRecording,
     JointStateSample,
     RecordingManifest,
     SensorRecordingState,
+    TypedSensorRecordingState,
 )
+from simlab.services.imu_sensors import ImuSensorSample
+from simlab.services.joint_state_sensors import JointStateSensorSample
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from simlab.services.joint_state_sensors import JointStateSensorSample
     from simlab.services.simulation_session import SimulationState
 
 
@@ -36,6 +39,7 @@ class JointStateRecorder:
         joint_ids: list[str],
         actuator_ids: list[str],
         sensor_ids: list[str] | None = None,
+        sensor_types: dict[str, str] | None = None,
         timestep: float,
         scene_version: str,
         engine_version: str,
@@ -53,6 +57,18 @@ class JointStateRecorder:
             raise ValueError("Recording actuator IDs must be unique")
         if len(selected_sensor_ids) != len(set(selected_sensor_ids)):
             raise ValueError("Recording sensor IDs must be unique")
+        selected_sensor_types = (
+            {sensor_id: "joint_state" for sensor_id in selected_sensor_ids}
+            if sensor_types is None
+            else dict(sensor_types)
+        )
+        if set(selected_sensor_types) != set(selected_sensor_ids):
+            raise ValueError("Recording sensor_types keys must match sensor_ids")
+        if any(
+            sensor_type not in {"joint_state", "imu"}
+            for sensor_type in selected_sensor_types.values()
+        ):
+            raise ValueError("Recording sensor type must be 'joint_state' or 'imu'")
         if not math.isfinite(timestep) or timestep <= 0:
             raise ValueError("Recording timestep must be finite and greater than zero")
         self.recording = JointStateRecording(
@@ -65,6 +81,7 @@ class JointStateRecorder:
             joint_ids=list(joint_ids),
             actuator_ids=list(actuator_ids),
             sensor_ids=list(selected_sensor_ids),
+            sensor_types=selected_sensor_types,  # type: ignore[arg-type]
         )
         self.active = True
         return self.recording
@@ -72,7 +89,7 @@ class JointStateRecorder:
     def capture(
         self,
         state: SimulationState,
-        emitted_sensors: Sequence[JointStateSensorSample] = (),
+        emitted_sensors: Sequence[JointStateSensorSample | ImuSensorSample] = (),
     ) -> bool:
         recording = self._require_recording()
         if not self.active:
@@ -107,13 +124,7 @@ class JointStateRecorder:
                 for actuator_id in recording.actuator_ids
             },
             sensors={
-                sensor.sensor_id: SensorRecordingState(
-                    joint_id=sensor.joint_id,
-                    time=float(sensor.time),
-                    sequence=int(sensor.sequence),
-                    qpos=float(sensor.qpos),
-                    qvel=float(sensor.qvel),
-                )
+                sensor.sensor_id: self._record_sensor(sensor)
                 for sensor in emitted_sensors
                 if sensor.sensor_id in recording.sensor_ids
             },
@@ -123,15 +134,43 @@ class JointStateRecorder:
         values.extend(
             value for item in sample.actuators.values() for value in (item.ctrl, item.force)
         )
-        values.extend(
-            value
-            for item in sample.sensors.values()
-            for value in (item.time, item.qpos, item.qvel)
-        )
+        for item in sample.sensors.values():
+            if isinstance(item, SensorRecordingState):
+                values.extend((item.time, item.qpos, item.qvel))
+            else:
+                values.extend(
+                    (
+                        item.time,
+                        *item.orientation,
+                        *item.angular_velocity,
+                        *item.linear_acceleration,
+                    )
+                )
         if not all(math.isfinite(value) for value in values):
             raise ValueError("Recording sample values must be finite")
         recording.samples.append(sample)
         return True
+
+    @staticmethod
+    def _record_sensor(
+        sensor: JointStateSensorSample | ImuSensorSample,
+    ) -> TypedSensorRecordingState:
+        if isinstance(sensor, ImuSensorSample):
+            return ImuRecordingState(
+                link_id=sensor.link_id,
+                time=float(sensor.time),
+                sequence=int(sensor.sequence),
+                orientation=sensor.orientation,
+                angular_velocity=sensor.angular_velocity,
+                linear_acceleration=sensor.linear_acceleration,
+            )
+        return SensorRecordingState(
+            joint_id=sensor.joint_id,
+            time=float(sensor.time),
+            sequence=int(sensor.sequence),
+            qpos=float(sensor.qpos),
+            qvel=float(sensor.qvel),
+        )
 
     def stop(self) -> JointStateRecording:
         recording = self._require_recording()

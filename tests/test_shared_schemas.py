@@ -61,8 +61,11 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     assert recording["properties"]["manifest"]["properties"]["engine"]["const"] == (
         "mujoco"
     )
-    assert "sensorState" in recording["$defs"]
+    assert {"sensorState", "jointSensorState", "imuSensorState"}.issubset(
+        recording["$defs"]
+    )
     assert "sensor_ids" in recording["required"]
+    assert "sensor_types" in recording["required"]
     assert trajectory["properties"]["keyframes"]["minItems"] == 2
     assert {"link", "joint", "actuator", "sensor", "collider", "inertial"}.issubset(
         robotics["$defs"]

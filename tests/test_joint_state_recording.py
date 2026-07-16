@@ -4,6 +4,7 @@ import io
 import pytest
 
 from simlab.models.recording import JointStateRecording
+from simlab.services.imu_sensors import ImuSensorSample
 from simlab.services.joint_state_recorder import JointStateRecorder
 from simlab.services.joint_state_sensors import JointStateSensorSample
 from simlab.services.simulation_session import (
@@ -102,6 +103,69 @@ def test_joint_state_recording_exports_only_emitted_sensor_samples() -> None:
     assert rows[2][-5:] == ["shoulder", "0.02", "1", "0.2", "1.5"]
 
 
+def test_recording_round_trip_exports_emitted_imu_vector_columns() -> None:
+    recorder = JointStateRecorder()
+    recorder.start(
+        name="IMU Run",
+        joint_ids=[],
+        actuator_ids=[],
+        sensor_ids=["forearm_imu"],
+        sensor_types={"forearm_imu": "imu"},
+        timestep=0.01,
+        scene_version="1.0",
+        engine_version="3.3.7",
+    )
+    event = ImuSensorSample(
+        sensor_id="forearm_imu",
+        link_id="forearm",
+        time=0.02,
+        sequence=1,
+        orientation=(0.0, 0.2, 0.0, 0.979795897),
+        angular_velocity=(0.1, 1.5, -0.2),
+        linear_acceleration=(2.0, 0.0, 9.5),
+    )
+
+    recorder.capture(_state(0.01))
+    recorder.capture(_state(0.02), [event])
+    recording = recorder.stop()
+    restored = JointStateRecording.from_dict(recording.to_dict())
+    rows = list(csv.reader(io.StringIO(restored.to_csv())))
+
+    assert restored.sensor_types == {"forearm_imu": "imu"}
+    assert restored.to_dict() == recording.to_dict()
+    assert rows[0][-13:] == [
+        "sensor.forearm_imu.link_id",
+        "sensor.forearm_imu.time",
+        "sensor.forearm_imu.sequence",
+        "sensor.forearm_imu.orientation.x",
+        "sensor.forearm_imu.orientation.y",
+        "sensor.forearm_imu.orientation.z",
+        "sensor.forearm_imu.orientation.w",
+        "sensor.forearm_imu.angular_velocity.x",
+        "sensor.forearm_imu.angular_velocity.y",
+        "sensor.forearm_imu.angular_velocity.z",
+        "sensor.forearm_imu.linear_acceleration.x",
+        "sensor.forearm_imu.linear_acceleration.y",
+        "sensor.forearm_imu.linear_acceleration.z",
+    ]
+    assert rows[1][-13:] == [""] * 13
+    assert rows[2][-13:] == [
+        "forearm",
+        "0.02",
+        "1",
+        "0.0",
+        "0.2",
+        "0.0",
+        "0.979795897",
+        "0.1",
+        "1.5",
+        "-0.2",
+        "2.0",
+        "0.0",
+        "9.5",
+    ]
+
+
 def test_joint_state_recording_reads_legacy_payload_without_sensors() -> None:
     recorder = _recorder()
     recorder.capture(_state(0.0))
@@ -114,6 +178,42 @@ def test_joint_state_recording_reads_legacy_payload_without_sensors() -> None:
 
     assert restored.sensor_ids == []
     assert restored.samples[0].sensors == {}
+
+
+def test_recording_infers_legacy_joint_sensor_type() -> None:
+    recorder = JointStateRecorder()
+    recorder.start(
+        name="Legacy Sensor",
+        joint_ids=[],
+        actuator_ids=[],
+        sensor_ids=["shoulder_state"],
+        timestep=0.01,
+        scene_version="1.0",
+        engine_version="3.3.7",
+    )
+    recorder.capture(
+        _state(0.01),
+        [
+            JointStateSensorSample(
+                sensor_id="shoulder_state",
+                joint_id="shoulder",
+                time=0.01,
+                sequence=1,
+                qpos=0.2,
+                qvel=1.0,
+            )
+        ],
+    )
+    payload = recorder.stop().to_dict()
+    payload.pop("sensor_types")
+    payload["samples"][0]["sensors"]["shoulder_state"].pop("sensor_type")
+
+    restored = JointStateRecording.from_dict(payload)
+
+    assert restored.sensor_types == {"shoulder_state": "joint_state"}
+    assert restored.samples[0].sensors["shoulder_state"].to_dict()["sensor_type"] == (
+        "joint_state"
+    )
 
 
 def test_joint_state_recorder_stops_at_sample_limit() -> None:
@@ -166,6 +266,13 @@ def test_joint_state_recorder_rejects_non_increasing_time() -> None:
             "joint_ids": [],
             "actuator_ids": [],
             "sensor_ids": ["sensor", "sensor"],
+        },
+        {
+            "name": "Mismatched Sensor Types",
+            "joint_ids": [],
+            "actuator_ids": [],
+            "sensor_ids": ["sensor"],
+            "sensor_types": {},
         },
     ],
 )

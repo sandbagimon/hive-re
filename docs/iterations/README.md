@@ -96,3 +96,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-16 MJCF IMU Export](2026-07-16-mjcf-imu-export.md)
 - [2026-07-16 MuJoCo IMU Runtime](2026-07-16-mujoco-imu-runtime.md)
 - [2026-07-16 Qt IMU Inspector](2026-07-16-qt-imu-inspector.md)
+- [2026-07-16 Typed IMU Recording Contract](2026-07-16-typed-imu-recording-contract.md)

@@ -21,17 +21,38 @@
       "required": ["ctrl", "force"],
       "additionalProperties": false
     },
-    "sensorState": {
+    "jointSensorState": {
       "type": "object",
       "properties": {
+        "sensor_type": { "const": "joint_state" },
         "joint_id": { "type": "string", "minLength": 1 },
         "time": { "type": "number", "minimum": 0 },
         "sequence": { "type": "integer", "minimum": 0 },
         "qpos": { "type": "number" },
         "qvel": { "type": "number" }
       },
-      "required": ["joint_id", "time", "sequence", "qpos", "qvel"],
+      "required": ["sensor_type", "joint_id", "time", "sequence", "qpos", "qvel"],
       "additionalProperties": false
+    },
+    "imuSensorState": {
+      "type": "object",
+      "properties": {
+        "sensor_type": { "const": "imu" },
+        "link_id": { "type": "string", "minLength": 1 },
+        "time": { "type": "number", "minimum": 0 },
+        "sequence": { "type": "integer", "minimum": 0 },
+        "orientation": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 },
+        "angular_velocity": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+        "linear_acceleration": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+      },
+      "required": ["sensor_type", "link_id", "time", "sequence", "orientation", "angular_velocity", "linear_acceleration"],
+      "additionalProperties": false
+    },
+    "sensorState": {
+      "oneOf": [
+        { "$ref": "#/$defs/jointSensorState" },
+        { "$ref": "#/$defs/imuSensorState" }
+      ]
     },
     "sample": {
       "type": "object",
@@ -72,9 +93,13 @@
     "joint_ids": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
     "actuator_ids": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
     "sensor_ids": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "sensor_types": {
+      "type": "object",
+      "additionalProperties": { "enum": ["joint_state", "imu"] }
+    },
     "limit_reached": { "type": "boolean" },
     "samples": { "type": "array", "items": { "$ref": "#/$defs/sample" } }
   },
-  "required": ["version", "name", "manifest", "joint_ids", "actuator_ids", "sensor_ids", "limit_reached", "samples"],
+  "required": ["version", "name", "manifest", "joint_ids", "actuator_ids", "sensor_ids", "sensor_types", "limit_reached", "samples"],
   "additionalProperties": false
 }
