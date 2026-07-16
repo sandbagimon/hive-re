@@ -20,6 +20,7 @@ import {
   applySimulationState,
   configureViewport,
   selectViewportActor,
+  selectViewportLink,
   setViewportScene,
 } from './viewport.js';
 
@@ -44,6 +45,7 @@ const store = new EditorStore();
 let bridge = new EditorBridgeClient(null);
 let previousSceneJson = '';
 let previousSelectedActorId: string | null = null;
+let previousSelectedJointId: string | null = null;
 let previousSimulationState: SimulationState | null = null;
 let syncSnapshot = '';
 let renderSnapshot = '';
@@ -87,7 +89,11 @@ function renderAssets(assets: AssetMetadata[]): void {
   }
 }
 
-function renderSceneTree(scene: Scene, selectedActorId: string | null): void {
+function renderSceneTree(
+  scene: Scene,
+  selectedActorId: string | null,
+  selectedJointId: string | null,
+): void {
   element('actor-count').textContent = String(scene.actors.length);
   const tree = element('scene-tree');
   tree.innerHTML = scene.actors.length ? scene.actors.map((actor) => {
@@ -102,22 +108,29 @@ function renderSceneTree(scene: Scene, selectedActorId: string | null): void {
             <span class="item-icon"></span><span class="item-label">${escapeHtml(link.name)}</span>
           </div>`).join('')}
         ${articulation.joints.map((joint) => `
-          <div class="tree-subitem joint" title="${escapeHtml(joint.id)}">
+          <button class="tree-subitem joint ${joint.id === selectedJointId ? 'selected' : ''}" type="button" title="${escapeHtml(joint.id)}" data-joint-id="${escapeHtml(joint.id)}" data-owner-actor-id="${escapeHtml(actor.id)}">
             <span class="item-icon"></span><span class="item-label">${escapeHtml(joint.name)}</span>
-          </div>`).join('')}
+          </button>`).join('')}
       </div>`).join('');
     return `
-    <button class="tree-item ${actor.id === selectedActorId ? 'selected' : ''}" type="button" data-actor-id="${escapeHtml(actor.id)}">
+    <button class="tree-item ${actor.id === selectedActorId && selectedJointId === null ? 'selected' : ''}" type="button" data-actor-row data-actor-id="${escapeHtml(actor.id)}">
       <span class="item-icon"></span>
       <span class="item-label">${escapeHtml(actor.name)}</span>
       <span class="delete-actor" data-delete-id="${escapeHtml(actor.id)}" title="Delete">×</span>
     </button>${robotRows}`;
   }).join('') : '<div class="empty-state">Scene is empty</div>';
-  for (const button of tree.querySelectorAll<HTMLButtonElement>('[data-actor-id]')) {
+  for (const button of tree.querySelectorAll<HTMLButtonElement>('[data-actor-row]')) {
     button.addEventListener('click', (event) => {
       const deleteTarget = (event.target as HTMLElement).closest<HTMLElement>('[data-delete-id]');
       if (deleteTarget?.dataset.deleteId) store.deleteActor(deleteTarget.dataset.deleteId);
       else store.selectActor(button.dataset.actorId ?? null);
+    });
+  }
+  for (const button of tree.querySelectorAll<HTMLButtonElement>('[data-joint-id]')) {
+    button.addEventListener('click', () => {
+      const actorId = button.dataset.ownerActorId;
+      const jointId = button.dataset.jointId;
+      if (actorId && jointId) store.selectJoint(actorId, jointId);
     });
   }
 }
@@ -135,6 +148,7 @@ function renderInspector(
   actor: Actor | undefined,
   scene: Scene,
   simulationState: SimulationState | null,
+  selectedJointId: string | null,
 ): void {
   const inspector = element('property-inspector');
   if (!actor) {
@@ -148,6 +162,8 @@ function renderInspector(
   const articulations = scene.robotics?.articulations.filter(
     (item) => articulationIds?.includes(item.id),
   ) ?? [];
+  const selectedJoint = articulations.flatMap((item) => item.joints)
+    .find((item) => item.id === selectedJointId);
   const jointStates = new Map((simulationState?.joints ?? []).map((item) => [item.id, item]));
   const actuatorStates = new Map(
     (simulationState?.actuators ?? []).map((item) => [item.id, item]),
@@ -160,7 +176,10 @@ function renderInspector(
     <small data-controller-message>${controller.message ? escapeHtml(controller.message) : ''}</small>
   </div>`;
   const jointControls = articulations.flatMap((articulation) =>
-    articulation.actuators.filter((item) => item.control_type === 'position').map((actuator) => {
+    articulation.actuators
+      .filter((item) => item.control_type === 'position')
+      .filter((item) => selectedJointId === null || item.joint_id === selectedJointId)
+      .map((actuator) => {
       const joint = articulation.joints.find((item) => item.id === actuator.joint_id);
       if (!joint) return '';
       const state = jointStates.get(joint.id);
@@ -188,7 +207,26 @@ function renderInspector(
       <div class="property-row"><label>Source</label><input type="text" value="${escapeHtml(geometry.source)}" title="${escapeHtml(geometry.source)}" disabled></div>
       <div class="property-row"><label>Collider</label><input type="text" value="Mesh" disabled></div>
     </section>` : '';
-  inspector.innerHTML = `
+  const selectedJointState = selectedJoint ? jointStates.get(selectedJoint.id) : undefined;
+  const selectedArticulation = selectedJoint
+    ? articulations.find((item) => item.joints.some((joint) => joint.id === selectedJoint.id))
+    : undefined;
+  const parentLink = selectedArticulation?.links.find(
+    (item) => item.id === selectedJoint?.parent_link_id,
+  );
+  const childLink = selectedArticulation?.links.find(
+    (item) => item.id === selectedJoint?.child_link_id,
+  );
+  const identitySections = selectedJoint ? `
+    <section class="property-group"><h3>Joint</h3>
+      <div class="property-row"><label>Name</label><input type="text" value="${escapeHtml(selectedJoint.name)}" disabled></div>
+      <div class="property-row"><label>Type</label><input type="text" value="${escapeHtml(selectedJoint.type)}" disabled></div>
+      <div class="property-row"><label>Parent</label><input type="text" value="${escapeHtml(parentLink?.name ?? selectedJoint.parent_link_id)}" disabled></div>
+      <div class="property-row"><label>Child</label><input type="text" value="${escapeHtml(childLink?.name ?? selectedJoint.child_link_id)}" disabled></div>
+      <div class="property-row"><label>Axis</label><input type="text" value="${selectedJoint.axis.join(', ')}" disabled></div>
+      <div class="property-row"><label>Range</label><input type="text" value="${selectedJoint.limits?.lower ?? '—'} to ${selectedJoint.limits?.upper ?? '—'}" disabled></div>
+      <div class="property-row"><label>Position</label><input type="text" value="${selectedJointState?.qpos.toFixed(3) ?? selectedJoint.initial_position}" disabled data-joint-position-field="${escapeHtml(selectedJoint.id)}"></div>
+    </section>` : `
     <section class="property-group"><h3>Actor</h3>
       <div class="property-row"><label>Name</label><input type="text" value="${escapeHtml(actor.name)}" data-field="name"></div>
       <div class="property-row"><label>Type</label><input type="text" value="${escapeHtml(actor.type)}" disabled></div>
@@ -199,8 +237,8 @@ function renderInspector(
       ${vectorInput('Rotation', 'rotation', actor.transform.rotation)}
       ${vectorInput('Scale', 'scale', actor.transform.scale)}
     </section>
-    ${sourceSection}
-    ${robotSection}
+    ${sourceSection}`;
+  const physicsSection = selectedJoint ? '' : `
     <section class="property-group"><h3>Physics</h3>
       <div class="property-row"><label>Dynamic</label><input type="checkbox" data-field="dynamic" ${physics.dynamic ? 'checked' : ''}></div>
       <div class="property-row"><label>Material</label><select data-field="material">${Object.keys(materialPresets).map((id) => `<option value="${id}" ${physics.material === id ? 'selected' : ''}>${id[0].toUpperCase()}${id.slice(1)}</option>`).join('')}</select></div>
@@ -209,6 +247,10 @@ function renderInspector(
       ${numberInput('Density', 'density', physics.density ?? 1000, physics.mass_mode !== 'density' ? 'disabled' : '')}
       ${numberInput('Friction', 'friction', friction[0], 'min="0"')}
     </section>`;
+  inspector.innerHTML = `
+    ${identitySections}
+    ${robotSection}
+    ${physicsSection}`;
 
   const actorId = actor.id;
   for (const input of inspector.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-field]')) {
@@ -260,6 +302,7 @@ function renderInspector(
     const targets = Object.fromEntries(
       articulations.flatMap((articulation) =>
         articulation.actuators.filter((actuator) => actuator.control_type === 'position')
+          .filter((actuator) => selectedJointId === null || actuator.joint_id === selectedJointId)
           .map((actuator) => articulation.joints.find((joint) => joint.id === actuator.joint_id))
           .filter((joint) => joint !== undefined)
           .map((joint) => [joint.id, joint.initial_position] as const),
@@ -289,6 +332,9 @@ function updateRuntimeInspector(simulationState: SimulationState | null): void {
     }
     for (const item of inspector.querySelectorAll<HTMLElement>('[data-joint-qvel]')) {
       if (item.dataset.jointQvel === joint.id) item.textContent = `qvel ${joint.qvel.toFixed(3)}`;
+    }
+    for (const input of inspector.querySelectorAll<HTMLInputElement>('[data-joint-position-field]')) {
+      if (input.dataset.jointPositionField === joint.id) input.value = joint.qpos.toFixed(3);
     }
   }
   for (const actuator of simulationState.actuators) {
@@ -372,11 +418,12 @@ function render(): void {
   (element('undo-button') as HTMLButtonElement).disabled = !state.canUndo;
   (element('redo-button') as HTMLButtonElement).disabled = !state.canRedo;
   renderAssets(state.assets);
-  renderSceneTree(state.scene, state.selectedActorId);
+  renderSceneTree(state.scene, state.selectedActorId, state.selectedJointId);
   renderInspector(
     state.scene.actors.find((actor) => actor.id === state.selectedActorId),
     state.scene,
     state.simulationState,
+    state.selectedJointId,
   );
   renderValidation(state.validationIssues);
   renderConsole(state.logs);
@@ -474,6 +521,7 @@ store.subscribe((state) => {
     sceneJson,
     assets: state.assets,
     selectedActorId: state.selectedActorId,
+    selectedJointId: state.selectedJointId,
     dirty: state.dirty,
     canUndo: state.canUndo,
     canRedo: state.canRedo,
@@ -493,6 +541,13 @@ store.subscribe((state) => {
   if (state.selectedActorId !== previousSelectedActorId) {
     selectViewportActor(state.selectedActorId);
     previousSelectedActorId = state.selectedActorId;
+  }
+  if (state.selectedJointId !== previousSelectedJointId) {
+    const childLinkId = state.scene.robotics?.articulations
+      .flatMap((item) => item.joints)
+      .find((item) => item.id === state.selectedJointId)?.child_link_id ?? null;
+    selectViewportLink(childLinkId);
+    previousSelectedJointId = state.selectedJointId;
   }
   if (state.simulationState !== previousSimulationState) {
     applySimulationState(state.simulationState);

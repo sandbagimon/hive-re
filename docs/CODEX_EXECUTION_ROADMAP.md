@@ -501,7 +501,15 @@ Pause/Resume 会清空墙钟间隙，callback 不足一个 timestep 时只发布
 输入获得焦点时 runtime ctrl 不覆盖正在编辑的值；range/number 的原生方向键使用配置后的 step。
 实现证据见 `docs/iterations/2026-07-15-live-joint-jog.md`。
 
-## 28. 当前下一项具体任务
+## 28. Robot Joint Selection（已完成 2026-07-16）
 
-> 增加 Robot Joint selection model：Scene Tree joint 可选择，Property Panel 只聚焦当前 joint，viewport
-> 高亮 child Link；保留选择 robot actor 时查看全部 joint 的总览模式。
+> Scene Tree joint 可选择且不影响 dirty/history；Property Panel 聚焦当前 joint 的 topology、axis、range、
+> live state 和控制，viewport 高亮并 outline child Link。选择 robot actor 仍显示全部 joint 总览。
+
+Frame Selected 会使用 child Link bounds，Store 拒绝不属于 actor 的 joint ID。实现证据见
+`docs/iterations/2026-07-16-robot-joint-selection.md`。
+
+## 29. 当前下一项具体任务
+
+> 建立受控 Editor Automation API，允许自动化按 path 导入 USD、读取 editor state 和选择 joint；使用
+> QtWebEngine offscreen 运行真实 TypeScript UI，截图并验证 robot tree、joint Inspector 与 viewport 非空。

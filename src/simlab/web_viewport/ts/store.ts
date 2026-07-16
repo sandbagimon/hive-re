@@ -14,6 +14,7 @@ export interface EditorState {
   scene: Scene;
   assets: AssetMetadata[];
   selectedActorId: string | null;
+  selectedJointId: string | null;
   dirty: boolean;
   canUndo: boolean;
   canRedo: boolean;
@@ -42,6 +43,7 @@ export class EditorStore {
     scene: emptyScene(),
     assets: [],
     selectedActorId: null,
+    selectedJointId: null,
     dirty: false,
     canUndo: false,
     canRedo: false,
@@ -84,6 +86,7 @@ export class EditorStore {
       scene: cloneScene(scene),
       currentPath: path,
       selectedActorId: null,
+      selectedJointId: null,
       dirty: false,
       canUndo: false,
       canRedo: false,
@@ -104,7 +107,18 @@ export class EditorStore {
   }
 
   selectActor(actorId: string | null): void {
-    this.patch({ selectedActorId: actorId });
+    this.patch({ selectedActorId: actorId, selectedJointId: null });
+  }
+
+  selectJoint(actorId: string, jointId: string): void {
+    const actor = this.state.scene.actors.find((item) => item.id === actorId);
+    const articulationIds = actor?.properties.articulation_ids as string[] | undefined;
+    const jointExists = this.state.scene.robotics?.articulations.some(
+      (articulation) => articulationIds?.includes(articulation.id)
+        && articulation.joints.some((joint) => joint.id === jointId),
+    );
+    if (!jointExists) return;
+    this.patch({ selectedActorId: actorId, selectedJointId: jointId });
   }
 
   addAsset(asset: AssetMetadata, robotics?: RoboticsModel | null): void {
@@ -226,6 +240,7 @@ export class EditorStore {
     this.patch({
       scene,
       selectedActorId,
+      selectedJointId: null,
       dirty: sceneSnapshot(scene) !== this.savedSnapshot,
       canUndo: true,
       canRedo: false,
@@ -237,11 +252,16 @@ export class EditorStore {
 
   private restoreHistory(scene: Scene, message: string): void {
     const selected = this.state.selectedActorId;
+    const selectedJoint = this.state.selectedJointId;
+    const jointStillExists = selectedJoint && scene.robotics?.articulations.some(
+      (articulation) => articulation.joints.some((joint) => joint.id === selectedJoint),
+    );
     this.patch({
       scene,
       selectedActorId: selected && scene.actors.some((actor) => actor.id === selected)
         ? selected
         : null,
+      selectedJointId: jointStillExists ? selectedJoint : null,
       dirty: sceneSnapshot(scene) !== this.savedSnapshot,
       canUndo: this.undoStack.length > 0,
       canRedo: this.redoStack.length > 0,

@@ -693,7 +693,7 @@ SimLab Desktop
 |---------|------|--------|------|
 | M0 Simulation-First MVP | ✅ 完成 | 100% | PySide6 shell、scene model、MJCF export、headless runner |
 | M1 Local three.js Viewport | ✅ 第一版 | 80% | WebGL viewport、orbit、选择、gizmo、缺少 snap |
-| M2 Robust Scene Editing | 🔶 基础完成 | 60% | dirty/undo/redo，缺少 hierarchy、duplicate、multi-select |
+| M2 Robust Scene Editing | 🔶 基础完成 | 65% | dirty/undo/redo、robot joint hierarchy selection，缺少 duplicate/multi-select |
 | M3 MuJoCo Live State Sync | ✅ 第一版 | 90% | pose sync、固定时钟、catch-up cap 与 runtime fault containment |
 | M4 Robot Import | ✅ 第一版 | 100% | 外部 USD 导入、Bridge、MuJoCo、控制、Link sync 与 Reset 已闭环 |
 | M5 Physics Authoring | 🔶 部分完成 | 55% | primitive physics、material presets、collider debug，缺少 solver/constraints |

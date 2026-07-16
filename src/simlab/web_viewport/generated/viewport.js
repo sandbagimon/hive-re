@@ -65,6 +65,7 @@ const pointer = new THREE.Vector2();
 const actorMeshes = new Map();
 const robotLinkGroups = new Map();
 let selectedActorId = null;
+let selectedLinkId = null;
 let currentScene = {
     version: '1.0',
     name: 'Untitled Scene',
@@ -256,6 +257,7 @@ function clearActors() {
 }
 export function setViewportScene(sceneData) {
     const revision = ++sceneRevision;
+    const retainedLinkId = selectedLinkId;
     currentScene = sceneData;
     clearActors();
     for (const actor of currentScene.actors) {
@@ -294,20 +296,15 @@ export function setViewportScene(sceneData) {
         }
     }
     selectViewportActor(selectedActorId, false);
+    selectViewportLink(retainedLinkId);
     if (simulationState)
         applySimulationState(simulationState);
     updateHud();
 }
 export function selectViewportActor(actorId, notify = false) {
     selectedActorId = actorId;
-    for (const [id, object] of actorMeshes.entries()) {
-        object.traverse((mesh) => {
-            if (!mesh.material?.emissive)
-                return;
-            mesh.material.emissive = new THREE.Color(id === selectedActorId ? 0x2b6cb0 : 0);
-            mesh.material.emissiveIntensity = id === selectedActorId ? 0.45 : 0;
-        });
-    }
+    selectedLinkId = null;
+    updateSelectionMaterials();
     const selectedMesh = selectedActorId ? actorMeshes.get(selectedActorId) : null;
     if (selectedMesh && !simulationState)
         transformControls.attach(selectedMesh);
@@ -317,6 +314,28 @@ export function selectViewportActor(actorId, notify = false) {
     updateHud();
     if (notify)
         actorSelectedCallback(actorId);
+}
+export function selectViewportLink(linkId) {
+    const group = linkId ? robotLinkGroups.get(linkId) : null;
+    selectedLinkId = group ? linkId : null;
+    if (group?.userData.actorId)
+        selectedActorId = group.userData.actorId;
+    transformControls.detach();
+    updateSelectionMaterials();
+    updateSelectionOutline();
+    updateHud();
+}
+function updateSelectionMaterials() {
+    for (const [id, object] of actorMeshes.entries()) {
+        object.traverse((mesh) => {
+            if (!mesh.material?.emissive)
+                return;
+            const linkSelected = selectedLinkId !== null && mesh.userData.linkId === selectedLinkId;
+            const actorSelected = selectedLinkId === null && id === selectedActorId;
+            mesh.material.emissive = new THREE.Color(linkSelected ? 0x9a6a16 : actorSelected ? 0x2b6cb0 : 0);
+            mesh.material.emissiveIntensity = linkSelected ? 0.65 : actorSelected ? 0.45 : 0;
+        });
+    }
 }
 function updateHud() {
     const selected = currentScene.actors.find((actor) => actor.id === selectedActorId);
@@ -329,7 +348,9 @@ function updateHud() {
     const materialState = selected?.properties.physics?.material
         ? ` | ${selected.properties.physics.material}`
         : '';
-    requiredElement('#selection').textContent = `Selected: ${selected?.name ?? 'None'}${colliderState}${materialState}`;
+    const linkName = selectedLinkId ? robotLinkGroups.get(selectedLinkId)?.name : null;
+    const linkState = linkName ? ` / ${linkName}` : '';
+    requiredElement('#selection').textContent = `Selected: ${selected?.name ?? 'None'}${linkState}${colliderState}${materialState}`;
 }
 export function applySimulationState(state) {
     simulationState = state;
@@ -366,7 +387,8 @@ export function applySimulationState(state) {
     updateHud();
 }
 function updateSelectionOutline() {
-    const selectedMesh = selectedActorId ? actorMeshes.get(selectedActorId) : null;
+    const selectedMesh = (selectedLinkId ? robotLinkGroups.get(selectedLinkId) : null)
+        ?? (selectedActorId ? actorMeshes.get(selectedActorId) : null);
     if (!selectedMesh) {
         selectionOutline.visible = false;
         return;
@@ -381,7 +403,7 @@ function setTransformMode(mode) {
         button.classList.toggle('active', button.dataset.tool === mode);
     }
     const selectedMesh = selectedActorId ? actorMeshes.get(selectedActorId) : null;
-    if (selectedMesh && !simulationState)
+    if (selectedMesh && !selectedLinkId && !simulationState)
         transformControls.attach(selectedMesh);
 }
 function setColliderDebugVisible(visible) {
@@ -409,7 +431,9 @@ function updateColliderDebugMarkers() {
     }
 }
 function getFocusObject() {
-    return (selectedActorId ? actorMeshes.get(selectedActorId) : null) ?? actorGroup;
+    return (selectedLinkId ? robotLinkGroups.get(selectedLinkId) : null)
+        ?? (selectedActorId ? actorMeshes.get(selectedActorId) : null)
+        ?? actorGroup;
 }
 function frameObject(object, direction = null) {
     if (!object || (object === actorGroup && actorGroup.children.length === 0))

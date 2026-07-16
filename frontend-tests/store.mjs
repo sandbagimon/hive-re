@@ -51,12 +51,21 @@ const robotics = {
   version: '1.0',
   articulations: [{
     id: 'arm_001', name: 'Arm', root_link_id: 'base', fixed_base: true,
-    links: [], joints: [], actuators: [], sensors: [],
+    links: [], joints: [{ id: 'joint_001' }], actuators: [], sensors: [],
   }],
 };
 store.addAsset(robot, robotics);
 assert.equal(store.current.scene.actors.at(-1).type, 'robot');
 assert.equal(store.current.scene.robotics.articulations[0].id, 'arm_001');
+const robotActorId = store.current.scene.actors.at(-1).id;
+store.selectJoint(robotActorId, 'joint_001');
+assert.equal(store.current.selectedActorId, robotActorId);
+assert.equal(store.current.selectedJointId, 'joint_001');
+assert.equal(store.current.dirty, true);
+store.selectJoint(robotActorId, 'joint_missing');
+assert.equal(store.current.selectedJointId, 'joint_001');
+store.selectActor(robotActorId);
+assert.equal(store.current.selectedJointId, null);
 store.deleteActor(store.current.scene.actors.at(-1).id);
 assert.equal(store.current.scene.robotics, undefined);
 
