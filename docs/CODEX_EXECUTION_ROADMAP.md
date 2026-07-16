@@ -772,8 +772,20 @@ Trajectory Play。测试随后继续完成 speed、trajectory、recording/export
 
 实现证据见 `docs/iterations/2026-07-16-controller-qt-e2e.md`。
 
-## 55. 当前下一项具体任务
+## 55. Joint Position PD Controller（已完成 2026-07-16）
 
 > 提供可复用 Joint PD Controller：配置 per-joint target/kp/kd/max_delta，基于 qpos/qvel 每步生成平滑
 > position action；支持 runtime 更新 target 和 Reset，明确 position-drive 外环语义。用外部 USD 双关节手臂
 > 验证收敛、限位、deterministic replay，并提供项目 controller 示例文件。
+
+`JointPositionPdController` 已提供 immutable per-joint config、atomic target updates、bounded delta 和
+observation ID 校验。外部 USD 手臂两次 200-step replay 逐样本一致；超范围 target 经 actuator clamp 与
+MuJoCo soft joint limit 约束。`examples/controllers/two_joint_pd.py` 可直接由 Loader 运行。
+
+实现证据见 `docs/iterations/2026-07-16-joint-pd-controller.md`。
+
+## 56. 当前下一项具体任务
+
+> 建立 Joint State Sensor Contract：从 robotics sensor schema 中实例化 joint-state sensor，定义 stable
+> sensor ID、simulation timestamp、sequence、sample period 和 qpos/qvel payload；按固定 physics clock
+> 调度，不依赖 viewport refresh。先支持 exact-step frequency divisors，并发布到 SimulationState。

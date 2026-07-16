@@ -29,6 +29,13 @@ session.detach_controller()
 `ctrl/force`, all keyed by stable Scene robotics IDs. `ControllerAction` currently supports position
 targets; Session applies the same actuator mapping and control-range clamping used by UI joint commands.
 
+For a reusable bounded outer loop, import `JointPdConfig` and `JointPositionPdController` from
+`simlab.controllers`. It computes a qpos/qvel correction, limits each per-step position-target delta, and
+leaves force generation to the MuJoCo position actuator. Runtime goals can be changed with `set_target()`
+or atomic `set_targets()`. See [`examples/controllers/two_joint_pd.py`](../examples/controllers/two_joint_pd.py)
+for a project-loadable example that configures the first two observed joints relative to Home without
+hard-coded USD Prim names.
+
 Controller lifecycle:
 
 - `attach_controller()` calls `reset()` once at the current simulation state.
