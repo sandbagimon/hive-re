@@ -77,6 +77,37 @@ def test_simulation_clock_caps_catch_up_and_discards_pause_gap(tmp_path) -> None
     assert after_resume is not None and after_resume.time == pytest.approx(0.05)
 
 
+def test_simulation_clock_scales_wall_time_without_changing_timestep(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    clock = FakeClock()
+    service = SimulationService(tmp_path, lambda _: None, clock=clock)
+    started = service.start(_scene(max_catch_up_steps=16))
+
+    half_speed = service.set_realtime_factor(0.5)
+    clock.advance(0.04)
+    half_state = service.step_frame()
+    double_speed = service.set_realtime_factor(2.0)
+    clock.advance(0.04)
+    double_state = service.step_frame()
+
+    assert started.clock.timestep == pytest.approx(0.01)
+    assert half_speed is not None and half_speed.clock.target_rtf == 0.5
+    assert half_state is not None and half_state.time == pytest.approx(0.02)
+    assert half_state.clock.actual_rtf == pytest.approx(0.5)
+    assert double_speed is not None and double_speed.clock.target_rtf == 2.0
+    assert double_state is not None and double_state.time == pytest.approx(0.10)
+    assert double_state.clock.actual_rtf == pytest.approx(2.0)
+    assert double_state.clock.timestep == pytest.approx(0.01)
+
+
+@pytest.mark.parametrize("value", [0.0, 0.75, 4.0, float("inf")])
+def test_simulation_clock_rejects_unsupported_realtime_factor(tmp_path, value) -> None:
+    service = SimulationService(tmp_path, lambda _: None)
+
+    with pytest.raises(ValueError, match="Real-time factor"):
+        service.set_realtime_factor(value)
+
+
 @pytest.mark.parametrize("value", [0, -1, 1.5, True])
 def test_simulation_clock_rejects_invalid_catch_up_limit(tmp_path, value) -> None:
     pytest.importorskip("mujoco")

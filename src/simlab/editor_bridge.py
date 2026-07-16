@@ -199,6 +199,21 @@ class EditorBridge(QObject):
         self.simulationStatusChanged.emit("paused")
         return self._success()
 
+    @Slot(float, result=str)
+    def setSimulationSpeed(self, factor: float) -> str:
+        try:
+            state = self.simulation_service.set_realtime_factor(factor)
+            if state is not None:
+                self.simulationStateChanged.emit(json.dumps(state.to_dict()))
+            return self._success(
+                {
+                    "target_rtf": self.simulation_service.target_realtime_factor,
+                    "state": state.to_dict() if state is not None else None,
+                }
+            )
+        except Exception as exc:
+            return self._failure(exc)
+
     @Slot(str, result=str)
     def stepSimulation(self, scene_json: str) -> str:
         self.simulation_timer.stop()

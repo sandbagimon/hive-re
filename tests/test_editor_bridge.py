@@ -145,6 +145,7 @@ def test_editor_bridge_external_robot_rpc_workflow(tmp_path: Path) -> None:
     shoulder, elbow = articulation.joints
 
     started = json.loads(bridge.runSimulation(json.dumps(scene.to_dict())))
+    speed = json.loads(bridge.setSimulationSpeed(0.5))
     commanded = json.loads(
         bridge.setJointTargets(
             json.dumps(scene.to_dict()),
@@ -158,9 +159,11 @@ def test_editor_bridge_external_robot_rpc_workflow(tmp_path: Path) -> None:
     reset = json.loads(bridge.resetSimulation())
 
     assert started["ok"] is True
+    assert speed["data"]["state"]["clock"]["target_rtf"] == 0.5
+    assert speed["data"]["state"]["clock"]["timestep"] == pytest.approx(0.01)
     assert commanded["data"]["state"]["controller"]["status"] == "active"
     assert paused["ok"] is True
-    assert states[-2]["time"] == pytest.approx(0.8)
+    assert states[-2]["time"] == pytest.approx(0.4)
     assert abs(states[-2]["joints"][0]["qpos"]) > 0.1
     assert reset["data"]["state"]["time"] == 0.0
     assert reset["data"]["state"]["joints"][0]["qpos"] == pytest.approx(

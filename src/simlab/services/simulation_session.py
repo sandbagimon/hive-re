@@ -91,6 +91,20 @@ class RecordingSimulationState:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class ClockSimulationState:
+    target_rtf: float = 1.0
+    actual_rtf: float = 0.0
+    timestep: float = 0.0
+
+    def to_dict(self) -> dict[str, float]:
+        return {
+            "target_rtf": self.target_rtf,
+            "actual_rtf": self.actual_rtf,
+            "timestep": self.timestep,
+        }
+
+
 @dataclass(slots=True)
 class SimulationState:
     time: float
@@ -112,6 +126,7 @@ class SimulationState:
     recording: RecordingSimulationState = field(
         default_factory=RecordingSimulationState
     )
+    clock: ClockSimulationState = field(default_factory=ClockSimulationState)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -123,6 +138,7 @@ class SimulationState:
             "controller": self.controller.to_dict(),
             "trajectory": self.trajectory.to_dict(),
             "recording": self.recording.to_dict(),
+            "clock": self.clock.to_dict(),
         }
 
 
