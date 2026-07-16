@@ -86,3 +86,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-16 Controller Panel](2026-07-16-controller-panel.md)
 - [2026-07-16 Controller Qt E2E](2026-07-16-controller-qt-e2e.md)
 - [2026-07-16 Joint PD Controller](2026-07-16-joint-pd-controller.md)
+- [2026-07-16 Joint State Sensor Contract](2026-07-16-joint-state-sensor-contract.md)

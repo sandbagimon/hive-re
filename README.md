@@ -60,6 +60,8 @@ The robot Inspector Controller section explicitly loads trusted project-local Py
 
 `simlab.controllers.JointPositionPdController` provides a bounded qpos/qvel outer loop for MuJoCo position drives. A project-loadable two-joint example is available at [`examples/controllers/two_joint_pd.py`](examples/controllers/two_joint_pd.py).
 
+The robotics schema includes fixed-clock `joint_state` sensors with stable IDs, qpos/qvel payloads, simulation timestamps, and monotonic sequence numbers. The first scheduler supports update rates that are exact integer divisors of the physics rate.
+
 Primitive actors expose basic physics properties in the Property Panel: Dynamic, Mass, and Friction. Dynamic actors export with MuJoCo free joints, while static actors export as fixed world geoms.
 
 Primitive geometry follows a shared viewport/MuJoCo contract: Box sizes are half extents, Sphere size is radius, Cylinder size is radius plus half-height, rotations are XYZ radians, and actor scale is baked into exported colliders. Non-uniformly scaled spheres export as Ellipsoids, while cylinders require matching X/Y radial scale. Export contains no implicit collision ground.

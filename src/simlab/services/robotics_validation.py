@@ -255,6 +255,15 @@ def _validate_articulation(
 
     for sensor_index, sensor in enumerate(articulation.sensors):
         sensor_path = f"{path}.sensors[{sensor_index}]"
+        if sensor.sensor_type in {"joint_state", "joint_position", "joint_velocity"}:
+            if sensor.joint_id is None:
+                issues.append(
+                    RoboticsValidationIssue(
+                        "missing_sensor_joint",
+                        f"{sensor_path}.joint_id",
+                        f"{sensor.sensor_type} sensor requires a joint",
+                    )
+                )
         if sensor.link_id is not None and sensor.link_id not in link_ids:
             issues.append(
                 RoboticsValidationIssue(

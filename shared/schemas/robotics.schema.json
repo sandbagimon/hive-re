@@ -211,7 +211,7 @@
         "id": { "$ref": "#/$defs/id" },
         "name": { "type": "string", "minLength": 1 },
         "sensor_type": {
-          "enum": ["joint_position", "joint_velocity", "actuator_force", "contact", "imu"]
+          "enum": ["joint_state", "joint_position", "joint_velocity", "actuator_force", "contact", "imu"]
         },
         "link_id": { "type": ["string", "null"] },
         "joint_id": { "type": ["string", "null"] },

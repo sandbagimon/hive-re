@@ -44,6 +44,20 @@ def test_robotics_model_round_trip_preserves_two_joint_arm() -> None:
     ]
 
 
+def test_joint_state_sensor_round_trip_and_requires_joint_reference() -> None:
+    data = fixture_data()
+    sensor = data["articulations"][0]["sensors"][0]
+    sensor["sensor_type"] = "joint_state"
+
+    restored = RoboticsModel.from_dict(data)
+    assert restored.articulations[0].sensors[0].sensor_type == "joint_state"
+
+    sensor["joint_id"] = None
+    with pytest.raises(RoboticsValidationError) as exc_info:
+        RoboticsModel.from_dict(data)
+    assert any(issue.code == "missing_sensor_joint" for issue in exc_info.value.issues)
+
+
 def test_legacy_scene_without_robotics_remains_compatible() -> None:
     legacy = {
         "version": "1.0",

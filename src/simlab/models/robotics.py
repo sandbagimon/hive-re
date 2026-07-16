@@ -7,7 +7,12 @@ GeometryType = Literal["box", "sphere", "ellipsoid", "cylinder", "capsule", "mes
 JointType = Literal["fixed", "revolute", "continuous", "prismatic"]
 ControlType = Literal["position", "velocity", "motor"]
 SensorType = Literal[
-    "joint_position", "joint_velocity", "actuator_force", "contact", "imu"
+    "joint_state",
+    "joint_position",
+    "joint_velocity",
+    "actuator_force",
+    "contact",
+    "imu",
 ]
 
 
