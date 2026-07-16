@@ -148,6 +148,19 @@ export interface RobotSensor {
     position: [number, number, number];
     quaternion: [number, number, number, number];
   };
+  noise?: {
+    seed: number;
+    channels: Partial<Record<
+      | 'qpos'
+      | 'qvel'
+      | 'orientation'
+      | 'angular_velocity'
+      | 'linear_acceleration'
+      | 'normal_force'
+      | 'tangent_force',
+      { bias: number | Vector3; standard_deviation: number | Vector3 }
+    >>;
+  };
   source_prim_path?: string | null;
 }
 

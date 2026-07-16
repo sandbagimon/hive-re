@@ -29,6 +29,69 @@ def _optional_float(value: Any) -> float | None:
     return None if value is None else float(value)
 
 
+NoiseValue = float | list[float]
+
+
+def _noise_value(value: Any) -> NoiseValue:
+    if isinstance(value, (list, tuple)):
+        return [float(item) for item in value]
+    return float(value)
+
+
+@dataclass(slots=True)
+class SensorNoiseChannel:
+    bias: NoiseValue
+    standard_deviation: NoiseValue
+
+    def __post_init__(self) -> None:
+        self.bias = _noise_value(self.bias)
+        self.standard_deviation = _noise_value(self.standard_deviation)
+
+    def to_dict(self) -> dict[str, NoiseValue]:
+        return {
+            "bias": list(self.bias) if isinstance(self.bias, list) else self.bias,
+            "standard_deviation": (
+                list(self.standard_deviation)
+                if isinstance(self.standard_deviation, list)
+                else self.standard_deviation
+            ),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> SensorNoiseChannel:
+        return cls(
+            bias=data["bias"],
+            standard_deviation=data["standard_deviation"],
+        )
+
+
+@dataclass(slots=True)
+class SensorNoise:
+    seed: int
+    channels: dict[str, SensorNoiseChannel]
+
+    def __post_init__(self) -> None:
+        self.seed = int(self.seed)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "seed": self.seed,
+            "channels": {
+                name: channel.to_dict() for name, channel in self.channels.items()
+            },
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> SensorNoise:
+        return cls(
+            seed=int(data["seed"]),
+            channels={
+                str(name): SensorNoiseChannel.from_dict(channel)
+                for name, channel in data.get("channels", {}).items()
+            },
+        )
+
+
 @dataclass(slots=True)
 class RigidTransform:
     """A local rigid transform using an xyzw quaternion."""
@@ -367,6 +430,7 @@ class Sensor:
     aggregation_mode: ContactAggregationMode | None = None
     update_rate_hz: float | None = None
     local_transform: RigidTransform | None = None
+    noise: SensorNoise | None = None
     source_prim_path: str | None = None
 
     def __post_init__(self) -> None:
@@ -388,6 +452,8 @@ class Sensor:
             data["collider_id"] = self.collider_id
         if self.aggregation_mode is not None:
             data["aggregation_mode"] = self.aggregation_mode
+        if self.noise is not None:
+            data["noise"] = self.noise.to_dict()
         return data
 
     @classmethod
@@ -404,6 +470,11 @@ class Sensor:
             local_transform=(
                 RigidTransform.from_dict(data["local_transform"])
                 if data.get("local_transform") is not None
+                else None
+            ),
+            noise=(
+                SensorNoise.from_dict(data["noise"])
+                if data.get("noise") is not None
                 else None
             ),
             source_prim_path=data.get("source_prim_path"),

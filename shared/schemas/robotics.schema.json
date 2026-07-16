@@ -205,6 +205,51 @@
       ],
       "additionalProperties": false
     },
+    "scalarNoiseChannel": {
+      "type": "object",
+      "properties": {
+        "bias": { "type": "number" },
+        "standard_deviation": { "type": "number", "minimum": 0 }
+      },
+      "required": ["bias", "standard_deviation"],
+      "additionalProperties": false
+    },
+    "vectorNoiseChannel": {
+      "type": "object",
+      "properties": {
+        "bias": { "$ref": "#/$defs/vector3" },
+        "standard_deviation": {
+          "type": "array",
+          "items": { "type": "number", "minimum": 0 },
+          "minItems": 3,
+          "maxItems": 3
+        }
+      },
+      "required": ["bias", "standard_deviation"],
+      "additionalProperties": false
+    },
+    "sensorNoise": {
+      "type": "object",
+      "properties": {
+        "seed": { "type": "integer", "minimum": 0, "maximum": 4294967295 },
+        "channels": {
+          "type": "object",
+          "minProperties": 1,
+          "properties": {
+            "qpos": { "$ref": "#/$defs/scalarNoiseChannel" },
+            "qvel": { "$ref": "#/$defs/scalarNoiseChannel" },
+            "orientation": { "$ref": "#/$defs/vectorNoiseChannel" },
+            "angular_velocity": { "$ref": "#/$defs/vectorNoiseChannel" },
+            "linear_acceleration": { "$ref": "#/$defs/vectorNoiseChannel" },
+            "normal_force": { "$ref": "#/$defs/scalarNoiseChannel" },
+            "tangent_force": { "$ref": "#/$defs/vectorNoiseChannel" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["seed", "channels"],
+      "additionalProperties": false
+    },
     "sensor": {
       "type": "object",
       "properties": {
@@ -219,6 +264,7 @@
         "aggregation_mode": { "const": "sum" },
         "update_rate_hz": { "type": ["number", "null"], "exclusiveMinimum": 0 },
         "local_transform": { "$ref": "#/$defs/transform" },
+        "noise": { "$ref": "#/$defs/sensorNoise" },
         "source_prim_path": { "type": ["string", "null"] }
       },
       "required": ["id", "name", "sensor_type", "link_id", "joint_id", "update_rate_hz"],

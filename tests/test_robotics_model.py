@@ -166,6 +166,69 @@ def test_contact_sensor_requires_one_valid_scope_and_sum_aggregation() -> None:
     )
 
 
+def test_sensor_noise_round_trip_preserves_typed_channels() -> None:
+    data = fixture_data()
+    sensor = data["articulations"][0]["sensors"][0]
+    sensor["sensor_type"] = "joint_state"
+    sensor["noise"] = {
+        "seed": 42,
+        "channels": {
+            "qpos": {"bias": 0.01, "standard_deviation": 0.002},
+            "qvel": {"bias": -0.02, "standard_deviation": 0.01},
+        },
+    }
+
+    restored = RoboticsModel.from_dict(data)
+
+    assert restored.to_dict() == data
+    noise = restored.articulations[0].sensors[0].noise
+    assert noise is not None
+    assert noise.seed == 42
+    assert noise.channels["qpos"].standard_deviation == pytest.approx(0.002)
+
+
+def test_sensor_noise_schema_rejects_wrong_dimension_seed_and_stddev() -> None:
+    data = fixture_data()
+    sensor = data["articulations"][0]["sensors"][0]
+    sensor["sensor_type"] = "joint_state"
+    sensor["noise"] = {
+        "seed": -1,
+        "channels": {
+            "qpos": {"bias": [0.0, 0.0], "standard_deviation": -0.1},
+        },
+    }
+
+    with pytest.raises(RoboticsValidationError) as exc_info:
+        RoboticsModel.from_dict(data)
+
+    assert {issue.code for issue in exc_info.value.issues}.issuperset(
+        {"schema.minimum", "schema.type"}
+    )
+
+
+def test_sensor_noise_rejects_channel_from_another_sensor_type() -> None:
+    data = fixture_data()
+    sensor = data["articulations"][0]["sensors"][0]
+    sensor["sensor_type"] = "joint_state"
+    sensor["noise"] = {
+        "seed": 1,
+        "channels": {
+            "orientation": {
+                "bias": [0.0, 0.0, 0.0],
+                "standard_deviation": [0.1, 0.1, 0.1],
+            },
+        },
+    }
+
+    with pytest.raises(RoboticsValidationError) as exc_info:
+        RoboticsModel.from_dict(data)
+
+    assert any(
+        issue.code == "invalid_sensor_noise_channel"
+        for issue in exc_info.value.issues
+    )
+
+
 def test_legacy_scene_without_robotics_remains_compatible() -> None:
     legacy = {
         "version": "1.0",

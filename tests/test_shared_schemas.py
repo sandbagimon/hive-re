@@ -85,6 +85,10 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     assert "local_transform" in robotics["$defs"]["sensor"]["properties"]
     assert "collider_id" in robotics["$defs"]["sensor"]["properties"]
     assert "aggregation_mode" in robotics["$defs"]["sensor"]["properties"]
+    assert "noise" in robotics["$defs"]["sensor"]["properties"]
+    assert {"sensorNoise", "scalarNoiseChannel", "vectorNoiseChannel"}.issubset(
+        robotics["$defs"]
+    )
     Draft202012Validator.check_schema(robotics)
     Draft202012Validator.check_schema(bridge)
     Draft202012Validator.check_schema(trajectory)

@@ -10,7 +10,7 @@ from typing import Any, Protocol
 
 from jsonschema import Draft202012Validator
 
-from simlab.models.robotics import Articulation, RoboticsModel
+from simlab.models.robotics import Articulation, RoboticsModel, Sensor
 
 
 class _Identified(Protocol):
@@ -343,9 +343,97 @@ def _validate_articulation(
                     f"Unknown joint: {sensor.joint_id}",
                 )
             )
+        _validate_sensor_noise(sensor, sensor_path, issues)
+
     return issues
 
 
+_SENSOR_NOISE_CHANNEL_DIMENSIONS = {
+    "joint_state": {"qpos": 1, "qvel": 1},
+    "imu": {
+        "orientation": 3,
+        "angular_velocity": 3,
+        "linear_acceleration": 3,
+    },
+    "contact": {"normal_force": 1, "tangent_force": 3},
+}
+
+
+def _noise_dimension(value: float | list[float]) -> int:
+    return len(value) if isinstance(value, list) else 1
+
+
+def _noise_values(value: float | list[float]) -> list[float]:
+    return value if isinstance(value, list) else [value]
+
+
+def _validate_sensor_noise(
+    sensor: Sensor,
+    sensor_path: str,
+    issues: list[RoboticsValidationIssue],
+) -> None:
+    if sensor.noise is None:
+        return
+    noise_path = f"{sensor_path}.noise"
+    if sensor.noise.seed < 0 or sensor.noise.seed > 0xFFFFFFFF:
+        issues.append(
+            RoboticsValidationIssue(
+                "invalid_sensor_noise_seed",
+                f"{noise_path}.seed",
+                "Sensor noise seed must be between 0 and 4294967295",
+            )
+        )
+    if not sensor.noise.channels:
+        issues.append(
+            RoboticsValidationIssue(
+                "empty_sensor_noise",
+                f"{noise_path}.channels",
+                "Sensor noise must configure at least one channel",
+            )
+        )
+    allowed = _SENSOR_NOISE_CHANNEL_DIMENSIONS.get(sensor.sensor_type, {})
+    for name, channel in sensor.noise.channels.items():
+        channel_path = f"{noise_path}.channels.{name}"
+        expected_dimension = allowed.get(name)
+        if expected_dimension is None:
+            issues.append(
+                RoboticsValidationIssue(
+                    "invalid_sensor_noise_channel",
+                    channel_path,
+                    f"Noise channel {name} is not supported by {sensor.sensor_type}",
+                )
+            )
+            continue
+        if _noise_dimension(channel.bias) != expected_dimension or _noise_dimension(
+            channel.standard_deviation
+        ) != expected_dimension:
+            issues.append(
+                RoboticsValidationIssue(
+                    "invalid_sensor_noise_dimension",
+                    channel_path,
+                    f"Noise channel {name} requires {expected_dimension} value(s)",
+                )
+            )
+        values = [
+            *_noise_values(channel.bias),
+            *_noise_values(channel.standard_deviation),
+        ]
+        if not all(math.isfinite(value) for value in values):
+            issues.append(
+                RoboticsValidationIssue(
+                    "non_finite_sensor_noise",
+                    channel_path,
+                    "Sensor noise values must be finite",
+                )
+            )
+        if any(value < 0 for value in _noise_values(channel.standard_deviation)):
+            issues.append(
+                RoboticsValidationIssue(
+                    "negative_sensor_noise_stddev",
+                    f"{channel_path}.standard_deviation",
+                    "Sensor noise standard deviation must be non-negative",
+                )
+            )
 def validate_robotics_model(value: RoboticsModel | dict[str, Any]) -> None:
     """Validate the shared schema and cross-reference invariants."""
     data = value.to_dict() if isinstance(value, RoboticsModel) else value
