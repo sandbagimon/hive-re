@@ -700,8 +700,20 @@ Command bar 已提供紧凑四段倍率选择，active 状态以 Python runtime 
 
 实现证据见 `docs/iterations/2026-07-16-simulation-speed-toolbar.md`。
 
-## 49. 当前下一项具体任务
+## 49. Simulation Speed Qt E2E（已完成 2026-07-16）
 
 > 增加 Simulation Speed Qt E2E：在同一外部机械臂三帧轨迹上分别以 0.5x 和 2x 播放，使用受控
 > wall clock 验证相同 wall time 下 simulation cursor 比例、timestep 不变、recording 时间戳连续且无重复；
 > 运行中切换倍率后 active segment 与 actual RTF readout 同步。
+
+双窗口真实 Qt 流程使用 fake clock 验证：0.5x 在 0.04 秒 wall time 推进 0.02 秒，运行中切到
+2x 后相同 wall time 推进 0.08 秒；timestep 保持 0.01，recording 共 11 个连续样本。测试恢复真实
+monotonic clock 后继续完成原有轨迹回放与 JSON/CSV 导出。
+
+实现证据见 `docs/iterations/2026-07-16-simulation-speed-qt-e2e.md`。
+
+## 50. 当前下一项具体任务
+
+> 建立 per-step Controller API Contract：定义只读 observation（time、joint qpos/qvel、actuator state）
+> 和 action（position target map），在每个 `mj_step` 前调用 controller；支持 reset callback、异常隔离、
+> deadline/disable 状态，并先以纯 Python position controller 验证外部 OpenUSD 双关节机械臂闭环。

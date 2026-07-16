@@ -79,3 +79,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-16 Recording Qt E2E](2026-07-16-recording-qt-e2e.md)
 - [2026-07-16 Simulation Clock RTF](2026-07-16-simulation-clock-rtf.md)
 - [2026-07-16 Simulation Speed Toolbar](2026-07-16-simulation-speed-toolbar.md)
+- [2026-07-16 Simulation Speed Qt E2E](2026-07-16-simulation-speed-qt-e2e.md)

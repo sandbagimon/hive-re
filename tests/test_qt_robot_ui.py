@@ -747,6 +747,182 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         )
 
     _wait_until(app, reopened_trajectory_is_loaded)
+    reopened_wall_time = [200.0]
+    reopened_window.bridge.simulation_service.clock = lambda: reopened_wall_time[0]
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-simulation-speed=\"0.5\"]').click();true",
+    )
+
+    def reopened_speed_is(factor: float) -> bool:
+        current = json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )
+        runtime = current["simulationState"]
+        return bool(
+            runtime
+            and runtime["clock"]["target_rtf"] == factor
+            and _javascript(
+                app,
+                reopened_window.web_view.page(),
+                f"document.querySelector('[data-simulation-speed=\"{factor:g}\"]')"
+                ".getAttribute('aria-pressed')",
+            )
+            == "true"
+        )
+
+    _wait_until(app, lambda: reopened_speed_is(0.5))
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-recording-command=\"start\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )["simulationState"]["recording"]["sample_count"]
+        == 1,
+    )
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-trajectory-command=\"play\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )["simulationStatus"]
+        == "running",
+    )
+    reopened_window.bridge.simulation_timer.stop()
+    reopened_wall_time[0] += 0.04
+    reopened_window.bridge._advance_simulation()
+    app.processEvents()
+    half_speed_state = json.loads(
+        _javascript(
+            app,
+            reopened_window.web_view.page(),
+            "window.simlabEditor.getStateJson()",
+        )
+    )["simulationState"]
+    assert half_speed_state["time"] == pytest.approx(0.02)
+    assert half_speed_state["trajectory"]["time"] == pytest.approx(0.02)
+    assert half_speed_state["clock"] == pytest.approx(
+        {"target_rtf": 0.5, "actual_rtf": 0.5, "timestep": 0.01}
+    )
+    assert half_speed_state["recording"]["sample_count"] == 3
+
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-simulation-speed=\"2\"]').click();true",
+    )
+    _wait_until(app, lambda: reopened_speed_is(2.0))
+    reopened_wall_time[0] += 0.04
+    reopened_window.bridge._advance_simulation()
+    app.processEvents()
+    double_speed_state = json.loads(
+        _javascript(
+            app,
+            reopened_window.web_view.page(),
+            "window.simlabEditor.getStateJson()",
+        )
+    )["simulationState"]
+    assert double_speed_state["time"] == pytest.approx(0.10)
+    assert double_speed_state["trajectory"]["time"] == pytest.approx(0.10)
+    assert double_speed_state["clock"] == pytest.approx(
+        {"target_rtf": 2.0, "actual_rtf": 2.0, "timestep": 0.01}
+    )
+    assert double_speed_state["recording"]["sample_count"] == 11
+    assert _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('#rtf-readout').textContent",
+    ) == "2.00x"
+
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-recording-command=\"stop\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )["simulationState"]["recording"]["active"]
+        is False,
+    )
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-trajectory-command=\"pause\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )["simulationStatus"]
+        == "paused",
+    )
+    speed_recording = reopened_window.bridge.simulation_service.get_joint_recording()
+    speed_times = [sample.time for sample in speed_recording.samples]
+    assert speed_times == pytest.approx([index * 0.01 for index in range(11)])
+
+    reopened_window.bridge.simulation_service.clock = time.monotonic
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-simulation-speed=\"1\"]').click();true",
+    )
+    _wait_until(app, lambda: reopened_speed_is(1.0))
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-command=\"reset\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )["simulationState"]["time"]
+        == 0,
+    )
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-trajectory-command=\"load\"]').click();true",
+    )
+    _wait_until(
+        app,
+        reopened_trajectory_is_loaded,
+    )
     second_joint_id = reopened_articulation["joints"][1]["id"]
     second_joint_selector = json.dumps(
         f'[data-recording-joint="{second_joint_id}"]'
