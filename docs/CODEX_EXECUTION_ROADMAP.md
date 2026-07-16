@@ -868,9 +868,20 @@ acceleration；latest/sequence/reset 语义与 joint_state 一致。
 
 实现证据见 `docs/iterations/2026-07-16-imu-sensor-contract.md`。
 
-## 63. 当前下一项具体任务
+## 63. MJCF IMU Export（已完成 2026-07-16）
 
 > 接入 MuJoCo IMU Runtime：exporter 为每个 IMU local_transform 创建 site，并输出 framequat/gyro/
-> accelerometer sensors；Session 用 stable sensor ID 映射 sensordata，转换 wxyz->xyzw 后交给 Scheduler。
-> 验证静止 fixed-base IMU orientation/proper acceleration，以及运动 forearm IMU 的 angular velocity、固定
-> 50Hz cadence、Reset 和 SimulationState serialization。
+> accelerometer sensors，保证 stable sensor ID 经 XML name 转换后仍可确定映射，并由 MuJoCo 真编译。
+
+Exporter 已将 IMU site 挂到所属 link body，pos/quat 来自 local_transform（xyzw 转 MuJoCo wxyz）；根级
+sensor section 为每个 stable ID 生成 orientation/angular_velocity/linear_acceleration channels。带点号/冒号
+ID 的 fixture 编译为 3 sensors，dimensions 4/3/3。
+
+实现证据见 `docs/iterations/2026-07-16-mjcf-imu-export.md`。
+
+## 64. 当前下一项具体任务
+
+> 接入 MuJoCo IMU Runtime：Session 用 stable sensor ID 映射 sensordata address/dimension，转换 framequat
+> wxyz->xyzw 后构造 ImuKinematics 并交给 Scheduler。SimulationState 支持 joint_state/imu union。验证静止
+> fixed-base IMU orientation/proper acceleration，以及运动 forearm IMU angular velocity、50Hz cadence、
+> Reset 和 serialization。

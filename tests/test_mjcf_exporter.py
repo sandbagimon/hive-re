@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 import pytest
 
 from simlab.models.actor import Actor
+from simlab.models.robotics import RigidTransform, Sensor
 from simlab.models.scene import Scene
 from simlab.models.transform import Transform
 from simlab.services.mjcf_exporter import export_scene_to_mjcf, scene_to_mjcf_xml
@@ -247,6 +248,66 @@ def test_external_usd_robot_exports_compilable_articulation(tmp_path) -> None:
         [-1.5707963267948966, 1.5707963267948966]
     )
     assert model.key_qpos[0, 1] == pytest.approx(-0.4)
+
+
+def test_robot_imu_exports_site_and_compilable_mujoco_sensors(tmp_path) -> None:
+    mujoco = pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    articulation = imported.robotics_model.articulations[0]
+    forearm = articulation.links[-1]
+    sensor = Sensor(
+        id="sensor.forearm:imu",
+        name="Forearm IMU",
+        sensor_type="imu",
+        link_id=forearm.id,
+        update_rate_hz=50.0,
+        local_transform=RigidTransform(
+            position=[0.0, 0.0, 0.2],
+            quaternion=[0.0, 0.0, 0.0, 1.0],
+        ),
+    )
+    articulation.sensors.append(sensor)
+    scene = Scene(
+        name="External Arm IMU",
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+    )
+
+    xml = scene_to_mjcf_xml(scene, asset_root=tmp_path)
+    root = ET.fromstring(xml)
+    site = root.find(f".//body[@name='{forearm.id}']/site")
+    framequat = root.find("./sensor/framequat")
+    gyro = root.find("./sensor/gyro")
+    accelerometer = root.find("./sensor/accelerometer")
+
+    assert site is not None
+    assert site.attrib["name"] == "sensor_forearm_imu_site"
+    assert site.attrib["pos"] == "0 0 0.2"
+    assert site.attrib["quat"] == "1 0 0 0"
+    assert framequat is not None
+    assert framequat.attrib == {
+        "name": "sensor_forearm_imu_orientation",
+        "objtype": "site",
+        "objname": "sensor_forearm_imu_site",
+    }
+    assert gyro is not None
+    assert gyro.attrib["site"] == site.attrib["name"]
+    assert accelerometer is not None
+    assert accelerometer.attrib["site"] == site.attrib["name"]
+
+    model = mujoco.MjModel.from_xml_string(xml)
+    assert model.nsensor == 3
+    assert list(model.sensor_dim) == [4, 3, 3]
 
 
 def test_robot_and_free_body_home_keyframe_has_complete_qpos(tmp_path) -> None:

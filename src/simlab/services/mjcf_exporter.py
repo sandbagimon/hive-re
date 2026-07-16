@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from simlab.models.actor import Actor
-from simlab.models.robotics import Articulation, Collider, Link
+from simlab.models.robotics import Articulation, Collider, Link, Sensor
 from simlab.models.scene import Scene
 from simlab.services.openusd_importer import resolve_imported_asset_path
 from simlab.services.physics_materials import material_for_id
@@ -50,6 +50,7 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
     worldbody = ET.SubElement(root, "worldbody")
     ET.SubElement(worldbody, "light", {"name": "key_light", "pos": "0 0 4"})
     robot_actuators: list[tuple[str, Any, float]] = []
+    robot_imu_sensors: list[tuple[Sensor, str]] = []
     robot_contact_excludes: list[tuple[str, str]] = []
     home_positions: list[float] = []
 
@@ -139,6 +140,7 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                     wrapper,
                     articulation,
                     robot_actuators,
+                    robot_imu_sensors,
                     robot_contact_excludes,
                     home_positions,
                 )
@@ -180,6 +182,29 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                 ET.SubElement(actuator_element, "velocity", attrs)
             else:
                 ET.SubElement(actuator_element, "motor", attrs)
+    if robot_imu_sensors:
+        sensor_element = ET.SubElement(root, "sensor")
+        for sensor, site_name in robot_imu_sensors:
+            sensor_name = _xml_name(sensor.id)
+            ET.SubElement(
+                sensor_element,
+                "framequat",
+                {
+                    "name": f"{sensor_name}_orientation",
+                    "objtype": "site",
+                    "objname": site_name,
+                },
+            )
+            ET.SubElement(
+                sensor_element,
+                "gyro",
+                {"name": f"{sensor_name}_angular_velocity", "site": site_name},
+            )
+            ET.SubElement(
+                sensor_element,
+                "accelerometer",
+                {"name": f"{sensor_name}_linear_acceleration", "site": site_name},
+            )
     if home_positions:
         keyframe = ET.SubElement(root, "keyframe")
         home_controls = [initial for _, _, initial in robot_actuators]
@@ -236,6 +261,7 @@ def _append_articulation(
     parent: Any,
     articulation: Articulation,
     exported_actuators: list[tuple[str, Any, float]],
+    exported_imu_sensors: list[tuple[Sensor, str]],
     contact_excludes: list[tuple[str, str]],
     home_positions: list[float],
 ) -> None:
@@ -247,6 +273,10 @@ def _append_articulation(
             children[link.parent_link_id].append(link)
 
     joint_names: dict[str, str] = {}
+    imu_sensors_by_link: dict[str, list[Sensor]] = {}
+    for sensor in articulation.sensors:
+        if sensor.sensor_type == "imu" and sensor.link_id is not None:
+            imu_sensors_by_link.setdefault(sensor.link_id, []).append(sensor)
 
     def append_link(parent_body: Any, link: Link) -> None:
         body = ET.SubElement(
@@ -288,6 +318,25 @@ def _append_articulation(
             ET.SubElement(body, "inertial", inertial_attrs)
         for collider in link.colliders:
             _append_collider(body, collider)
+        for sensor in imu_sensors_by_link.get(link.id, []):
+            if sensor.local_transform is None:
+                raise ValueError(f"IMU sensor requires local_transform: {sensor.id}")
+            site_name = f"{_xml_name(sensor.id)}_site"
+            ET.SubElement(
+                body,
+                "site",
+                {
+                    "name": site_name,
+                    "pos": _format_vector(sensor.local_transform.position),
+                    "quat": _format_vector(
+                        _mujoco_quaternion(sensor.local_transform.quaternion)
+                    ),
+                    "type": "sphere",
+                    "size": "0.005",
+                    "rgba": "0.2 0.85 0.65 0.8",
+                },
+            )
+            exported_imu_sensors.append((sensor, site_name))
         for child in children[link.id]:
             append_link(body, child)
 
