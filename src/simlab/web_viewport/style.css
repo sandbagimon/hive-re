@@ -98,6 +98,20 @@ h2 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; }
 .trajectory-actions { display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, 32px); gap: 5px; margin-top: 7px; }
 .trajectory-actions button { min-width: 0; height: 28px; min-height: 28px; padding: 0 7px; }
 .trajectory-actions .icon-button { padding: 0; font-size: 13px; }
+.keyframe-toolbar { display: flex; align-items: center; justify-content: space-between; margin-top: 9px; color: #9ca8b5; font-size: 10px; }
+.keyframe-toolbar button { min-height: 24px; padding: 2px 7px; font-size: 11px; }
+.keyframe-list { max-height: 180px; margin-top: 5px; overflow-y: auto; border-top: 1px solid #303640; border-bottom: 1px solid #303640; }
+.keyframe-row { padding: 6px 0; }
+.keyframe-row + .keyframe-row { border-top: 1px solid #303640; }
+.keyframe-header { display: grid; grid-template-columns: 25px minmax(0, 1fr) 26px; gap: 5px; align-items: center; }
+.keyframe-header strong { color: #aeb8c4; font-size: 10px; }
+.keyframe-header label { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 5px; align-items: center; color: #8f9baa; font-size: 10px; }
+.keyframe-header input { min-width: 0; height: 24px; }
+.keyframe-header .icon-button { width: 26px; height: 24px; min-height: 24px; padding: 0; }
+.keyframe-targets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin-top: 5px; }
+.keyframe-targets label { display: grid; grid-template-columns: minmax(0, 1fr) 54px; gap: 4px; align-items: center; color: #9ca8b5; font-size: 10px; min-width: 0; }
+.keyframe-targets span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.keyframe-targets input { width: 54px; min-width: 0; height: 24px; }
 
 .asset-list, .scene-tree { min-height: 0; padding: 6px; overflow-y: auto; }
 .asset-item, .tree-item {

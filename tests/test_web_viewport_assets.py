@@ -62,6 +62,8 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "loadTrajectory" in types
     assert "TrajectorySimulationState" in types
     assert 'id="trajectory-panel"' in html
-    assert "buildTrajectory" in app
+    assert "data-keyframe-add" in app
+    assert "data-keyframe-target" in app
+    assert "trajectoryFromDraft" in app
     assert "handleTrajectoryCommand" in app
     assert "updateTrajectoryRuntime" in app

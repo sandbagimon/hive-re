@@ -1,5 +1,6 @@
 import { EditorBridgeClient } from './bridge.js';
 import { EditorStore } from './store.js';
+import { captureTrajectoryKeyframe, createTrajectoryDraft, removeTrajectoryKeyframe, setTrajectoryDuration, trajectoryDuration, trajectoryFromDraft, updateTrajectoryKeyframeTarget, updateTrajectoryKeyframeTime, } from './trajectory-draft.js';
 import { applySimulationState, configureViewport, selectViewportActor, selectViewportLink, setViewportScene, } from './viewport.js';
 const materialPresets = {
     default: { density: 1000, friction: [0.8, 0.005, 0.0001], solref: [0.02, 1], solimp: [0.9, 0.95, 0.001, 0.5, 2], roughness: 0.55, metalness: 0.04 },
@@ -9,7 +10,7 @@ const materialPresets = {
     ice: { density: 917, friction: [0.03, 0.001, 0.00005], solref: [0.01, 1], solimp: [0.92, 0.98, 0.0005, 0.5, 2], roughness: 0.12, metalness: 0.08 },
 };
 const store = new EditorStore();
-const trajectoryDraft = { name: 'Joint Motion', duration: 2, loop: false };
+const trajectoryDrafts = new Map();
 let bridge = new EditorBridgeClient(null);
 let previousSceneJson = '';
 let previousSelectedActorId = null;
@@ -357,12 +358,19 @@ function renderTrajectoryPanel(actor, scene, simulationState) {
     panel.hidden = actor?.type !== 'robot';
     if (panel.hidden || !actor)
         return;
+    const draftState = ensureTrajectoryDraft(actor, scene);
+    if (!draftState) {
+        element('trajectory-controls').innerHTML = '<div class="empty-state">No position joints</div>';
+        return;
+    }
+    const { draft } = draftState;
+    const bindings = positionJointBindings(actor, scene);
     const controls = element('trajectory-controls');
     controls.innerHTML = `
     <div class="trajectory-fields">
-      <input type="text" value="${escapeHtml(trajectoryDraft.name)}" data-trajectory-name title="Trajectory name">
-      <input type="number" min="0.05" step="0.1" value="${trajectoryDraft.duration}" data-trajectory-duration title="Duration in seconds">
-      <label><input type="checkbox" data-trajectory-loop ${trajectoryDraft.loop ? 'checked' : ''}>Loop</label>
+      <input type="text" value="${escapeHtml(draft.name)}" data-trajectory-name title="Trajectory name">
+      <input type="number" min="0.05" step="0.1" value="${trajectoryDuration(draft)}" data-trajectory-duration title="Duration in seconds">
+      <label><input type="checkbox" data-trajectory-loop ${draft.loop ? 'checked' : ''}>Loop</label>
     </div>
     <progress class="trajectory-progress" value="0" max="1" data-trajectory-progress></progress>
     <div class="trajectory-time" data-trajectory-time>0.00 / 0.00 s</div>
@@ -371,23 +379,79 @@ function renderTrajectoryPanel(actor, scene, simulationState) {
       <button type="button" class="icon-button" data-trajectory-command="play" title="Play">▶</button>
       <button type="button" class="icon-button" data-trajectory-command="pause" title="Pause">Ⅱ</button>
       <button type="button" class="icon-button" data-trajectory-command="stop" title="Stop">■</button>
+    </div>
+    <div class="keyframe-toolbar">
+      <span>${draft.keyframes.length} Keyframes</span>
+      <button type="button" data-keyframe-add>Add Current</button>
+    </div>
+    <div class="keyframe-list">
+      ${draft.keyframes.map((keyframe, index) => `
+        <div class="keyframe-row" data-keyframe-id="${escapeHtml(keyframe.id)}">
+          <div class="keyframe-header">
+            <strong>#${index + 1}</strong>
+            <label>Time <input type="number" min="0" step="0.05" value="${keyframe.time}" data-keyframe-time ${index === 0 ? 'disabled' : ''}></label>
+            <button type="button" class="icon-button" data-keyframe-delete title="Delete keyframe" ${index === 0 || draft.keyframes.length <= 2 ? 'disabled' : ''}>×</button>
+          </div>
+          <div class="keyframe-targets">
+            ${bindings.map(({ joint, actuator }) => `
+              <label title="${escapeHtml(joint.id)}">
+                <span>${escapeHtml(joint.name)}</span>
+                <input type="number" min="${actuator.control_range[0]}" max="${actuator.control_range[1]}" step="0.01" value="${keyframe.targets[joint.id]}" data-keyframe-target="${escapeHtml(joint.id)}">
+              </label>`).join('')}
+          </div>
+        </div>`).join('')}
     </div>`;
-    controls.querySelector('[data-trajectory-name]')?.addEventListener('change', (event) => { trajectoryDraft.name = event.currentTarget.value; });
-    controls.querySelector('[data-trajectory-duration]')?.addEventListener('change', (event) => { trajectoryDraft.duration = Number(event.currentTarget.value); });
-    controls.querySelector('[data-trajectory-loop]')?.addEventListener('change', (event) => { trajectoryDraft.loop = event.currentTarget.checked; });
+    controls.querySelector('[data-trajectory-name]')?.addEventListener('change', (event) => { draft.name = event.currentTarget.value; });
+    controls.querySelector('[data-trajectory-duration]')?.addEventListener('change', (event) => {
+        try {
+            draftState.draft = setTrajectoryDuration(draftState.draft, Number(event.currentTarget.value));
+            renderTrajectoryPanel(actor, scene, store.current.simulationState);
+        }
+        catch (error) {
+            showToast(error instanceof Error ? error.message : String(error), true);
+        }
+    });
+    controls.querySelector('[data-trajectory-loop]')?.addEventListener('change', (event) => { draft.loop = event.currentTarget.checked; });
     for (const button of controls.querySelectorAll('[data-trajectory-command]')) {
         button.addEventListener('click', () => {
             void handleTrajectoryCommand(button.dataset.trajectoryCommand ?? '', actor, scene);
         });
     }
+    controls.querySelector('[data-keyframe-add]')?.addEventListener('click', () => {
+        draftState.draft = captureTrajectoryKeyframe(draftState.draft, `keyframe-${draftState.nextKeyframeId++}`, trajectoryDuration(draftState.draft) + 0.5, currentRobotTargets(actor, scene));
+        draftState.targetsTouched = true;
+        renderTrajectoryPanel(actor, scene, store.current.simulationState);
+    });
+    for (const row of controls.querySelectorAll('[data-keyframe-id]')) {
+        const keyframeId = row.dataset.keyframeId ?? '';
+        row.querySelector('[data-keyframe-time]')?.addEventListener('change', (event) => {
+            draftState.draft = updateTrajectoryKeyframeTime(draftState.draft, keyframeId, Number(event.currentTarget.value));
+            draftState.targetsTouched = true;
+            renderTrajectoryPanel(actor, scene, store.current.simulationState);
+        });
+        for (const input of row.querySelectorAll('[data-keyframe-target]')) {
+            input.addEventListener('change', () => {
+                draftState.draft = updateTrajectoryKeyframeTarget(draftState.draft, keyframeId, input.dataset.keyframeTarget ?? '', Number(input.value));
+                draftState.targetsTouched = true;
+            });
+        }
+        row.querySelector('[data-keyframe-delete]')?.addEventListener('click', () => {
+            try {
+                draftState.draft = removeTrajectoryKeyframe(draftState.draft, keyframeId);
+                draftState.targetsTouched = true;
+                renderTrajectoryPanel(actor, scene, store.current.simulationState);
+            }
+            catch (error) {
+                showToast(error instanceof Error ? error.message : String(error), true);
+            }
+        });
+    }
     updateTrajectoryRuntime(simulationState);
 }
-function buildTrajectory(actor, scene) {
+function positionJointBindings(actor, scene) {
     const articulationIds = actor.properties.articulation_ids;
     const articulations = scene.robotics?.articulations.filter((item) => articulationIds?.includes(item.id)) ?? [];
-    const actuatorStates = new Map((store.current.simulationState?.actuators ?? []).map((item) => [item.id, item.ctrl]));
-    const homeTargets = {};
-    const endTargets = {};
+    const bindings = [];
     for (const articulation of articulations) {
         for (const actuator of articulation.actuators) {
             if (actuator.control_type !== 'position')
@@ -395,32 +459,60 @@ function buildTrajectory(actor, scene) {
             const joint = articulation.joints.find((item) => item.id === actuator.joint_id);
             if (!joint)
                 continue;
-            homeTargets[joint.id] = joint.initial_position;
-            endTargets[joint.id] = actuatorStates.get(actuator.id) ?? joint.initial_position;
+            bindings.push({ joint, actuator });
         }
     }
+    return bindings;
+}
+function currentRobotTargets(actor, scene) {
+    const actuatorStates = new Map((store.current.simulationState?.actuators ?? []).map((item) => [item.id, item.ctrl]));
+    return Object.fromEntries(positionJointBindings(actor, scene).map(({ joint, actuator }) => [
+        joint.id,
+        actuatorStates.get(actuator.id) ?? joint.initial_position,
+    ]));
+}
+function ensureTrajectoryDraft(actor, scene) {
+    const homeTargets = Object.fromEntries(positionJointBindings(actor, scene).map(({ joint }) => [
+        joint.id,
+        joint.initial_position,
+    ]));
     if (Object.keys(homeTargets).length === 0)
         return null;
-    return {
-        version: '1.0',
-        name: trajectoryDraft.name.trim() || 'Joint Motion',
-        loop: trajectoryDraft.loop,
-        keyframes: [
-            { time: 0, targets: homeTargets },
-            { time: trajectoryDraft.duration, targets: endTargets },
-        ],
+    const homeSignature = JSON.stringify(homeTargets);
+    const existing = trajectoryDrafts.get(actor.id);
+    if (existing?.homeSignature === homeSignature)
+        return existing;
+    const created = {
+        draft: createTrajectoryDraft(actor.id, homeTargets),
+        homeSignature,
+        targetsTouched: false,
+        nextKeyframeId: 2,
     };
+    trajectoryDrafts.set(actor.id, created);
+    return created;
 }
 async function handleTrajectoryCommand(command, actor, scene) {
     let result;
     if (command === 'load') {
-        if (!Number.isFinite(trajectoryDraft.duration) || trajectoryDraft.duration <= 0) {
-            showToast('Trajectory duration must be greater than zero', true);
+        const draftState = ensureTrajectoryDraft(actor, scene);
+        if (!draftState) {
+            showToast('Robot has no position joints', true);
             return;
         }
-        const trajectory = buildTrajectory(actor, scene);
-        if (!trajectory) {
-            showToast('Robot has no position joints', true);
+        if (!draftState.targetsTouched) {
+            const finalKeyframe = draftState.draft.keyframes.at(-1);
+            if (finalKeyframe) {
+                for (const [jointId, target] of Object.entries(currentRobotTargets(actor, scene))) {
+                    draftState.draft = updateTrajectoryKeyframeTarget(draftState.draft, finalKeyframe.id, jointId, target);
+                }
+            }
+        }
+        let trajectory;
+        try {
+            trajectory = trajectoryFromDraft(draftState.draft);
+        }
+        catch (error) {
+            showToast(error instanceof Error ? error.message : String(error), true);
             return;
         }
         result = await bridge.call('loadTrajectory', JSON.stringify(scene), JSON.stringify(trajectory));
