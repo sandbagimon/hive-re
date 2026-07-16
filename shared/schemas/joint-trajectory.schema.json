@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://simlab.local/schemas/joint-trajectory.schema.json",
+  "title": "SimLabJointTrajectory",
+  "$defs": {
+    "keyframe": {
+      "type": "object",
+      "properties": {
+        "time": { "type": "number", "minimum": 0 },
+        "targets": {
+          "type": "object",
+          "propertyNames": { "type": "string", "minLength": 1 },
+          "additionalProperties": { "type": "number" },
+          "minProperties": 1
+        }
+      },
+      "required": ["time", "targets"],
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "version": { "const": "1.0" },
+    "name": { "type": "string", "minLength": 1 },
+    "loop": { "type": "boolean", "default": false },
+    "keyframes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/keyframe" },
+      "minItems": 2
+    }
+  },
+  "required": ["version", "name", "loop", "keyframes"],
+  "additionalProperties": false
+}

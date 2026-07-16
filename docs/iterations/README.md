@@ -61,3 +61,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-16 Robot Joint Selection](2026-07-16-robot-joint-selection.md)
 - [2026-07-16 Qt Robot UI E2E](2026-07-16-qt-robot-ui-e2e.md)
 - [2026-07-16 Qt Robot Control E2E](2026-07-16-qt-robot-control-e2e.md)
+- [2026-07-16 Joint Trajectory Contract](2026-07-16-joint-trajectory-contract.md)
