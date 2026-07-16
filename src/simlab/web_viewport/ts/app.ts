@@ -9,6 +9,7 @@ import type {
   PhysicsProperties,
   PreflightPayload,
   ProjectPayload,
+  RpcResult,
   SavePayload,
   Scene,
   SimulationState,
@@ -224,7 +225,7 @@ function renderInspector(
       <div class="property-row"><label>Parent</label><input type="text" value="${escapeHtml(parentLink?.name ?? selectedJoint.parent_link_id)}" disabled></div>
       <div class="property-row"><label>Child</label><input type="text" value="${escapeHtml(childLink?.name ?? selectedJoint.child_link_id)}" disabled></div>
       <div class="property-row"><label>Axis</label><input type="text" value="${selectedJoint.axis.join(', ')}" disabled></div>
-      <div class="property-row"><label>Range</label><input type="text" value="${selectedJoint.limits?.lower ?? '—'} to ${selectedJoint.limits?.upper ?? '—'}" disabled></div>
+      <div class="property-row"><label>Range</label><input type="text" value="${selectedJoint.limits?.lower?.toFixed(3) ?? '—'} to ${selectedJoint.limits?.upper?.toFixed(3) ?? '—'}" disabled></div>
       <div class="property-row"><label>Position</label><input type="text" value="${selectedJointState?.qpos.toFixed(3) ?? selectedJoint.initial_position}" disabled data-joint-position-field="${escapeHtml(selectedJoint.id)}"></div>
     </section>` : `
     <section class="property-group"><h3>Actor</h3>
@@ -454,17 +455,7 @@ async function handleCommand(command: string): Promise<void> {
     } else if (result.error !== 'Cancelled') showToast(result.error ?? 'Open failed', true);
   } else if (command === 'save') await saveProject(false);
   else if (command === 'save-as') await saveProject(true);
-  else if (command === 'import-openusd') {
-    const result = await bridge.call<OpenUsdImportPayload>('importOpenUsd');
-    if (result.ok && result.data) {
-      store.upsertAsset(result.data.asset);
-      store.addAsset(result.data.asset, result.data.robotics);
-      for (const warning of result.data.warnings) store.appendLog(`USD: ${warning}`);
-      showToast(`Imported ${result.data.asset.name}`);
-    } else if (result.error !== 'Cancelled') {
-      showToast(result.error ?? 'OpenUSD import failed', true);
-    }
-  }
+  else if (command === 'import-openusd') await importOpenUsd();
   else if (command === 'undo') store.undo();
   else if (command === 'redo') store.redo();
   else if (command === 'clear-console') store.clearLogs();
@@ -498,6 +489,21 @@ async function handleCommand(command: string): Promise<void> {
       showToast(result.error ?? 'Simulation reset failed', true);
     }
   }
+}
+
+async function importOpenUsd(path?: string): Promise<RpcResult<OpenUsdImportPayload>> {
+  const result = path
+    ? await bridge.call<OpenUsdImportPayload>('importOpenUsdPath', path)
+    : await bridge.call<OpenUsdImportPayload>('importOpenUsd');
+  if (result.ok && result.data) {
+    store.upsertAsset(result.data.asset);
+    store.addAsset(result.data.asset, result.data.robotics);
+    for (const warning of result.data.warnings) store.appendLog(`USD: ${warning}`);
+    showToast(`Imported ${result.data.asset.name}`);
+  } else if (result.error !== 'Cancelled') {
+    showToast(result.error ?? 'OpenUSD import failed', true);
+  }
+  return result;
 }
 
 for (const button of document.querySelectorAll<HTMLButtonElement>('[data-command]')) {
@@ -591,6 +597,18 @@ async function initialize(): Promise<void> {
     store.current.currentPath,
   );
   store.appendLog('TypeScript editor ready.');
+  window.simlabEditorReady = true;
 }
+
+window.simlabEditorReady = false;
+window.simlabEditor = {
+  importOpenUsdPath: (path) => importOpenUsd(path),
+  getStateJson: () => JSON.stringify(store.current),
+  selectJoint: (actorId, jointId) => {
+    store.selectJoint(actorId, jointId);
+    return store.current.selectedActorId === actorId
+      && store.current.selectedJointId === jointId;
+  },
+};
 
 void initialize();

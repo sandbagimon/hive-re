@@ -509,7 +509,15 @@ Pause/Resume 会清空墙钟间隙，callback 不足一个 timestep 时只发布
 Frame Selected 会使用 child Link bounds，Store 拒绝不属于 actor 的 joint ID。实现证据见
 `docs/iterations/2026-07-16-robot-joint-selection.md`。
 
-## 29. 当前下一项具体任务
+## 29. Editor Automation and Qt Robot UI E2E（已完成 2026-07-16）
 
-> 建立受控 Editor Automation API，允许自动化按 path 导入 USD、读取 editor state 和选择 joint；使用
-> QtWebEngine offscreen 运行真实 TypeScript UI，截图并验证 robot tree、joint Inspector 与 viewport 非空。
+> 受控 Editor Automation API 支持按 path 导入 USD、读取 JSON state 和选择有效 joint；真实
+> QtWebEngine offscreen 测试验证 robot tree、Joint Inspector、Jog、canvas 和非空截图。
+
+MainWindow 支持注入临时 project root，视觉测试不会污染仓库资产。显式视觉门禁通过并生成
+`/tmp/simlab-robot-joint-ui.png`。实现证据见 `docs/iterations/2026-07-16-qt-robot-ui-e2e.md`。
+
+## 30. 当前下一项具体任务
+
+> 扩展 Qt robot UI E2E：通过真实 Run/Jog/Pause/Reset 按钮驱动机械臂，等待 qpos 与 child Link pose
+> 变化，验证 live Inspector 反馈和 Reset Home，并保存运行态截图。

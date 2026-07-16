@@ -277,6 +277,12 @@ export interface QWebChannelInstance {
   objects: { simlabBridge: PythonBridgeObject };
 }
 
+export interface SimLabEditorAutomation {
+  importOpenUsdPath(path: string): Promise<RpcResult<OpenUsdImportPayload>>;
+  getStateJson(): string;
+  selectJoint(actorId: string, jointId: string): boolean;
+}
+
 declare global {
   interface Window {
     qt?: { webChannelTransport: unknown };
@@ -284,5 +290,7 @@ declare global {
       transport: unknown,
       callback: (channel: QWebChannelInstance) => void,
     ) => unknown;
+    simlabEditor?: SimLabEditorAutomation;
+    simlabEditorReady?: boolean;
   }
 }

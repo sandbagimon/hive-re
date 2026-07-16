@@ -14,9 +14,9 @@ from simlab.editor_bridge import EditorBridge
 class MainWindow(QMainWindow):
     """Thin desktop host for the TypeScript editor and Python RPC bridge."""
 
-    def __init__(self) -> None:
+    def __init__(self, project_root: Path | None = None) -> None:
         super().__init__()
-        self.project_root = self._find_project_root()
+        self.project_root = project_root or self._find_project_root()
         self.web_view = QWebEngineView(self)
         self.bridge = EditorBridge(self, self.project_root)
         self.channel = QWebChannel(self.web_view.page())
