@@ -979,8 +979,20 @@ Scene Tree selection、SecondSegment viewport 高亮、Pause 和 Reset 清空均
 
 实现证据见 `docs/iterations/2026-07-16-contact-sensor-qt-e2e.md`。
 
-## 72. 当前下一项具体任务
+## 72. Contact Recording Contract（已完成 2026-07-16）
 
 > 建立 Contact Recording Contract：扩展 sensor recording typed union 与 JSON schema，定义 contact event 的 stable
 > columns（time/sequence/count/normal force/impulse/tangent xyz，以及有界 point/normal slots）；保持空 step cells 与
 > joint/IMU 相同语义，先用纯 recorder round-trip/CSV tests 固定格式。
+
+Recording model/recorder/shared schema 已支持 contact typed event。每个 contact sensor 固定导出 56 列：8 个聚合
+字段加 8 组 point xyz/normal xyz；未发射 step 整块留空，已发射 event 对未使用 slot 留空。contact_count 保留完整
+接触数量，即使 points/normals 最多只保留 8 组。JSON round-trip、schema validation 与 CSV 精确列序已固定。
+
+实现证据见 `docs/iterations/2026-07-16-contact-recording-contract.md`。
+
+## 73. 当前下一项具体任务
+
+> 接入 Contact Recording Runtime/UI：Session 将 contact emitted samples 与 joint/IMU 同步送入 recorder，允许
+> selected contact sensor type；Recording Panel 展示 contact checkbox。验证 t=0 empty event、每步 cadence、接触
+> 发生后的 typed event、event count、Reset/Stop 边界与 JSON/CSV 导出。

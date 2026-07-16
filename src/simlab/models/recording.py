@@ -6,6 +6,10 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 
+def _vector3(values: Any) -> tuple[float, float, float]:
+    return (float(values[0]), float(values[1]), float(values[2]))
+
+
 @dataclass(frozen=True, slots=True)
 class RecordingManifest:
     engine_version: str
@@ -89,8 +93,38 @@ class ImuRecordingState:
         }
 
 
-RecordingSensorType = Literal["joint_state", "imu"]
-TypedSensorRecordingState = SensorRecordingState | ImuRecordingState
+CONTACT_RECORDING_POINT_SLOTS = 8
+
+
+@dataclass(frozen=True, slots=True)
+class ContactRecordingState:
+    time: float
+    sequence: int
+    contact_count: int
+    normal_force: float
+    normal_impulse: float
+    tangent_force: tuple[float, float, float]
+    points: tuple[tuple[float, float, float], ...]
+    normals: tuple[tuple[float, float, float], ...]
+
+    def to_dict(self) -> dict[str, str | int | float | list[float] | list[list[float]]]:
+        return {
+            "sensor_type": "contact",
+            "time": self.time,
+            "sequence": self.sequence,
+            "contact_count": self.contact_count,
+            "normal_force": self.normal_force,
+            "normal_impulse": self.normal_impulse,
+            "tangent_force": list(self.tangent_force),
+            "points": [list(point) for point in self.points],
+            "normals": [list(normal) for normal in self.normals],
+        }
+
+
+RecordingSensorType = Literal["joint_state", "imu", "contact"]
+TypedSensorRecordingState = (
+    SensorRecordingState | ImuRecordingState | ContactRecordingState
+)
 
 
 def _sensor_state_from_dict(data: dict[str, Any]) -> TypedSensorRecordingState:
@@ -107,6 +141,17 @@ def _sensor_state_from_dict(data: dict[str, Any]) -> TypedSensorRecordingState:
             linear_acceleration=tuple(  # type: ignore[arg-type]
                 float(value) for value in data["linear_acceleration"]
             ),
+        )
+    if sensor_type == "contact":
+        return ContactRecordingState(
+            time=float(data["time"]),
+            sequence=int(data["sequence"]),
+            contact_count=int(data["contact_count"]),
+            normal_force=float(data["normal_force"]),
+            normal_impulse=float(data["normal_impulse"]),
+            tangent_force=_vector3(data["tangent_force"]),
+            points=tuple(_vector3(point) for point in data["points"]),
+            normals=tuple(_vector3(normal) for normal in data["normals"]),
         )
     if sensor_type != "joint_state":
         raise ValueError(f"Unsupported recording sensor type: {sensor_type}")
@@ -226,8 +271,11 @@ class JointStateRecording:
                 [f"actuator.{actuator_id}.ctrl", f"actuator.{actuator_id}.force"]
             )
         for sensor_id in self.sensor_ids:
-            if self.sensor_types.get(sensor_id, "joint_state") == "imu":
+            sensor_type = self.sensor_types.get(sensor_id, "joint_state")
+            if sensor_type == "imu":
                 header.extend(_imu_csv_columns(sensor_id))
+            elif sensor_type == "contact":
+                header.extend(_contact_csv_columns(sensor_id))
             else:
                 header.extend(_joint_sensor_csv_columns(sensor_id))
         writer.writerow(header)
@@ -243,7 +291,9 @@ class JointStateRecording:
                 sensor_state = sample.sensors.get(sensor_id)
                 sensor_type = self.sensor_types.get(sensor_id, "joint_state")
                 if sensor_state is None:
-                    column_count = 13 if sensor_type == "imu" else 5
+                    column_count = {"joint_state": 5, "imu": 13, "contact": 56}[
+                        sensor_type
+                    ]
                     row.extend([""] * column_count)
                     continue
                 if sensor_type == "imu" and isinstance(sensor_state, ImuRecordingState):
@@ -257,6 +307,29 @@ class JointStateRecording:
                             *sensor_state.linear_acceleration,
                         ]
                     )
+                elif sensor_type == "contact" and isinstance(
+                    sensor_state, ContactRecordingState
+                ):
+                    row.extend(
+                        [
+                            sensor_state.time,
+                            sensor_state.sequence,
+                            sensor_state.contact_count,
+                            sensor_state.normal_force,
+                            sensor_state.normal_impulse,
+                            *sensor_state.tangent_force,
+                        ]
+                    )
+                    for slot in range(CONTACT_RECORDING_POINT_SLOTS):
+                        if slot < len(sensor_state.points):
+                            row.extend(
+                                [
+                                    *sensor_state.points[slot],
+                                    *sensor_state.normals[slot],
+                                ]
+                            )
+                        else:
+                            row.extend([""] * 6)
                 elif sensor_type == "joint_state" and isinstance(
                     sensor_state, SensorRecordingState
                 ):
@@ -302,3 +375,29 @@ def _imu_csv_columns(sensor_id: str) -> list[str]:
         f"{prefix}.linear_acceleration.y",
         f"{prefix}.linear_acceleration.z",
     ]
+
+
+def _contact_csv_columns(sensor_id: str) -> list[str]:
+    prefix = f"sensor.{sensor_id}"
+    columns = [
+        f"{prefix}.time",
+        f"{prefix}.sequence",
+        f"{prefix}.contact_count",
+        f"{prefix}.normal_force",
+        f"{prefix}.normal_impulse",
+        f"{prefix}.tangent_force.x",
+        f"{prefix}.tangent_force.y",
+        f"{prefix}.tangent_force.z",
+    ]
+    for slot in range(CONTACT_RECORDING_POINT_SLOTS):
+        columns.extend(
+            [
+                f"{prefix}.point.{slot}.x",
+                f"{prefix}.point.{slot}.y",
+                f"{prefix}.point.{slot}.z",
+                f"{prefix}.normal.{slot}.x",
+                f"{prefix}.normal.{slot}.y",
+                f"{prefix}.normal.{slot}.z",
+            ]
+        )
+    return columns

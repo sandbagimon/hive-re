@@ -48,10 +48,35 @@
       "required": ["sensor_type", "link_id", "time", "sequence", "orientation", "angular_velocity", "linear_acceleration"],
       "additionalProperties": false
     },
+    "contactSensorState": {
+      "type": "object",
+      "properties": {
+        "sensor_type": { "const": "contact" },
+        "time": { "type": "number", "minimum": 0 },
+        "sequence": { "type": "integer", "minimum": 0 },
+        "contact_count": { "type": "integer", "minimum": 0 },
+        "normal_force": { "type": "number", "minimum": 0 },
+        "normal_impulse": { "type": "number", "minimum": 0 },
+        "tangent_force": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+        "points": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+        },
+        "normals": {
+          "type": "array",
+          "maxItems": 8,
+          "items": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+        }
+      },
+      "required": ["sensor_type", "time", "sequence", "contact_count", "normal_force", "normal_impulse", "tangent_force", "points", "normals"],
+      "additionalProperties": false
+    },
     "sensorState": {
       "oneOf": [
         { "$ref": "#/$defs/jointSensorState" },
-        { "$ref": "#/$defs/imuSensorState" }
+        { "$ref": "#/$defs/imuSensorState" },
+        { "$ref": "#/$defs/contactSensorState" }
       ]
     },
     "sample": {
@@ -95,7 +120,7 @@
     "sensor_ids": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
     "sensor_types": {
       "type": "object",
-      "additionalProperties": { "enum": ["joint_state", "imu"] }
+      "additionalProperties": { "enum": ["joint_state", "imu", "contact"] }
     },
     "limit_reached": { "type": "boolean" },
     "samples": { "type": "array", "items": { "$ref": "#/$defs/sample" } }

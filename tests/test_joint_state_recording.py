@@ -1,9 +1,13 @@
 import csv
 import io
+import json
+from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
 
 from simlab.models.recording import JointStateRecording
+from simlab.services.contact_sensors import ContactMeasurement, ContactSensorSample
 from simlab.services.imu_sensors import ImuSensorSample
 from simlab.services.joint_state_recorder import JointStateRecorder
 from simlab.services.joint_state_sensors import JointStateSensorSample
@@ -164,6 +168,89 @@ def test_recording_round_trip_exports_emitted_imu_vector_columns() -> None:
         "0.0",
         "9.5",
     ]
+
+
+def test_recording_round_trip_exports_bounded_contact_columns() -> None:
+    recorder = JointStateRecorder()
+    recorder.start(
+        name="Contact Run",
+        joint_ids=[],
+        actuator_ids=[],
+        sensor_ids=["forearm_contact"],
+        sensor_types={"forearm_contact": "contact"},
+        timestep=0.01,
+        scene_version="1.0",
+        engine_version="3.3.7",
+    )
+    event = ContactSensorSample(
+        sensor_id="forearm_contact",
+        time=0.02,
+        sequence=1,
+        measurement=ContactMeasurement(
+            contact_count=3,
+            normal_force=18.5,
+            normal_impulse=0.185,
+            tangent_force=(-1.0, 0.5, 0.0),
+            points=((0.4, -0.1, 0.2), (0.4, 0.1, 0.2)),
+            normals=((0.0, 0.0, -1.0), (0.0, 0.0, -1.0)),
+        ),
+    )
+
+    recorder.capture(_state(0.01))
+    recorder.capture(_state(0.02), [event])
+    recording = recorder.stop()
+    restored = JointStateRecording.from_dict(recording.to_dict())
+    rows = list(csv.reader(io.StringIO(restored.to_csv())))
+    schema = json.loads(
+        Path("shared/schemas/joint-recording.schema.json").read_text(encoding="utf-8")
+    )
+    Draft202012Validator(schema).validate(recording.to_dict())
+
+    assert restored.sensor_types == {"forearm_contact": "contact"}
+    assert restored.to_dict() == recording.to_dict()
+    assert len(rows[0]) == 57
+    assert rows[0][1:9] == [
+        "sensor.forearm_contact.time",
+        "sensor.forearm_contact.sequence",
+        "sensor.forearm_contact.contact_count",
+        "sensor.forearm_contact.normal_force",
+        "sensor.forearm_contact.normal_impulse",
+        "sensor.forearm_contact.tangent_force.x",
+        "sensor.forearm_contact.tangent_force.y",
+        "sensor.forearm_contact.tangent_force.z",
+    ]
+    assert rows[0][-6:] == [
+        "sensor.forearm_contact.point.7.x",
+        "sensor.forearm_contact.point.7.y",
+        "sensor.forearm_contact.point.7.z",
+        "sensor.forearm_contact.normal.7.x",
+        "sensor.forearm_contact.normal.7.y",
+        "sensor.forearm_contact.normal.7.z",
+    ]
+    assert rows[1][1:] == [""] * 56
+    assert rows[2][1:21] == [
+        "0.02",
+        "1",
+        "3",
+        "18.5",
+        "0.185",
+        "-1.0",
+        "0.5",
+        "0.0",
+        "0.4",
+        "-0.1",
+        "0.2",
+        "0.0",
+        "0.0",
+        "-1.0",
+        "0.4",
+        "0.1",
+        "0.2",
+        "0.0",
+        "0.0",
+        "-1.0",
+    ]
+    assert rows[2][21:] == [""] * 36
 
 
 def test_joint_state_recording_reads_legacy_payload_without_sensors() -> None:
