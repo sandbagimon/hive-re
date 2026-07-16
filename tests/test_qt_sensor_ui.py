@@ -41,7 +41,7 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
 
     from simlab.main_window import MainWindow
     from simlab.models.actor import Actor
-    from simlab.models.robotics import Sensor
+    from simlab.models.robotics import RigidTransform, Sensor
     from simlab.models.scene import Scene
     from simlab.services.openusd_importer import import_openusd_asset
     from simlab.services.project_service import save_scene
@@ -59,6 +59,16 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
         update_rate_hz=50.0,
     )
     articulation.sensors.append(sensor)
+    forearm = articulation.links[-1]
+    imu = Sensor(
+        id="sensor_qt_forearm_imu",
+        name="Forearm IMU",
+        sensor_type="imu",
+        link_id=forearm.id,
+        update_rate_hz=50.0,
+        local_transform=RigidTransform(position=[0.0, 0.0, 0.2]),
+    )
+    articulation.sensors.append(imu)
     scene = Scene(
         name="Qt Sensor Scene",
         actors=[
@@ -123,7 +133,7 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
         )
     )
     assert initial_ui == {
-        "rows": 1,
+        "rows": 2,
         "selected": 1,
         "heading": "Sensor",
         "rate": "50 Hz",
@@ -302,13 +312,41 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
     )
     assert recording_status == f"{len(recording['samples'])} Rows · {len(events)} Events"
 
-    _javascript(
+    assert _javascript(
         app,
         window.web_view.page(),
-        "document.querySelector('#recording-panel').scrollIntoView({block:'start'});true",
+        "window.simlabEditor.selectSensor('actor_arm','sensor_qt_forearm_imu')",
+    ) is True
+    imu_sample = next(item for item in state["sensors"] if item["sensor_type"] == "imu")
+    imu_ui = json.loads(
+        _javascript(
+            app,
+            window.web_view.page(),
+            "JSON.stringify({"
+            "mount:[...document.querySelectorAll('#property-inspector .property-row')]"
+            ".find(row=>row.querySelector('label').textContent==='Link').querySelector('input').value,"
+            "fields:Object.fromEntries([...document.querySelectorAll('[data-sensor-field]')]"
+            ".map(input=>[input.dataset.sensorField,input.value]))"
+            "})",
+        )
     )
+    assert imu_ui["mount"] == forearm.name
+    assert int(imu_ui["fields"]["sequence"]) == imu_sample["sequence"]
+    assert float(imu_ui["fields"]["time"]) == pytest.approx(imu_sample["time"], abs=0.001)
+    assert imu_ui["fields"]["orientation"] == ", ".join(
+        f"{value:.3f}" for value in imu_sample["orientation"]
+    )
+    assert imu_ui["fields"]["angular_velocity"] == ", ".join(
+        f"{value:.3f}" for value in imu_sample["angular_velocity"]
+    )
+    assert imu_ui["fields"]["linear_acceleration"] == ", ".join(
+        f"{value:.3f}" for value in imu_sample["linear_acceleration"]
+    )
+    assert any(abs(value) > 0.01 for value in imu_sample["angular_velocity"])
+
     # QtWebEngine updates the DOM synchronously but composites offscreen a frame later.
-    paint_deadline = time.monotonic() + 0.25
+    window.web_view.update()
+    paint_deadline = time.monotonic() + 0.75
     while time.monotonic() < paint_deadline:
         app.processEvents()
         time.sleep(0.02)
@@ -324,6 +362,29 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
         for y in range(0, image.height(), max(image.height() // 20, 1))
     }
     assert len(colors) > 10
+
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-command=\"reset\"]').click();true",
+    )
+
+    def imu_is_reset() -> bool:
+        current = json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )
+        reset_imu = next(
+            item
+            for item in current["simulationState"]["sensors"]
+            if item["sensor_type"] == "imu"
+        )
+        return bool(
+            current["simulationStatus"] == "paused"
+            and reset_imu["sequence"] == 0
+            and reset_imu["time"] == 0.0
+        )
+
+    _wait_until(app, imu_is_reset)
 
     window.bridge.dirty = False
     window.close()

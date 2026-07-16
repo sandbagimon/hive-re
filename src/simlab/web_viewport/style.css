@@ -279,6 +279,7 @@ h2 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; }
   color: #e6edf3;
 }
 .property-row input[type="checkbox"] { width: 16px; justify-self: start; }
+[data-runtime-sensor-id] { font-family: monospace; font-size: 9px; letter-spacing: 0; }
 .vector-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
 
 #validation-panel { border-top: 1px solid #303640; }
