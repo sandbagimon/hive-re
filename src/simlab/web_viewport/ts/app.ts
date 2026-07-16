@@ -905,9 +905,7 @@ function updateTrajectoryRuntime(simulationState: SimulationState | null): void 
 
 function ensureRecordingDraft(actor: Actor, scene: Scene): RecordingDraftState {
   const bindings = positionJointBindings(actor, scene);
-  const sensors = robotSensors(actor, scene).filter(
-    (sensor) => sensor.sensor_type === 'joint_state',
-  );
+  const sensors = robotSensors(actor, scene);
   const signature = JSON.stringify([
     bindings.map(({ joint }) => joint.id),
     sensors.map((sensor) => sensor.id),
@@ -930,7 +928,6 @@ function sensorsForRecording(
   draft: RecordingDraftState,
 ): string[] {
   return robotSensors(actor, scene)
-    .filter((sensor) => sensor.sensor_type === 'joint_state')
     .filter((sensor) => draft.selectedSensorIds.has(sensor.id))
     .map((sensor) => sensor.id);
 }
@@ -945,9 +942,7 @@ function renderRecordingPanel(
   if (panel.hidden || !actor) return;
   const draft = ensureRecordingDraft(actor, scene);
   const bindings = positionJointBindings(actor, scene);
-  const sensors = robotSensors(actor, scene).filter(
-    (sensor) => sensor.sensor_type === 'joint_state',
-  );
+  const sensors = robotSensors(actor, scene);
   const controls = element('recording-controls');
   controls.innerHTML = `
     <input class="recording-name" type="text" value="${escapeHtml(draft.name)}" data-recording-name title="Recording name">

@@ -200,9 +200,12 @@ class MuJoCoSimulationSession:
             for articulation in (scene.robotics.articulations if scene.robotics else [])
             for sensor in articulation.sensors
         ]
-        self._sensor_ids = {
-            sensor.id for sensor in sensor_definitions if sensor.sensor_type == "joint_state"
+        self._sensor_types = {
+            sensor.id: sensor.sensor_type
+            for sensor in sensor_definitions
+            if sensor.sensor_type in {"joint_state", "imu"}
         }
+        self._sensor_ids = set(self._sensor_types)
         self._joint_state_sensors = JointStateSensorScheduler(
             sensor_definitions,
             float(self.model.opt.timestep),
@@ -241,13 +244,20 @@ class MuJoCoSimulationSession:
                 float(self.data.time),
                 self._joint_kinematics(),
             )
-            self._imu_sensors.capture(
+            emitted_imu_sensors = self._imu_sensors.capture(
                 self._physics_step_index,
                 float(self.data.time),
                 self._imu_measurements(),
             )
             if self._state_recorder.active:
-                self._state_recorder.capture(self.state(), emitted_sensors)
+                recording_sensors: list[JointStateSensorSample | ImuSensorSample] = [
+                    *emitted_sensors,
+                    *emitted_imu_sensors,
+                ]
+                self._state_recorder.capture(
+                    self.state(),
+                    recording_sensors,
+                )
         return self.state()
 
     def reset(self) -> SimulationState:
@@ -351,15 +361,20 @@ class MuJoCoSimulationSession:
             joint_ids=selected_joint_ids,
             actuator_ids=selected_actuator_ids,
             sensor_ids=selected_sensor_ids,
+            sensor_types={
+                sensor_id: self._sensor_types[sensor_id]
+                for sensor_id in selected_sensor_ids
+            },
             timestep=float(self.model.opt.timestep),
             scene_version=self.scene.version,
             engine_version=str(self._mujoco.__version__),
         )
-        initial_sensor_samples = (
-            self._joint_state_sensors.latest_samples
-            if math.isclose(float(self.data.time), 0.0, abs_tol=1e-12)
-            else ()
-        )
+        initial_sensor_samples: list[JointStateSensorSample | ImuSensorSample] = []
+        if math.isclose(float(self.data.time), 0.0, abs_tol=1e-12):
+            initial_sensor_samples = [
+                *self._joint_state_sensors.latest_samples,
+                *self._imu_sensors.latest_samples,
+            ]
         self._state_recorder.capture(self.state(), initial_sensor_samples)
         return self.state()
 

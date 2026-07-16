@@ -916,8 +916,20 @@ joint_state。Recorder 校验 sensor IDs/types 完全匹配并验证所有 vecto
 
 实现证据见 `docs/iterations/2026-07-16-typed-imu-recording-contract.md`。
 
-## 67. 当前下一项具体任务
+## 67. IMU Recording Runtime and Qt E2E（已完成 2026-07-16）
 
 > 接入 IMU Recording Runtime/UI：Session 对 selected sensor_ids 传入类型映射，合并 joint/imu emitted tuple；
 > Recording Panel 展示两类 sensor checkbox。扩展 Qt E2E 同时选择 joint-state 与 IMU，验证各自 50Hz
 > cadence、event count、JSON typed payload 和 CSV 5+13 stable columns。
+
+Session 已维护 stable sensor ID/type map，并将同一 physics step 的 joint/imu emitted events 合并 capture；
+t=0 boundary 同时记录两类 sequence 0。Recording Panel 展示全部支持类型。真实 Qt 流程同时勾选两类
+50Hz sensor，验证 typed JSON、joint 5列、IMU 13列、空步和合计 event count；Reset 后 runtime 回 Home。
+
+实现证据见 `docs/iterations/2026-07-16-imu-recording-runtime.md`。
+
+## 68. 当前下一项具体任务
+
+> 建立 Contact Sensor Contract：定义 collider/link scope、aggregation mode、update rate 和 payload（contact_count、
+> normal_force、tangent_force、impulse、contact points/normals 的首版有界集合）；先实现纯 fixed-step scheduler 与
+> MuJoCo contact aggregation adapter，明确 world/local frame 和多接触合并规则，再接 SimulationState/UI。

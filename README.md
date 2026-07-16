@@ -50,7 +50,7 @@ OpenUSD physics values are imported when authored, including rigid-body state, m
 
 OpenUSD articulations are imported as robot actors with independent links, colliders, inertial properties, revolute joints, and position drives. The Scene Tree and viewport preserve the robot hierarchy; joint targets, jog controls, and editable keyframe trajectories drive the generated MuJoCo articulation while live link poses and joint feedback remain separate from authoring transforms.
 
-Robot trajectories can be saved in the scene, reopened, edited, and replayed. The Recording panel selects joints and joint-state sensors independently, then reports fixed physics rows separately from emitted sensor events. The artifact contract also defines typed IMU events and 13 stable vector CSV columns while retaining legacy joint-sensor migration. Session, Service, and Bridge preserve joint-state fixed-clock cadence in deterministic JSON and CSV; CSV leaves sensor columns empty between real samples instead of duplicating stale latest values.
+Robot trajectories can be saved in the scene, reopened, edited, and replayed. The Recording panel selects joints, joint-state sensors, and IMUs independently, then reports fixed physics rows separately from emitted sensor events. Session merges typed fixed-step events into deterministic JSON and CSV: joint-state sensors use 5 stable columns and IMUs use 13 link/vector columns. CSV leaves all sensor columns empty between real samples instead of duplicating stale latest values, and legacy joint-sensor artifacts remain readable.
 
 The command bar provides 0.25x, 0.5x, 1x, and 2x simulation-speed controls plus measured real-time-factor feedback. Speed changes scale fixed-step scheduling without changing the authored MuJoCo timestep or trajectory/recording timestamps.
 
@@ -104,8 +104,8 @@ task; `PRODUCT_PLAN.md` remains the long-term scope document.
 
 The external OpenUSD robot import, joint-control vertical slice, general controller callback API, and first joint-state sensor runtime/Inspector are complete. The next platform gap is deterministic sensor recording/export followed by IMU and contact/force sensing.
 
-1. **IMU sensor**: Add link-mounted schema, fixed-clock runtime sampling, recording fields, and UI inspection.
-2. **Contact sensing**: Add contact/force schema, aggregation semantics, recording fields, and UI inspection.
+1. **Contact sensing**: Add contact/force schema, aggregation semantics, recording fields, and UI inspection.
+2. **Sensor authoring**: Add Inspector controls for creating, editing, and deleting mounted sensors.
 3. **Clock hardening**: Extend soak coverage for variable host load and long recording sessions.
 4. **Authoring**: Add dedicated collision prim workflows and a consolidated validation panel.
 

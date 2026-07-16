@@ -148,12 +148,11 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
             "})",
         )
     )
-    assert recording_sources == {"count": 1, "checked": False}
+    assert recording_sources == {"count": 2, "checked": False}
     _javascript(
         app,
         window.web_view.page(),
-        "const sensor=document.querySelector('[data-recording-sensor]');"
-        "sensor.click();"
+        "document.querySelectorAll('[data-recording-sensor]').forEach(sensor=>sensor.click());"
         "document.querySelector('[data-recording-command=\"start\"]').click();true",
     )
 
@@ -165,7 +164,7 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
             current
             and current["recording"]["active"] is True
             and current["recording"]["sample_count"] == 1
-            and current["recording"]["sensor_event_count"] == 1
+            and current["recording"]["sensor_event_count"] == 2
         )
 
     _wait_until(app, recording_is_active)
@@ -255,7 +254,8 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
     )
     assert recording_result["ok"] is True
     recording = recording_result["data"]["recording"]
-    assert recording["sensor_ids"] == [sensor.id]
+    assert recording["sensor_ids"] == [sensor.id, imu.id]
+    assert recording["sensor_types"] == {sensor.id: "joint_state", imu.id: "imu"}
     events = [
         sample["sensors"][sensor.id]
         for sample in recording["samples"]
@@ -267,7 +267,18 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
         for left, right in zip(events, events[1:], strict=False)
     )
     assert any(not sample["sensors"] for sample in recording["samples"][1:])
-    assert state["recording"]["sensor_event_count"] == len(events)
+    imu_events = [
+        sample["sensors"][imu.id]
+        for sample in recording["samples"]
+        if imu.id in sample["sensors"]
+    ]
+    assert [event["sequence"] for event in imu_events] == list(range(len(imu_events)))
+    assert all(
+        right["time"] - left["time"] == pytest.approx(0.02)
+        for left, right in zip(imu_events, imu_events[1:], strict=False)
+    )
+    assert all(event["sensor_type"] == "imu" for event in imu_events)
+    assert state["recording"]["sensor_event_count"] == len(events) + len(imu_events)
 
     json_path = tmp_path / "recordings" / "sensor.json"
     csv_path = tmp_path / "recordings" / "sensor.csv"
@@ -305,12 +316,20 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
     assert [
         int(row[sequence_column]) for row in rows[1:] if row[sequence_column]
     ] == list(range(len(events)))
+    imu_sequence_column = rows[0].index(f"sensor.{imu.id}.sequence")
+    assert f"sensor.{imu.id}.orientation.w" in rows[0]
+    assert f"sensor.{imu.id}.linear_acceleration.z" in rows[0]
+    assert [
+        int(row[imu_sequence_column]) for row in rows[1:] if row[imu_sequence_column]
+    ] == list(range(len(imu_events)))
     recording_status = _javascript(
         app,
         window.web_view.page(),
         "document.querySelector('#recording-status').textContent",
     )
-    assert recording_status == f"{len(recording['samples'])} Rows · {len(events)} Events"
+    assert recording_status == (
+        f"{len(recording['samples'])} Rows · {len(events) + len(imu_events)} Events"
+    )
 
     assert _javascript(
         app,

@@ -242,14 +242,31 @@ def test_robot_session_publishes_mujoco_imu_samples(tmp_path) -> None:
     assert sum(value * value for value in forearm_stepped.orientation) == pytest.approx(1.0)
     assert stepped.to_dict()["sensors"][1]["sensor_type"] == "imu"
 
-    with pytest.raises(ValueError, match="unknown sensor ID"):
-        session.start_joint_recording(name="Unsupported IMU", sensor_ids=["imu_base_100hz"])
-
     reset = session.reset()
     assert [(sample.sequence, sample.time) for sample in reset.sensors] == [
         (0, 0.0),
         (0, 0.0),
     ]
+    started = session.start_joint_recording(
+        name="IMU Recording",
+        joint_ids=[],
+        actuator_ids=[],
+        sensor_ids=["imu_forearm_50hz"],
+    )
+    recorded = session.step(steps=2)
+    _, recording = session.stop_joint_recording()
+
+    assert started.recording.sensor_event_count == 1
+    assert recorded.recording.sensor_event_count == 2
+    assert recording.sensor_types == {"imu_forearm_50hz": "imu"}
+    assert [set(sample.sensors) for sample in recording.samples] == [
+        {"imu_forearm_50hz"},
+        set(),
+        {"imu_forearm_50hz"},
+    ]
+    assert recording.samples[-1].sensors["imu_forearm_50hz"].to_dict()[
+        "sensor_type"
+    ] == "imu"
 
 
 def test_robot_session_clamps_joint_targets_and_reset_restores_home(tmp_path) -> None:
