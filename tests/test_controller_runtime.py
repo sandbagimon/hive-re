@@ -82,6 +82,25 @@ def test_controller_runner_contains_exception_and_disables_future_steps() -> Non
     assert "control law diverged" in (runner.state.message or "")
 
 
+def test_controller_runner_can_be_faulted_by_action_consumer() -> None:
+    class Controller:
+        def reset(self, observation: ControllerObservation) -> None:
+            pass
+
+        def step(self, observation: ControllerObservation) -> None:
+            return None
+
+    runner = ControllerRunner()
+    runner.attach(Controller())
+
+    runner.fail("Controller action rejected: unknown joint")
+
+    assert runner.attached is True
+    assert runner.enabled is False
+    assert runner.state.status == "fault"
+    assert "unknown joint" in (runner.state.message or "")
+
+
 def test_controller_runner_disables_step_that_exceeds_deadline() -> None:
     values = iter([10.0, 10.025])
 
@@ -107,4 +126,3 @@ def test_controller_contract_rejects_non_finite_values(value: float) -> None:
         JointObservation(qpos=value, qvel=0.0)
     with pytest.raises(ValueError, match="finite"):
         ControllerAction({"shoulder": value})
-

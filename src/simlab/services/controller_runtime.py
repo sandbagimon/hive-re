@@ -101,6 +101,10 @@ class ControllerRunner:
         return self._controller is not None and self._status != "fault"
 
     @property
+    def attached(self) -> bool:
+        return self._controller is not None
+
+    @property
     def state(self) -> ControllerRunnerState:
         return ControllerRunnerState(
             status=self._status,
@@ -130,6 +134,10 @@ class ControllerRunner:
         self._message = None
         self._step_count = 0
         self._last_duration = None
+
+    def fail(self, message: str) -> None:
+        if self._controller is not None:
+            self._fault(message)
 
     def reset(self, observation: ControllerObservation) -> bool:
         controller = self._controller
@@ -182,4 +190,3 @@ class ControllerRunner:
     def _fault(self, message: str) -> None:
         self._status = "fault"
         self._message = message
-

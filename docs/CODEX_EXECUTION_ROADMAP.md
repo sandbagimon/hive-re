@@ -724,8 +724,20 @@ ControllerRunner；Runner 记录 name/status/step count/duration/deadline，rese
 
 实现证据见 `docs/iterations/2026-07-16-controller-api-contract.md`。
 
-## 51. 当前下一项具体任务
+## 51. MuJoCo Per-Step Controller Integration（已完成 2026-07-16）
 
 > 将 ControllerRunner 接入 MuJoCo Session：attach/detach controller，在每个 `mj_step` 前构造 observation
 > 并应用 position action；Reset 调用 reset callback，轨迹播放与 controller 互斥，fault 不终止 physics
 > runtime。使用外部 OpenUSD 双关节机械臂 position controller 做端到端 Session 测试。
+
+Session/Service 已提供 attach/detach；每个物理步前复制 joint/actuator observation 并应用经限位验证的
+position action。controller fault 后 physics 保持运行；Reset 对健康 controller 调用 reset。外部 USD
+双关节手臂 100-step 测试验证 callback 次数、时间戳、ctrl、qpos 和 runtime diagnostics。
+
+实现证据见 `docs/iterations/2026-07-16-mujoco-controller-integration.md`。
+
+## 52. 当前下一项具体任务
+
+> 增加 Project Controller Loader：用户显式选择项目内 Python module，加载约定的 `create_controller()`
+> factory；模块不会随 scene open 自动执行。提供 reload/detach、import traceback、project-root path 限制，
+> 并用临时外部 controller 文件验证加载后驱动 OpenUSD 机械臂。

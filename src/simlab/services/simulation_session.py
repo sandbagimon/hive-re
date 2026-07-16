@@ -8,6 +8,13 @@ from typing import Any
 from simlab.models.recording import JointStateRecording
 from simlab.models.scene import Scene
 from simlab.models.trajectory import JointTrajectory
+from simlab.services.controller_runtime import (
+    ActuatorObservation,
+    ControllerObservation,
+    ControllerRunner,
+    JointObservation,
+    StepController,
+)
 from simlab.services.joint_state_recorder import JointStateRecorder
 from simlab.services.mjcf_exporter import export_scene_to_mjcf
 from simlab.services.trajectory_player import (
@@ -65,6 +72,11 @@ class ControllerSimulationState:
     message: str | None = None
     command_time: float | None = None
     timeout: float | None = None
+    mode: str = "manual"
+    name: str | None = None
+    step_count: int = 0
+    last_duration: float | None = None
+    deadline: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -72,6 +84,11 @@ class ControllerSimulationState:
             "message": self.message,
             "command_time": self.command_time,
             "timeout": self.timeout,
+            "mode": self.mode,
+            "name": self.name,
+            "step_count": self.step_count,
+            "last_duration": self.last_duration,
+            "deadline": self.deadline,
         }
 
 
@@ -168,6 +185,9 @@ class MuJoCoSimulationSession:
         self._joint_position_actuators = self._map_joint_position_actuators(scene)
         self._trajectory_player = JointTrajectoryPlayer()
         self._state_recorder = JointStateRecorder(self._read_recording_max_samples(scene))
+        self._controller_runner = ControllerRunner(
+            deadline=self._read_controller_deadline(scene)
+        )
         self._control_timeout = self._read_control_timeout(scene)
         self._controller_status = "ready"
         self._controller_message: str | None = None
@@ -179,6 +199,7 @@ class MuJoCoSimulationSession:
     def step(self, steps: int = 1) -> SimulationState:
         for _ in range(max(steps, 1)):
             self._apply_trajectory_target()
+            self._apply_python_controller()
             self._apply_control_watchdog()
             self._mujoco.mj_step(self.model, self.data)
             self._apply_trajectory_target()
@@ -191,9 +212,34 @@ class MuJoCoSimulationSession:
             self._state_recorder.stop()
         self._reset_to_home()
         self._mujoco.mj_forward(self.model, self.data)
+        if self._controller_runner.enabled:
+            self._controller_runner.reset(self._controller_observation())
+            self._sync_python_controller_state()
+        return self.state()
+
+    def attach_controller(
+        self,
+        controller: StepController,
+        *,
+        name: str | None = None,
+    ) -> SimulationState:
+        if self._trajectory_player.status == "playing":
+            raise RuntimeError("Pause or stop the trajectory before attaching a controller")
+        self._controller_runner.attach(controller, name=name)
+        self._controller_runner.reset(self._controller_observation())
+        self._sync_python_controller_state()
+        return self.state()
+
+    def detach_controller(self) -> SimulationState:
+        self._controller_runner.detach()
+        self._controller_status = "ready"
+        self._controller_message = None
+        self._last_command_time = None
         return self.state()
 
     def set_joint_position_targets(self, targets: dict[str, float]) -> SimulationState:
+        if self._controller_runner.attached:
+            raise RuntimeError("Detach the Python controller before setting manual targets")
         if self._trajectory_player.status == "playing":
             self._trajectory_player.pause(float(self.data.time))
         try:
@@ -218,6 +264,8 @@ class MuJoCoSimulationSession:
         return self.state()
 
     def play_trajectory(self) -> SimulationState:
+        if self._controller_runner.attached:
+            raise RuntimeError("Detach the Python controller before playing a trajectory")
         self._trajectory_player.play(float(self.data.time))
         self._apply_trajectory_target()
         return self.state()
@@ -310,6 +358,11 @@ class MuJoCoSimulationSession:
                 message=self._controller_message,
                 command_time=self._last_command_time,
                 timeout=self._control_timeout or None,
+                mode="python" if self._controller_runner.attached else "manual",
+                name=self._controller_runner.state.name,
+                step_count=self._controller_runner.state.step_count,
+                last_duration=self._controller_runner.state.last_duration,
+                deadline=self._controller_runner.state.deadline,
             ),
             trajectory=self._trajectory_player.state(float(self.data.time)),
             recording=self._recording_state(),
@@ -389,6 +442,8 @@ class MuJoCoSimulationSession:
 
     def _apply_control_watchdog(self) -> None:
         if (
+            self._controller_runner.attached
+            or
             self._control_timeout <= 0
             or self._controller_status != "active"
             or self._last_command_time is None
@@ -417,11 +472,67 @@ class MuJoCoSimulationSession:
             self._validate_joint_position_targets(targets)
         )
 
+    def _controller_observation(self) -> ControllerObservation:
+        joints = {
+            joint_id: JointObservation(
+                qpos=float(self.data.qpos[self.model.jnt_qposadr[mujoco_id]]),
+                qvel=float(self.data.qvel[self.model.jnt_dofadr[mujoco_id]]),
+            )
+            for joint_id, mujoco_id in self._joint_ids.items()
+        }
+        actuators = {
+            actuator_id: ActuatorObservation(
+                ctrl=float(self.data.ctrl[mujoco_id]),
+                force=float(self.data.actuator_force[mujoco_id]),
+            )
+            for actuator_id, mujoco_id in self._actuator_ids.items()
+        }
+        return ControllerObservation(
+            time=float(self.data.time),
+            timestep=float(self.model.opt.timestep),
+            joints=joints,
+            actuators=actuators,
+        )
+
+    def _apply_python_controller(self) -> None:
+        if not self._controller_runner.enabled:
+            return
+        action = self._controller_runner.step(self._controller_observation())
+        if action is not None:
+            try:
+                updates = self._validate_joint_position_targets(
+                    dict(action.position_targets)
+                )
+            except (TypeError, ValueError) as exc:
+                self._controller_runner.fail(f"Controller action rejected: {exc}")
+            else:
+                self._apply_joint_target_updates(updates)
+        self._sync_python_controller_state()
+
+    def _sync_python_controller_state(self) -> None:
+        runner_state = self._controller_runner.state
+        if runner_state.status == "fault":
+            self._controller_status = "fault"
+            self._controller_message = runner_state.message
+        elif runner_state.status in {"ready", "active"}:
+            self._controller_status = runner_state.status
+            self._controller_message = None
+
     @staticmethod
     def _read_control_timeout(scene: Scene) -> float:
         value = float(scene.simulation_config.get("control_timeout", 0.0))
         if not math.isfinite(value) or value < 0:
             raise ValueError("simulation_config.control_timeout must be finite and >= 0")
+        return value
+
+    @staticmethod
+    def _read_controller_deadline(scene: Scene) -> float | None:
+        raw_value = scene.simulation_config.get("controller_deadline")
+        if raw_value is None:
+            return None
+        value = float(raw_value)
+        if not math.isfinite(value) or value <= 0:
+            raise ValueError("simulation_config.controller_deadline must be finite and > 0")
         return value
 
     @staticmethod

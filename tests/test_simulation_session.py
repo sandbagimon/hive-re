@@ -4,6 +4,7 @@ from simlab.models.actor import Actor
 from simlab.models.scene import Scene
 from simlab.models.trajectory import JointTrajectory
 from simlab.models.transform import Transform
+from simlab.services.controller_runtime import ControllerAction, ControllerObservation
 from simlab.services.openusd_importer import import_openusd_asset
 from simlab.services.simulation_session import (
     MuJoCoSimulationSession,
@@ -169,6 +170,159 @@ def test_robot_control_watchdog_returns_targets_home(tmp_path) -> None:
     assert [state.ctrl for state in timed_out.actuators] == pytest.approx(
         [shoulder.initial_position, elbow.initial_position]
     )
+
+
+def test_robot_session_runs_python_controller_before_each_physics_step(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+        simulation_config={"timestep": 0.01},
+    )
+    shoulder, elbow = imported.robotics_model.articulations[0].joints
+
+    class ReachController:
+        def __init__(self) -> None:
+            self.reset_count = 0
+            self.observation_times: list[float] = []
+
+        def reset(self, observation: ControllerObservation) -> None:
+            self.reset_count += 1
+            self.observation_times.clear()
+
+        def step(self, observation: ControllerObservation) -> ControllerAction:
+            self.observation_times.append(observation.time)
+            assert shoulder.id in observation.joints
+            return ControllerAction({shoulder.id: 0.6, elbow.id: -1.0})
+
+    controller = ReachController()
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+    attached = session.attach_controller(controller, name="Reach Controller")
+    stepped = session.step(steps=100)
+
+    assert attached.controller.status == "ready"
+    assert attached.controller.mode == "python"
+    assert attached.controller.name == "Reach Controller"
+    assert controller.reset_count == 1
+    assert controller.observation_times == pytest.approx(
+        [index * 0.01 for index in range(100)]
+    )
+    assert stepped.time == pytest.approx(1.0)
+    assert stepped.controller.status == "active"
+    assert stepped.controller.step_count == 100
+    assert [state.ctrl for state in stepped.actuators] == pytest.approx([0.6, -1.0])
+    assert stepped.joints[0].qpos > 0.1
+
+    reset = session.reset()
+    assert controller.reset_count == 2
+    assert reset.controller.status == "ready"
+    assert reset.controller.step_count == 0
+    detached = session.detach_controller()
+    assert detached.controller.mode == "manual"
+    assert detached.controller.name is None
+
+
+def test_robot_session_contains_python_controller_fault_and_keeps_stepping(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+        simulation_config={"timestep": 0.01},
+    )
+
+    class FailingController:
+        calls = 0
+
+        def reset(self, observation: ControllerObservation) -> None:
+            pass
+
+        def step(self, observation: ControllerObservation) -> ControllerAction:
+            self.calls += 1
+            raise RuntimeError("controller exploded")
+
+    controller = FailingController()
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+    session.attach_controller(controller)
+
+    fault = session.step(steps=3)
+
+    assert fault.time == pytest.approx(0.03)
+    assert fault.controller.status == "fault"
+    assert fault.controller.step_count == 0
+    assert "controller exploded" in (fault.controller.message or "")
+    assert controller.calls == 1
+
+
+def test_robot_session_rejects_competing_controller_sources(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+    )
+    shoulder, elbow = imported.robotics_model.articulations[0].joints
+
+    class HoldController:
+        def reset(self, observation: ControllerObservation) -> None:
+            pass
+
+        def step(self, observation: ControllerObservation) -> ControllerAction:
+            return ControllerAction({shoulder.id: 0.0, elbow.id: -0.4})
+
+    trajectory = JointTrajectory.from_dict(
+        {
+            "version": "1.0",
+            "name": "Competing Trajectory",
+            "loop": False,
+            "keyframes": [
+                {"time": 0.0, "targets": {shoulder.id: 0.0, elbow.id: -0.4}},
+                {"time": 1.0, "targets": {shoulder.id: 0.5, elbow.id: -1.0}},
+            ],
+        }
+    )
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+    session.load_joint_trajectory(trajectory)
+    session.attach_controller(HoldController())
+
+    with pytest.raises(RuntimeError, match="Detach the Python controller"):
+        session.set_joint_position_targets({shoulder.id: 0.2})
+    with pytest.raises(RuntimeError, match="Detach the Python controller"):
+        session.play_trajectory()
+
+    session.detach_controller()
+    assert session.play_trajectory().trajectory.status == "playing"
 
 
 def test_robot_session_rejects_non_finite_runtime_state_with_context(tmp_path) -> None:

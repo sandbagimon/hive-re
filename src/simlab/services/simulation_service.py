@@ -9,6 +9,7 @@ from pathlib import Path
 from simlab.models.recording import JointStateRecording
 from simlab.models.scene import Scene
 from simlab.models.trajectory import JointTrajectory
+from simlab.services.controller_runtime import StepController
 from simlab.services.simulation_session import (
     ClockSimulationState,
     MuJoCoSimulationSession,
@@ -140,6 +141,27 @@ class SimulationService:
             self.console(f"Loaded MuJoCo model: {self.session.xml_path}")
         state = self.session.set_joint_position_targets(targets)
         self.console(f"Updated {len(targets)} joint target(s).")
+        return self._with_clock(state)
+
+    def attach_controller(
+        self,
+        scene: Scene,
+        controller: StepController,
+        *,
+        name: str | None = None,
+    ) -> SimulationState:
+        if self.session is None:
+            self.session = self._create_session(scene)
+            self.console(f"Loaded MuJoCo model: {self.session.xml_path}")
+        state = self.session.attach_controller(controller, name=name)
+        self.console(f"Attached Python controller: {name or type(controller).__name__}")
+        return self._with_clock(state)
+
+    def detach_controller(self) -> SimulationState:
+        if self.session is None:
+            raise RuntimeError("No simulation is loaded")
+        state = self.session.detach_controller()
+        self.console("Detached Python controller.")
         return self._with_clock(state)
 
     def load_joint_trajectory(

@@ -1,0 +1,47 @@
+# Python Controller API
+
+SimLab controllers receive an immutable snapshot before every MuJoCo physics step and may return
+joint position targets. They never receive mutable `MjModel` or `MjData` objects.
+
+```python
+from simlab.services.controller_runtime import (
+    ControllerAction,
+    ControllerObservation,
+)
+
+
+class ReachController:
+    def reset(self, observation: ControllerObservation) -> None:
+        self.started_at = observation.time
+
+    def step(self, observation: ControllerObservation) -> ControllerAction:
+        shoulder = observation.joints["joint_shoulder"]
+        target = min(0.6, shoulder.qpos + 0.01)
+        return ControllerAction({"joint_shoulder": target})
+
+
+session.attach_controller(ReachController(), name="Reach")
+state = session.step(steps=100)
+session.detach_controller()
+```
+
+`ControllerObservation` contains simulation `time`, fixed `timestep`, joint `qpos/qvel`, and actuator
+`ctrl/force`, all keyed by stable Scene robotics IDs. `ControllerAction` currently supports position
+targets; Session applies the same actuator mapping and control-range clamping used by UI joint commands.
+
+Controller lifecycle:
+
+- `attach_controller()` calls `reset()` once at the current simulation state.
+- `step()` runs before each `mj_step`.
+- Session `reset()` invokes `reset()` again for a healthy attached controller.
+- Exceptions, invalid actions, and configured deadline overruns set controller status to `fault` and
+  disable later callbacks. Physics stepping continues.
+- `detach_controller()` is required before manual joint commands or trajectory playback.
+
+Set `simulation_config.controller_deadline` to a positive number of seconds to enforce a per-call
+deadline. This is elapsed-time detection, not thread preemption: an overrun is detected after the user
+callback returns, its action is discarded, and later callbacks are disabled.
+
+The first API version is in-process and trusted. Project Python module loading is not yet exposed in the
+desktop editor; applications instantiate controller objects explicitly and attach them through
+`MuJoCoSimulationSession` or `SimulationService`.
