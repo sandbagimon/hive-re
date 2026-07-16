@@ -712,8 +712,20 @@ monotonic clock 后继续完成原有轨迹回放与 JSON/CSV 导出。
 
 实现证据见 `docs/iterations/2026-07-16-simulation-speed-qt-e2e.md`。
 
-## 50. 当前下一项具体任务
+## 50. Per-Step Controller API Contract（已完成 2026-07-16）
 
 > 建立 per-step Controller API Contract：定义只读 observation（time、joint qpos/qvel、actuator state）
 > 和 action（position target map），在每个 `mj_step` 前调用 controller；支持 reset callback、异常隔离、
 > deadline/disable 状态，并先以纯 Python position controller 验证外部 OpenUSD 双关节机械臂闭环。
+
+纯 Python contract 已定义 immutable ControllerObservation/ControllerAction、StepController Protocol 和
+ControllerRunner；Runner 记录 name/status/step count/duration/deadline，reset/step 异常或超时后进入 fault
+并停止后续调用。该层不暴露可变 MuJoCo data。
+
+实现证据见 `docs/iterations/2026-07-16-controller-api-contract.md`。
+
+## 51. 当前下一项具体任务
+
+> 将 ControllerRunner 接入 MuJoCo Session：attach/detach controller，在每个 `mj_step` 前构造 observation
+> 并应用 position action；Reset 调用 reset callback，轨迹播放与 controller 互斥，fault 不终止 physics
+> runtime。使用外部 OpenUSD 双关节机械臂 position controller 做端到端 Session 测试。
