@@ -51,7 +51,8 @@ const robotics = {
   version: '1.0',
   articulations: [{
     id: 'arm_001', name: 'Arm', root_link_id: 'base', fixed_base: true,
-    links: [], joints: [{ id: 'joint_001' }], actuators: [], sensors: [],
+    links: [], joints: [{ id: 'joint_001' }], actuators: [],
+    sensors: [{ id: 'sensor_001', joint_id: 'joint_001' }],
   }],
 };
 store.addAsset(robot, robotics);
@@ -61,11 +62,19 @@ const robotActorId = store.current.scene.actors.at(-1).id;
 store.selectJoint(robotActorId, 'joint_001');
 assert.equal(store.current.selectedActorId, robotActorId);
 assert.equal(store.current.selectedJointId, 'joint_001');
+assert.equal(store.current.selectedSensorId, null);
 assert.equal(store.current.dirty, true);
 store.selectJoint(robotActorId, 'joint_missing');
 assert.equal(store.current.selectedJointId, 'joint_001');
+store.selectSensor(robotActorId, 'sensor_001');
+assert.equal(store.current.selectedJointId, null);
+assert.equal(store.current.selectedSensorId, 'sensor_001');
+assert.equal(store.current.dirty, true);
+store.selectSensor(robotActorId, 'sensor_missing');
+assert.equal(store.current.selectedSensorId, 'sensor_001');
 store.selectActor(robotActorId);
 assert.equal(store.current.selectedJointId, null);
+assert.equal(store.current.selectedSensorId, null);
 
 store.selectJoint(robotActorId, 'joint_001');
 const trajectory = {

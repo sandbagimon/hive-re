@@ -180,11 +180,14 @@ h2 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; }
   color: #aeb8c4;
   font-size: 11px;
 }
-.tree-subitem.joint { width: 100%; border: 0; border-radius: 0; background: transparent; color: #8faac6; text-align: left; }
-.tree-subitem.joint:hover { background: #29313b; }
-.tree-subitem.joint.selected { background: #303b48; color: #d4e3f2; }
+.tree-subitem.joint, .tree-subitem.sensor { width: 100%; border: 0; border-radius: 0; background: transparent; text-align: left; }
+.tree-subitem.joint { color: #8faac6; }
+.tree-subitem.sensor { color: #89b8a7; }
+.tree-subitem.joint:hover, .tree-subitem.sensor:hover { background: #29313b; }
+.tree-subitem.joint.selected, .tree-subitem.sensor.selected { background: #303b48; color: #d4e3f2; }
 .tree-subitem .item-icon { width: 8px; height: 8px; }
 .tree-subitem.joint .item-icon { border-radius: 50%; }
+.tree-subitem.sensor .item-icon { transform: rotate(45deg) scale(.8); }
 .item-icon { width: 12px; height: 12px; border: 1px solid #8fa0b3; }
 .asset-swatch { width: 12px; height: 12px; border-radius: 2px; }
 .item-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

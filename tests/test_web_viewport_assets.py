@@ -59,6 +59,9 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "data-joint-jog" in app
     assert "updateRuntimeInspector" in app
     assert "store.selectJoint" in app
+    assert "store.selectSensor" in app
+    assert "data-sensor-id" in app
+    assert "data-runtime-sensor-id" in app
     assert "selectViewportLink" in app
     assert "selectedLinkId" in viewport
     assert "window.simlabEditor" in app

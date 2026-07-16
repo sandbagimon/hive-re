@@ -368,6 +368,7 @@ export interface SimLabEditorAutomation {
   }>>;
   getStateJson(): string;
   selectJoint(actorId: string, jointId: string): boolean;
+  selectSensor(actorId: string, sensorId: string): boolean;
 }
 
 declare global {

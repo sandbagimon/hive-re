@@ -60,7 +60,7 @@ The robot Inspector Controller section explicitly loads trusted project-local Py
 
 `simlab.controllers.JointPositionPdController` provides a bounded qpos/qvel outer loop for MuJoCo position drives. A project-loadable two-joint example is available at [`examples/controllers/two_joint_pd.py`](examples/controllers/two_joint_pd.py).
 
-The robotics schema includes fixed-clock `joint_state` sensors with stable IDs, qpos/qvel payloads, simulation timestamps, and monotonic sequence numbers. MuJoCo sessions publish each sensor's latest sample after fixed physics steps; update rates are exact integer divisors of the physics rate and remain independent of UI refresh, pause gaps, and target real-time factor.
+The robotics schema includes fixed-clock `joint_state` sensors with stable IDs, qpos/qvel payloads, simulation timestamps, and monotonic sequence numbers. MuJoCo sessions publish each sensor's latest sample after fixed physics steps; update rates are exact integer divisors of the physics rate and remain independent of UI refresh, pause gaps, and target real-time factor. Robot Tree sensor selection opens a live Inspector for identity, update rate, sequence, simulation time, qpos, and qvel without changing the authoring scene.
 
 Primitive actors expose basic physics properties in the Property Panel: Dynamic, Mass, and Friction. Dynamic actors export with MuJoCo free joints, while static actors export as fixed world geoms.
 
@@ -102,10 +102,10 @@ slice is external OpenUSD robot-arm import -> robotics intermediate model -> MJC
 application. Read that document before starting the next implementation
 task; `PRODUCT_PLAN.md` remains the long-term scope document.
 
-The external OpenUSD robot import and joint-control vertical slice is complete. The next major platform gap is sensor data and a general controller callback API.
+The external OpenUSD robot import, joint-control vertical slice, general controller callback API, and first joint-state sensor runtime/Inspector are complete. The next platform gap is deterministic sensor recording/export followed by IMU and contact/force sensing.
 
-1. **Controller API**: Add per-step Python callbacks with observation/action buffers, exception isolation, and a PID example.
-2. **Sensors**: Add joint-state, IMU, and contact/force schema, runtime sampling, and UI inspection.
+1. **Sensor recording**: Export emitted joint-state samples with stable JSON/CSV columns and no UI-rate resampling.
+2. **Sensors**: Add IMU and contact/force schema, runtime sampling, and UI inspection.
 3. **Clock hardening**: Extend soak coverage for variable host load and long recording sessions.
 4. **Authoring**: Add dedicated collision prim workflows and a consolidated validation panel.
 

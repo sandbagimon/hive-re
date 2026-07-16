@@ -13,6 +13,7 @@ export class EditorStore {
         assets: [],
         selectedActorId: null,
         selectedJointId: null,
+        selectedSensorId: null,
         dirty: false,
         canUndo: false,
         canRedo: false,
@@ -51,6 +52,7 @@ export class EditorStore {
             currentPath: path,
             selectedActorId: null,
             selectedJointId: null,
+            selectedSensorId: null,
             dirty: false,
             canUndo: false,
             canRedo: false,
@@ -68,7 +70,11 @@ export class EditorStore {
         this.patch({ currentPath: path, dirty: false });
     }
     selectActor(actorId) {
-        this.patch({ selectedActorId: actorId, selectedJointId: null });
+        this.patch({
+            selectedActorId: actorId,
+            selectedJointId: null,
+            selectedSensorId: null,
+        });
     }
     selectJoint(actorId, jointId) {
         const actor = this.state.scene.actors.find((item) => item.id === actorId);
@@ -77,7 +83,16 @@ export class EditorStore {
             && articulation.joints.some((joint) => joint.id === jointId));
         if (!jointExists)
             return;
-        this.patch({ selectedActorId: actorId, selectedJointId: jointId });
+        this.patch({ selectedActorId: actorId, selectedJointId: jointId, selectedSensorId: null });
+    }
+    selectSensor(actorId, sensorId) {
+        const actor = this.state.scene.actors.find((item) => item.id === actorId);
+        const articulationIds = actor?.properties.articulation_ids;
+        const sensorExists = this.state.scene.robotics?.articulations.some((articulation) => articulationIds?.includes(articulation.id)
+            && articulation.sensors.some((sensor) => sensor.id === sensorId));
+        if (!sensorExists)
+            return;
+        this.patch({ selectedActorId: actorId, selectedJointId: null, selectedSensorId: sensorId });
     }
     addAsset(asset, robotics) {
         const scene = cloneScene(this.state.scene);
@@ -227,6 +242,7 @@ export class EditorStore {
             scene,
             selectedActorId,
             selectedJointId: preserveJointSelection ? this.state.selectedJointId : null,
+            selectedSensorId: preserveJointSelection ? this.state.selectedSensorId : null,
             dirty: sceneSnapshot(scene) !== this.savedSnapshot,
             canUndo: true,
             canRedo: false,
@@ -238,13 +254,16 @@ export class EditorStore {
     restoreHistory(scene, message) {
         const selected = this.state.selectedActorId;
         const selectedJoint = this.state.selectedJointId;
+        const selectedSensor = this.state.selectedSensorId;
         const jointStillExists = selectedJoint && scene.robotics?.articulations.some((articulation) => articulation.joints.some((joint) => joint.id === selectedJoint));
+        const sensorStillExists = selectedSensor && scene.robotics?.articulations.some((articulation) => articulation.sensors.some((sensor) => sensor.id === selectedSensor));
         this.patch({
             scene,
             selectedActorId: selected && scene.actors.some((actor) => actor.id === selected)
                 ? selected
                 : null,
             selectedJointId: jointStillExists ? selectedJoint : null,
+            selectedSensorId: sensorStillExists ? selectedSensor : null,
             dirty: sceneSnapshot(scene) !== this.savedSnapshot,
             canUndo: this.undoStack.length > 0,
             canRedo: this.redoStack.length > 0,

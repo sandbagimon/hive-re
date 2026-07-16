@@ -1,0 +1,199 @@
+from __future__ import annotations
+
+import json
+import os
+import time
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+pytestmark = pytest.mark.skipif(
+    os.environ.get("SIMLAB_QT_WEBENGINE_E2E") != "1",
+    reason="Set SIMLAB_QT_WEBENGINE_E2E=1 to run the QtWebEngine sensor test.",
+)
+
+
+def _wait_until(app: Any, predicate: Any, timeout: float = 15.0) -> None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        app.processEvents()
+        if predicate():
+            return
+        time.sleep(0.02)
+    raise AssertionError("Timed out waiting for QtWebEngine sensor state")
+
+
+def _javascript(app: Any, page: Any, script: str) -> Any:
+    result: list[Any] = []
+    page.runJavaScript(script, result.append)
+    _wait_until(app, lambda: bool(result))
+    return result[0]
+
+
+def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
+    pytest.importorskip("mujoco")
+    pytest.importorskip("pxr")
+    pytest.importorskip("PySide6.QtWebEngineWidgets")
+    from PySide6.QtGui import QColor
+    from PySide6.QtWidgets import QApplication
+
+    from simlab.main_window import MainWindow
+    from simlab.models.actor import Actor
+    from simlab.models.robotics import Sensor
+    from simlab.models.scene import Scene
+    from simlab.services.openusd_importer import import_openusd_asset
+    from simlab.services.project_service import save_scene
+
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    articulation = imported.robotics_model.articulations[0]
+    shoulder = articulation.joints[0]
+    sensor = Sensor(
+        id="sensor_qt_shoulder",
+        name="Shoulder State",
+        sensor_type="joint_state",
+        joint_id=shoulder.id,
+        update_rate_hz=50.0,
+    )
+    articulation.sensors.append(sensor)
+    scene = Scene(
+        name="Qt Sensor Scene",
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="External Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+        simulation_config={"timestep": 0.01, "max_catch_up_steps": 8},
+    )
+    scene_path = tmp_path / "sensor-scene.json"
+    save_scene(scene_path, scene)
+
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow(project_root=tmp_path)
+    window.show()
+    loaded: list[bool] = []
+    window.web_view.loadFinished.connect(loaded.append)
+    _wait_until(app, lambda: bool(loaded) and loaded[-1])
+    _wait_until(
+        app,
+        lambda: bool(
+            _javascript(app, window.web_view.page(), "window.simlabEditorReady === true")
+        ),
+    )
+    _javascript(
+        app,
+        window.web_view.page(),
+        f"window.simlabEditor.openProjectPath({json.dumps(str(scene_path))}).then("
+        "result=>document.documentElement.dataset.sensorOpen=JSON.stringify(result));true",
+    )
+    _wait_until(
+        app,
+        lambda: bool(
+            _javascript(
+                app,
+                window.web_view.page(),
+                "document.documentElement.dataset.sensorOpen || ''",
+            )
+        ),
+    )
+    assert _javascript(
+        app,
+        window.web_view.page(),
+        "window.simlabEditor.selectSensor('actor_arm','sensor_qt_shoulder')",
+    ) is True
+    initial_ui = json.loads(
+        _javascript(
+            app,
+            window.web_view.page(),
+            "JSON.stringify({"
+            "rows:document.querySelectorAll('[data-sensor-id]').length,"
+            "selected:document.querySelectorAll('[data-sensor-id].selected').length,"
+            "heading:document.querySelector('#property-inspector h3').textContent,"
+            "rate:[...document.querySelectorAll('#property-inspector .property-row')]"
+            ".find(row=>row.querySelector('label').textContent==='Rate').querySelector('input').value"
+            "})",
+        )
+    )
+    assert initial_ui == {
+        "rows": 1,
+        "selected": 1,
+        "heading": "Sensor",
+        "rate": "50 Hz",
+    }
+
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-command=\"run\"]').click();true",
+    )
+
+    def sensor_has_samples() -> bool:
+        current = json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )
+        return bool(
+            current["simulationStatus"] == "running"
+            and current["simulationState"]
+            and current["simulationState"]["sensors"][0]["sequence"] >= 4
+        )
+
+    _wait_until(app, sensor_has_samples)
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-command=\"pause\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )["simulationStatus"]
+        == "paused",
+    )
+    state = json.loads(
+        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+    )["simulationState"]
+    sample = state["sensors"][0]
+    live_ui = json.loads(
+        _javascript(
+            app,
+            window.web_view.page(),
+            "JSON.stringify(Object.fromEntries("
+            "[...document.querySelectorAll('[data-sensor-field]')]"
+            ".map(input=>[input.dataset.sensorField,input.value])))",
+        )
+    )
+    assert int(live_ui["sequence"]) == sample["sequence"]
+    assert float(live_ui["time"]) == pytest.approx(sample["time"], abs=0.001)
+    assert float(live_ui["qpos"]) == pytest.approx(sample["qpos"], abs=0.001)
+    assert float(live_ui["qvel"]) == pytest.approx(sample["qvel"], abs=0.001)
+    assert sample["time"] <= state["time"]
+
+    # QtWebEngine updates the DOM synchronously but composites offscreen a frame later.
+    paint_deadline = time.monotonic() + 0.25
+    while time.monotonic() < paint_deadline:
+        app.processEvents()
+        time.sleep(0.02)
+    screenshot = window.web_view.grab()
+    output = Path(
+        os.environ.get("SIMLAB_QT_SENSOR_SCREENSHOT", tmp_path / "joint-sensor-ui.png")
+    )
+    assert screenshot.save(str(output))
+    image = screenshot.toImage()
+    colors = {
+        QColor(image.pixel(x, y)).rgb()
+        for x in range(0, image.width(), max(image.width() // 20, 1))
+        for y in range(0, image.height(), max(image.height() // 20, 1))
+    }
+    assert len(colors) > 10
+
+    window.bridge.dirty = False
+    window.close()
+    app.processEvents()

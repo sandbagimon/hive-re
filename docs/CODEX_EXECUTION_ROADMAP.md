@@ -808,8 +808,19 @@ TypeScript contract 已增加 latest sensors。100Hz/50Hz sequence 与 recording
 
 实现证据见 `docs/iterations/2026-07-16-mujoco-joint-sensor-runtime.md`。
 
-## 58. 当前下一项具体任务
+## 58. Sensor Tree and Live Inspector（已完成 2026-07-16）
 
-> 增加 Sensor Inspector 和数据导出：Robot Tree 展示 sensors，选中 sensor 后显示 type/joint/rate 与 live
-> sequence/time/qpos/qvel；Recording 可选包含 sensor latest/emitted samples，JSON/CSV 使用 stable sensor
-> columns。先完成 joint_state，避免把 UI refresh 当作采样源。
+> 增加 Sensor Inspector：Robot Tree 展示 articulation sensors；选中 sensor 后显示 type/joint/rate 与
+> live sequence/time/qpos/qvel，并高亮关联 joint/link。传感器选择不修改 scene 或 dirty/history。
+
+EditorStore 已增加独立 sensor selection，和 actor/joint selection 互斥；Inspector 的 live 字段只消费
+SimulationState latest samples，不以 DOM refresh 触发采样。真实 QtWebEngine 测试从外部 USD 手臂项目启动
+MuJoCo，验证 50Hz sensor 数据到达 Store 和 DOM，暂停后逐字段比对并保存非空 viewport 截图。
+
+实现证据见 `docs/iterations/2026-07-16-sensor-inspector.md`。
+
+## 59. 当前下一项具体任务
+
+> 扩展 Recording/Export 传感器数据闭环：Recording 可选择包含 sensor emitted samples；每个 physics step
+> 只记录该步实际发出的 sensor sample，避免重复 latest 值。JSON/CSV 使用 stable sensor ID 列，未发出
+> 的采样点保持空值；补 service/bridge/UI 与 Qt 导出验收。

@@ -100,6 +100,7 @@ let bridge = new EditorBridgeClient(null);
 let previousSceneJson = '';
 let previousSelectedActorId: string | null = null;
 let previousSelectedJointId: string | null = null;
+let previousSelectedSensorId: string | null = null;
 let previousSimulationState: SimulationState | null = null;
 let syncSnapshot = '';
 let renderSnapshot = '';
@@ -147,6 +148,7 @@ function renderSceneTree(
   scene: Scene,
   selectedActorId: string | null,
   selectedJointId: string | null,
+  selectedSensorId: string | null,
 ): void {
   element('actor-count').textContent = String(scene.actors.length);
   const tree = element('scene-tree');
@@ -165,9 +167,13 @@ function renderSceneTree(
           <button class="tree-subitem joint ${joint.id === selectedJointId ? 'selected' : ''}" type="button" title="${escapeHtml(joint.id)}" data-joint-id="${escapeHtml(joint.id)}" data-owner-actor-id="${escapeHtml(actor.id)}">
             <span class="item-icon"></span><span class="item-label">${escapeHtml(joint.name)}</span>
           </button>`).join('')}
+        ${articulation.sensors.map((sensor) => `
+          <button class="tree-subitem sensor ${sensor.id === selectedSensorId ? 'selected' : ''}" type="button" title="${escapeHtml(sensor.id)}" data-sensor-id="${escapeHtml(sensor.id)}" data-owner-actor-id="${escapeHtml(actor.id)}">
+            <span class="item-icon"></span><span class="item-label">${escapeHtml(sensor.name)}</span>
+          </button>`).join('')}
       </div>`).join('');
     return `
-    <button class="tree-item ${actor.id === selectedActorId && selectedJointId === null ? 'selected' : ''}" type="button" data-actor-row data-actor-id="${escapeHtml(actor.id)}">
+    <button class="tree-item ${actor.id === selectedActorId && selectedJointId === null && selectedSensorId === null ? 'selected' : ''}" type="button" data-actor-row data-actor-id="${escapeHtml(actor.id)}">
       <span class="item-icon"></span>
       <span class="item-label">${escapeHtml(actor.name)}</span>
       <span class="delete-actor" data-delete-id="${escapeHtml(actor.id)}" title="Delete">×</span>
@@ -187,6 +193,13 @@ function renderSceneTree(
       if (actorId && jointId) store.selectJoint(actorId, jointId);
     });
   }
+  for (const button of tree.querySelectorAll<HTMLButtonElement>('[data-sensor-id]')) {
+    button.addEventListener('click', () => {
+      const actorId = button.dataset.ownerActorId;
+      const sensorId = button.dataset.sensorId;
+      if (actorId && sensorId) store.selectSensor(actorId, sensorId);
+    });
+  }
 }
 
 function numberInput(label: string, field: string, value: number, options = ''): string {
@@ -203,6 +216,7 @@ function renderInspector(
   scene: Scene,
   simulationState: SimulationState | null,
   selectedJointId: string | null,
+  selectedSensorId: string | null,
 ): void {
   const inspector = element('property-inspector');
   if (!actor) {
@@ -218,6 +232,11 @@ function renderInspector(
   ) ?? [];
   const selectedJoint = articulations.flatMap((item) => item.joints)
     .find((item) => item.id === selectedJointId);
+  const selectedSensor = articulations.flatMap((item) => item.sensors)
+    .find((item) => item.id === selectedSensorId);
+  const selectedSensorSample = simulationState?.sensors.find(
+    (item) => item.id === selectedSensorId,
+  );
   const jointStates = new Map((simulationState?.joints ?? []).map((item) => [item.id, item]));
   const actuatorStates = new Map(
     (simulationState?.actuators ?? []).map((item) => [item.id, item]),
@@ -251,7 +270,7 @@ function renderInspector(
       </div>`;
     }),
   ).join('');
-  const robotSection = jointControls ? `
+  const robotSection = jointControls && !selectedSensor ? `
     <section class="property-group"><div class="group-heading"><h3>Joint Control</h3><div class="joint-tools"><label>Step <input type="number" min="0.001" max="1" step="0.01" value="0.05" data-joint-step></label><button type="button" data-joint-home>Home</button></div></div>
       ${controllerStatus}
       ${jointControls}
@@ -272,7 +291,21 @@ function renderInspector(
   const childLink = selectedArticulation?.links.find(
     (item) => item.id === selectedJoint?.child_link_id,
   );
-  const identitySections = selectedJoint ? `
+  const sensorJoint = selectedSensor
+    ? articulations.flatMap((item) => item.joints)
+      .find((item) => item.id === selectedSensor.joint_id)
+    : undefined;
+  const identitySections = selectedSensor ? `
+    <section class="property-group"><h3>Sensor</h3>
+      <div class="property-row"><label>Name</label><input type="text" value="${escapeHtml(selectedSensor.name)}" disabled></div>
+      <div class="property-row"><label>Type</label><input type="text" value="${escapeHtml(selectedSensor.sensor_type)}" disabled></div>
+      <div class="property-row"><label>Joint</label><input type="text" value="${escapeHtml(sensorJoint?.name ?? selectedSensor.joint_id ?? '—')}" disabled></div>
+      <div class="property-row"><label>Rate</label><input type="text" value="${selectedSensor.update_rate_hz === null ? 'Physics rate' : `${selectedSensor.update_rate_hz} Hz`}" disabled></div>
+      <div class="property-row"><label>Sequence</label><input type="text" value="${selectedSensorSample?.sequence ?? '—'}" disabled data-sensor-field="sequence" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Time</label><input type="text" value="${selectedSensorSample?.time.toFixed(3) ?? '—'}" disabled data-sensor-field="time" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Position</label><input type="text" value="${selectedSensorSample?.qpos.toFixed(3) ?? '—'}" disabled data-sensor-field="qpos" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Velocity</label><input type="text" value="${selectedSensorSample?.qvel.toFixed(3) ?? '—'}" disabled data-sensor-field="qvel" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+    </section>` : selectedJoint ? `
     <section class="property-group"><h3>Joint</h3>
       <div class="property-row"><label>Name</label><input type="text" value="${escapeHtml(selectedJoint.name)}" disabled></div>
       <div class="property-row"><label>Type</label><input type="text" value="${escapeHtml(selectedJoint.type)}" disabled></div>
@@ -293,7 +326,7 @@ function renderInspector(
       ${vectorInput('Scale', 'scale', actor.transform.scale)}
     </section>
     ${sourceSection}`;
-  const physicsSection = selectedJoint ? '' : `
+  const physicsSection = selectedJoint || selectedSensor ? '' : `
     <section class="property-group"><h3>Physics</h3>
       <div class="property-row"><label>Dynamic</label><input type="checkbox" data-field="dynamic" ${physics.dynamic ? 'checked' : ''}></div>
       <div class="property-row"><label>Material</label><select data-field="material">${Object.keys(materialPresets).map((id) => `<option value="${id}" ${physics.material === id ? 'selected' : ''}>${id[0].toUpperCase()}${id.slice(1)}</option>`).join('')}</select></div>
@@ -397,6 +430,16 @@ function updateRuntimeInspector(simulationState: SimulationState | null): void {
       if (input.dataset.actuatorId === actuator.id && document.activeElement !== input) {
         input.value = input.type === 'number' ? actuator.ctrl.toFixed(3) : String(actuator.ctrl);
       }
+    }
+  }
+  for (const sensor of simulationState.sensors) {
+    for (const input of inspector.querySelectorAll<HTMLInputElement>('[data-runtime-sensor-id]')) {
+      if (input.dataset.runtimeSensorId !== sensor.id) continue;
+      const field = input.dataset.sensorField;
+      if (field === 'sequence') input.value = String(sensor.sequence);
+      else if (field === 'time') input.value = sensor.time.toFixed(3);
+      else if (field === 'qpos') input.value = sensor.qpos.toFixed(3);
+      else if (field === 'qvel') input.value = sensor.qvel.toFixed(3);
     }
   }
 }
@@ -1118,12 +1161,18 @@ function render(): void {
   (element('undo-button') as HTMLButtonElement).disabled = !state.canUndo;
   (element('redo-button') as HTMLButtonElement).disabled = !state.canRedo;
   renderAssets(state.assets);
-  renderSceneTree(state.scene, state.selectedActorId, state.selectedJointId);
+  renderSceneTree(
+    state.scene,
+    state.selectedActorId,
+    state.selectedJointId,
+    state.selectedSensorId,
+  );
   renderInspector(
     state.scene.actors.find((actor) => actor.id === state.selectedActorId),
     state.scene,
     state.simulationState,
     state.selectedJointId,
+    state.selectedSensorId,
   );
   renderTrajectoryPanel(
     state.scene.actors.find((actor) => actor.id === state.selectedActorId),
@@ -1280,6 +1329,7 @@ store.subscribe((state) => {
     assets: state.assets,
     selectedActorId: state.selectedActorId,
     selectedJointId: state.selectedJointId,
+    selectedSensorId: state.selectedSensorId,
     dirty: state.dirty,
     canUndo: state.canUndo,
     canRedo: state.canRedo,
@@ -1300,12 +1350,19 @@ store.subscribe((state) => {
     selectViewportActor(state.selectedActorId);
     previousSelectedActorId = state.selectedActorId;
   }
-  if (state.selectedJointId !== previousSelectedJointId) {
+  if (
+    state.selectedJointId !== previousSelectedJointId
+    || state.selectedSensorId !== previousSelectedSensorId
+  ) {
+    const relatedJointId = state.selectedJointId ?? state.scene.robotics?.articulations
+      .flatMap((item) => item.sensors)
+      .find((item) => item.id === state.selectedSensorId)?.joint_id ?? null;
     const childLinkId = state.scene.robotics?.articulations
       .flatMap((item) => item.joints)
-      .find((item) => item.id === state.selectedJointId)?.child_link_id ?? null;
+      .find((item) => item.id === relatedJointId)?.child_link_id ?? null;
     selectViewportLink(childLinkId);
     previousSelectedJointId = state.selectedJointId;
+    previousSelectedSensorId = state.selectedSensorId;
   }
   if (state.simulationState !== previousSimulationState) {
     applySimulationState(state.simulationState);
@@ -1383,6 +1440,11 @@ window.simlabEditor = {
     store.selectJoint(actorId, jointId);
     return store.current.selectedActorId === actorId
       && store.current.selectedJointId === jointId;
+  },
+  selectSensor: (actorId, sensorId) => {
+    store.selectSensor(actorId, sensorId);
+    return store.current.selectedActorId === actorId
+      && store.current.selectedSensorId === sensorId;
   },
 };
 
