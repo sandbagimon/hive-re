@@ -89,3 +89,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-16 Joint State Sensor Contract](2026-07-16-joint-state-sensor-contract.md)
 - [2026-07-16 MuJoCo Joint Sensor Runtime](2026-07-16-mujoco-joint-sensor-runtime.md)
 - [2026-07-16 Sensor Inspector](2026-07-16-sensor-inspector.md)
+- [2026-07-16 Sensor Recording Contract](2026-07-16-sensor-recording-contract.md)

@@ -9,9 +9,13 @@ from simlab.models.recording import (
     JointStateRecording,
     JointStateSample,
     RecordingManifest,
+    SensorRecordingState,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
+    from simlab.services.joint_state_sensors import JointStateSensorSample
     from simlab.services.simulation_session import SimulationState
 
 
@@ -31,6 +35,7 @@ class JointStateRecorder:
         name: str,
         joint_ids: list[str],
         actuator_ids: list[str],
+        sensor_ids: list[str] | None = None,
         timestep: float,
         scene_version: str,
         engine_version: str,
@@ -39,12 +44,15 @@ class JointStateRecorder:
             raise RuntimeError("Joint state recording is already active")
         if not name.strip():
             raise ValueError("Recording name cannot be empty")
-        if not joint_ids and not actuator_ids:
-            raise ValueError("Recording must select at least one joint or actuator")
+        selected_sensor_ids = sensor_ids or []
+        if not joint_ids and not actuator_ids and not selected_sensor_ids:
+            raise ValueError("Recording must select at least one joint, actuator, or sensor")
         if len(joint_ids) != len(set(joint_ids)):
             raise ValueError("Recording joint IDs must be unique")
         if len(actuator_ids) != len(set(actuator_ids)):
             raise ValueError("Recording actuator IDs must be unique")
+        if len(selected_sensor_ids) != len(set(selected_sensor_ids)):
+            raise ValueError("Recording sensor IDs must be unique")
         if not math.isfinite(timestep) or timestep <= 0:
             raise ValueError("Recording timestep must be finite and greater than zero")
         self.recording = JointStateRecording(
@@ -56,11 +64,16 @@ class JointStateRecorder:
             ),
             joint_ids=list(joint_ids),
             actuator_ids=list(actuator_ids),
+            sensor_ids=list(selected_sensor_ids),
         )
         self.active = True
         return self.recording
 
-    def capture(self, state: SimulationState) -> bool:
+    def capture(
+        self,
+        state: SimulationState,
+        emitted_sensors: Sequence[JointStateSensorSample] = (),
+    ) -> bool:
         recording = self._require_recording()
         if not self.active:
             return False
@@ -93,11 +106,27 @@ class JointStateRecorder:
                 )
                 for actuator_id in recording.actuator_ids
             },
+            sensors={
+                sensor.sensor_id: SensorRecordingState(
+                    joint_id=sensor.joint_id,
+                    time=float(sensor.time),
+                    sequence=int(sensor.sequence),
+                    qpos=float(sensor.qpos),
+                    qvel=float(sensor.qvel),
+                )
+                for sensor in emitted_sensors
+                if sensor.sensor_id in recording.sensor_ids
+            },
         )
         values = [sample.time]
         values.extend(value for item in sample.joints.values() for value in (item.qpos, item.qvel))
         values.extend(
             value for item in sample.actuators.values() for value in (item.ctrl, item.force)
+        )
+        values.extend(
+            value
+            for item in sample.sensors.values()
+            for value in (item.time, item.qpos, item.qvel)
         )
         if not all(math.isfinite(value) for value in values):
             raise ValueError("Recording sample values must be finite")

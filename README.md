@@ -50,7 +50,7 @@ OpenUSD physics values are imported when authored, including rigid-body state, m
 
 OpenUSD articulations are imported as robot actors with independent links, colliders, inertial properties, revolute joints, and position drives. The Scene Tree and viewport preserve the robot hierarchy; joint targets, jog controls, and editable keyframe trajectories drive the generated MuJoCo articulation while live link poses and joint feedback remain separate from authoring transforms.
 
-Robot trajectories can be saved in the scene, reopened, edited, and replayed. The Recording panel captures selected joint qpos/qvel and actuator ctrl/force on every fixed MuJoCo step, then exports deterministic JSON or CSV artifacts.
+Robot trajectories can be saved in the scene, reopened, edited, and replayed. The Recording contract captures selected joint qpos/qvel and actuator ctrl/force on every fixed MuJoCo step and can represent sensor events only on the steps where they were emitted. Deterministic JSON and CSV use stable robotics IDs; CSV leaves sensor columns empty between real samples instead of duplicating stale latest values.
 
 The command bar provides 0.25x, 0.5x, 1x, and 2x simulation-speed controls plus measured real-time-factor feedback. Speed changes scale fixed-step scheduling without changing the authored MuJoCo timestep or trajectory/recording timestamps.
 

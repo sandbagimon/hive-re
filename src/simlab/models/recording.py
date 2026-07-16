@@ -50,10 +50,29 @@ class ActuatorRecordingState:
 
 
 @dataclass(frozen=True, slots=True)
+class SensorRecordingState:
+    joint_id: str
+    time: float
+    sequence: int
+    qpos: float
+    qvel: float
+
+    def to_dict(self) -> dict[str, str | int | float]:
+        return {
+            "joint_id": self.joint_id,
+            "time": self.time,
+            "sequence": self.sequence,
+            "qpos": self.qpos,
+            "qvel": self.qvel,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class JointStateSample:
     time: float
     joints: dict[str, JointRecordingState]
     actuators: dict[str, ActuatorRecordingState]
+    sensors: dict[str, SensorRecordingState] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -62,6 +81,7 @@ class JointStateSample:
             "actuators": {
                 key: value.to_dict() for key, value in self.actuators.items()
             },
+            "sensors": {key: value.to_dict() for key, value in self.sensors.items()},
         }
 
     @classmethod
@@ -82,6 +102,16 @@ class JointStateSample:
                 )
                 for key, value in data.get("actuators", {}).items()
             },
+            sensors={
+                str(key): SensorRecordingState(
+                    joint_id=str(value["joint_id"]),
+                    time=float(value["time"]),
+                    sequence=int(value["sequence"]),
+                    qpos=float(value["qpos"]),
+                    qvel=float(value["qvel"]),
+                )
+                for key, value in data.get("sensors", {}).items()
+            },
         )
 
 
@@ -91,6 +121,7 @@ class JointStateRecording:
     manifest: RecordingManifest
     joint_ids: list[str]
     actuator_ids: list[str]
+    sensor_ids: list[str] = field(default_factory=list)
     samples: list[JointStateSample] = field(default_factory=list)
     limit_reached: bool = False
     version: str = "1.0"
@@ -102,6 +133,7 @@ class JointStateRecording:
             "manifest": self.manifest.to_dict(),
             "joint_ids": list(self.joint_ids),
             "actuator_ids": list(self.actuator_ids),
+            "sensor_ids": list(self.sensor_ids),
             "limit_reached": self.limit_reached,
             "samples": [sample.to_dict() for sample in self.samples],
         }
@@ -114,6 +146,7 @@ class JointStateRecording:
             manifest=RecordingManifest.from_dict(data["manifest"]),
             joint_ids=[str(value) for value in data.get("joint_ids", [])],
             actuator_ids=[str(value) for value in data.get("actuator_ids", [])],
+            sensor_ids=[str(value) for value in data.get("sensor_ids", [])],
             limit_reached=bool(data.get("limit_reached", False)),
             samples=[JointStateSample.from_dict(item) for item in data.get("samples", [])],
         )
@@ -128,14 +161,38 @@ class JointStateRecording:
             header.extend(
                 [f"actuator.{actuator_id}.ctrl", f"actuator.{actuator_id}.force"]
             )
+        for sensor_id in self.sensor_ids:
+            header.extend(
+                [
+                    f"sensor.{sensor_id}.joint_id",
+                    f"sensor.{sensor_id}.time",
+                    f"sensor.{sensor_id}.sequence",
+                    f"sensor.{sensor_id}.qpos",
+                    f"sensor.{sensor_id}.qvel",
+                ]
+            )
         writer.writerow(header)
         for sample in self.samples:
-            row: list[float] = [sample.time]
+            row: list[str | int | float] = [sample.time]
             for joint_id in self.joint_ids:
                 joint_state = sample.joints[joint_id]
                 row.extend([joint_state.qpos, joint_state.qvel])
             for actuator_id in self.actuator_ids:
                 actuator_state = sample.actuators[actuator_id]
                 row.extend([actuator_state.ctrl, actuator_state.force])
+            for sensor_id in self.sensor_ids:
+                sensor_state = sample.sensors.get(sensor_id)
+                if sensor_state is None:
+                    row.extend(["", "", "", "", ""])
+                    continue
+                row.extend(
+                    [
+                        sensor_state.joint_id,
+                        sensor_state.time,
+                        sensor_state.sequence,
+                        sensor_state.qpos,
+                        sensor_state.qvel,
+                    ]
+                )
             writer.writerow(row)
         return output.getvalue()
