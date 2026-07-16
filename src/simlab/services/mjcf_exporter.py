@@ -397,6 +397,11 @@ def imu_sensor_channel_names(sensor_id: str) -> tuple[str, str, str]:
     )
 
 
+def mujoco_name(value: str) -> str:
+    """Return the deterministic XML-safe name used for stable SimLab IDs."""
+    return _xml_name(value)
+
+
 def _xml_name(value: str) -> str:
     cleaned = "".join(char if char.isalnum() or char in "_-" else "_" for char in value.strip())
     return cleaned or "actor"

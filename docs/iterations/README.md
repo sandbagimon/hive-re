@@ -99,3 +99,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-16 Typed IMU Recording Contract](2026-07-16-typed-imu-recording-contract.md)
 - [2026-07-16 IMU Recording Runtime](2026-07-16-imu-recording-runtime.md)
 - [2026-07-16 Contact Sensor Contract](2026-07-16-contact-sensor-contract.md)
+- [2026-07-16 MuJoCo Contact Adapter](2026-07-16-mujoco-contact-adapter.md)
