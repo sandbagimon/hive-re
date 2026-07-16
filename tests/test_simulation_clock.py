@@ -3,8 +3,10 @@ from __future__ import annotations
 import pytest
 
 from simlab.models.actor import Actor
+from simlab.models.robotics import Sensor
 from simlab.models.scene import Scene
 from simlab.models.transform import Transform
+from simlab.services.openusd_importer import import_openusd_asset
 from simlab.services.simulation_service import SimulationService
 
 
@@ -98,6 +100,59 @@ def test_simulation_clock_scales_wall_time_without_changing_timestep(tmp_path) -
     assert double_state is not None and double_state.time == pytest.approx(0.10)
     assert double_state.clock.actual_rtf == pytest.approx(2.0)
     assert double_state.clock.timestep == pytest.approx(0.01)
+
+
+def test_simulation_rtf_and_pause_preserve_joint_sensor_physics_cadence(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    articulation = imported.robotics_model.articulations[0]
+    shoulder = articulation.joints[0]
+    articulation.sensors.append(
+        Sensor(
+            id="sensor_shoulder_50hz",
+            name="Shoulder 50 Hz",
+            sensor_type="joint_state",
+            joint_id=shoulder.id,
+            update_rate_hz=50.0,
+        )
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+        simulation_config={"timestep": 0.01, "max_catch_up_steps": 8},
+    )
+    clock = FakeClock()
+    service = SimulationService(tmp_path, lambda _: None, clock=clock)
+    service.set_realtime_factor(0.5)
+    initial = service.start(scene)
+
+    clock.advance(0.04)
+    half_speed = service.step_frame()
+    service.pause()
+    clock.advance(10.0)
+    resumed = service.start(scene)
+    service.set_realtime_factor(2.0)
+    clock.advance(0.04)
+    double_speed = service.step_frame()
+
+    assert initial.sensors[0].sequence == 0
+    assert half_speed is not None and half_speed.time == pytest.approx(0.02)
+    assert half_speed.sensors[0].sequence == 1
+    assert half_speed.sensors[0].time == pytest.approx(0.02)
+    assert resumed.sensors[0].sequence == 1
+    assert double_speed is not None and double_speed.time == pytest.approx(0.10)
+    assert double_speed.sensors[0].sequence == 5
+    assert double_speed.sensors[0].time == pytest.approx(0.10)
 
 
 @pytest.mark.parametrize("value", [0.0, 0.75, 4.0, float("inf")])

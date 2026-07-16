@@ -1,6 +1,7 @@
 import pytest
 
 from simlab.models.actor import Actor
+from simlab.models.robotics import Sensor
 from simlab.models.scene import Scene
 from simlab.models.trajectory import JointTrajectory
 from simlab.models.transform import Transform
@@ -73,6 +74,75 @@ def test_robot_session_publishes_home_link_joint_and_actuator_state(tmp_path) ->
     assert {item["id"] for item in payload["links"]} == {
         link.id for link in imported.robotics_model.articulations[0].links
     }
+
+
+def test_robot_session_publishes_fixed_step_joint_sensor_samples(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    articulation = imported.robotics_model.articulations[0]
+    shoulder = articulation.joints[0]
+    articulation.sensors.extend(
+        [
+            Sensor(
+                id="sensor_shoulder_100hz",
+                name="Shoulder 100 Hz",
+                sensor_type="joint_state",
+                joint_id=shoulder.id,
+                update_rate_hz=100.0,
+            ),
+            Sensor(
+                id="sensor_shoulder_50hz",
+                name="Shoulder 50 Hz",
+                sensor_type="joint_state",
+                joint_id=shoulder.id,
+                update_rate_hz=50.0,
+            ),
+        ]
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+        simulation_config={"timestep": 0.01},
+    )
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+
+    initial = session.state()
+    session.start_joint_recording(name="Sensor Alignment")
+    stepped = session.step(steps=4)
+    _, recording = session.stop_joint_recording()
+
+    assert [(sample.sensor_id, sample.sequence, sample.time) for sample in initial.sensors] == [
+        ("sensor_shoulder_100hz", 0, 0.0),
+        ("sensor_shoulder_50hz", 0, 0.0),
+    ]
+    assert [(sample.sensor_id, sample.sequence, sample.time) for sample in stepped.sensors] == [
+        ("sensor_shoulder_100hz", 4, pytest.approx(0.04)),
+        ("sensor_shoulder_50hz", 2, pytest.approx(0.04)),
+    ]
+    assert [sample.time for sample in recording.samples] == pytest.approx(
+        [0.0, 0.01, 0.02, 0.03, 0.04]
+    )
+    latest = stepped.sensors[0]
+    recorded_latest = recording.samples[-1].joints[shoulder.id]
+    assert latest.qpos == pytest.approx(recorded_latest.qpos)
+    assert latest.qvel == pytest.approx(recorded_latest.qvel)
+    assert stepped.to_dict()["sensors"][0]["sequence"] == 4
+
+    reset = session.reset()
+    assert [(sample.sequence, sample.time) for sample in reset.sensors] == [
+        (0, 0.0),
+        (0, 0.0),
+    ]
 
 
 def test_robot_session_clamps_joint_targets_and_reset_restores_home(tmp_path) -> None:

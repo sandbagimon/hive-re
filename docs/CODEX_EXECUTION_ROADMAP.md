@@ -796,8 +796,20 @@ Robotics schema 已增加 joint_state sensor；语义校验要求 joint referenc
 
 实现证据见 `docs/iterations/2026-07-16-joint-state-sensor-contract.md`。
 
-## 57. 当前下一项具体任务
+## 57. MuJoCo Joint Sensor Runtime（已完成 2026-07-16）
 
 > 将 JointStateSensorScheduler 接入 MuJoCo Session：Reset 发布 Home sample，每个 `mj_step` 后按 step index
 > capture；SimulationState 增加 sensors latest samples，Service/Bridge 原样同步。验证 100Hz/50Hz sensor
 > timestamps/sequence/qpos/qvel 与 recording 对齐，Pause/RTF 不改变 sensor simulation cadence。
+
+Session 在 `mj_forward` 后发布 Home samples，并在每个 mj_step 后与 recording 同时观察状态；SimulationState/
+TypeScript contract 已增加 latest sensors。100Hz/50Hz sequence 与 recording 对齐；fake clock 验证 Pause gap
+不采样，0.5x/2x 只改变执行步数而不改变 50Hz 的 simulation-time cadence。
+
+实现证据见 `docs/iterations/2026-07-16-mujoco-joint-sensor-runtime.md`。
+
+## 58. 当前下一项具体任务
+
+> 增加 Sensor Inspector 和数据导出：Robot Tree 展示 sensors，选中 sensor 后显示 type/joint/rate 与 live
+> sequence/time/qpos/qvel；Recording 可选包含 sensor latest/emitted samples，JSON/CSV 使用 stable sensor
+> columns。先完成 joint_state，避免把 UI refresh 当作采样源。

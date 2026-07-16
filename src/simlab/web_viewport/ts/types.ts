@@ -189,6 +189,15 @@ export interface ActuatorSimulationState {
   force: number;
 }
 
+export interface JointStateSensorSample {
+  id: string;
+  joint_id: string;
+  time: number;
+  sequence: number;
+  qpos: number;
+  qvel: number;
+}
+
 export interface ControllerSimulationState {
   status: 'ready' | 'active' | 'timed_out' | 'fault';
   message: string | null;
@@ -245,6 +254,7 @@ export interface SimulationState {
   links: LinkSimulationState[];
   joints: JointSimulationState[];
   actuators: ActuatorSimulationState[];
+  sensors: JointStateSensorSample[];
   trajectory: TrajectorySimulationState;
   recording: RecordingSimulationState;
   clock: ClockSimulationState;

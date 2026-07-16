@@ -16,6 +16,11 @@ from simlab.services.controller_runtime import (
     StepController,
 )
 from simlab.services.joint_state_recorder import JointStateRecorder
+from simlab.services.joint_state_sensors import (
+    JointKinematics,
+    JointStateSensorSample,
+    JointStateSensorScheduler,
+)
 from simlab.services.mjcf_exporter import export_scene_to_mjcf
 from simlab.services.trajectory_player import (
     JointTrajectoryPlayer,
@@ -129,6 +134,7 @@ class SimulationState:
     links: list[LinkSimulationState] = field(default_factory=list)
     joints: list[JointSimulationState] = field(default_factory=list)
     actuators: list[ActuatorSimulationState] = field(default_factory=list)
+    sensors: list[JointStateSensorSample] = field(default_factory=list)
     controller: ControllerSimulationState = field(
         default_factory=ControllerSimulationState
     )
@@ -152,6 +158,7 @@ class SimulationState:
             "links": [link.to_dict() for link in self.links],
             "joints": [joint.to_dict() for joint in self.joints],
             "actuators": [actuator.to_dict() for actuator in self.actuators],
+            "sensors": [sensor.to_dict() for sensor in self.sensors],
             "controller": self.controller.to_dict(),
             "trajectory": self.trajectory.to_dict(),
             "recording": self.recording.to_dict(),
@@ -185,6 +192,16 @@ class MuJoCoSimulationSession:
         self._joint_position_actuators = self._map_joint_position_actuators(scene)
         self._trajectory_player = JointTrajectoryPlayer()
         self._state_recorder = JointStateRecorder(self._read_recording_max_samples(scene))
+        sensor_definitions = [
+            sensor
+            for articulation in (scene.robotics.articulations if scene.robotics else [])
+            for sensor in articulation.sensors
+        ]
+        self._joint_state_sensors = JointStateSensorScheduler(
+            sensor_definitions,
+            float(self.model.opt.timestep),
+        )
+        self._physics_step_index = 0
         self._controller_runner = ControllerRunner(
             deadline=self._read_controller_deadline(scene)
         )
@@ -195,6 +212,7 @@ class MuJoCoSimulationSession:
         self._reset_to_home()
         self._home_controls = self.data.ctrl.copy()
         mujoco.mj_forward(self.model, self.data)
+        self._reset_joint_state_sensors()
 
     def step(self, steps: int = 1) -> SimulationState:
         for _ in range(max(steps, 1)):
@@ -203,6 +221,12 @@ class MuJoCoSimulationSession:
             self._apply_control_watchdog()
             self._mujoco.mj_step(self.model, self.data)
             self._apply_trajectory_target()
+            self._physics_step_index += 1
+            self._joint_state_sensors.capture(
+                self._physics_step_index,
+                float(self.data.time),
+                self._joint_kinematics(),
+            )
             if self._state_recorder.active:
                 self._state_recorder.capture(self.state())
         return self.state()
@@ -212,6 +236,7 @@ class MuJoCoSimulationSession:
             self._state_recorder.stop()
         self._reset_to_home()
         self._mujoco.mj_forward(self.model, self.data)
+        self._reset_joint_state_sensors()
         if self._controller_runner.enabled:
             self._controller_runner.reset(self._controller_observation())
             self._sync_python_controller_state()
@@ -353,6 +378,7 @@ class MuJoCoSimulationSession:
             links=link_states,
             joints=joint_states,
             actuators=actuator_states,
+            sensors=list(self._joint_state_sensors.latest_samples),
             controller=ControllerSimulationState(
                 status=self._controller_status,
                 message=self._controller_message,
@@ -492,6 +518,22 @@ class MuJoCoSimulationSession:
             timestep=float(self.model.opt.timestep),
             joints=joints,
             actuators=actuators,
+        )
+
+    def _joint_kinematics(self) -> dict[str, JointKinematics]:
+        return {
+            joint_id: JointKinematics(
+                qpos=float(self.data.qpos[self.model.jnt_qposadr[mujoco_id]]),
+                qvel=float(self.data.qvel[self.model.jnt_dofadr[mujoco_id]]),
+            )
+            for joint_id, mujoco_id in self._joint_ids.items()
+        }
+
+    def _reset_joint_state_sensors(self) -> None:
+        self._physics_step_index = 0
+        self._joint_state_sensors.reset(
+            float(self.data.time),
+            self._joint_kinematics(),
         )
 
     def _apply_python_controller(self) -> None:

@@ -60,7 +60,7 @@ The robot Inspector Controller section explicitly loads trusted project-local Py
 
 `simlab.controllers.JointPositionPdController` provides a bounded qpos/qvel outer loop for MuJoCo position drives. A project-loadable two-joint example is available at [`examples/controllers/two_joint_pd.py`](examples/controllers/two_joint_pd.py).
 
-The robotics schema includes fixed-clock `joint_state` sensors with stable IDs, qpos/qvel payloads, simulation timestamps, and monotonic sequence numbers. The first scheduler supports update rates that are exact integer divisors of the physics rate.
+The robotics schema includes fixed-clock `joint_state` sensors with stable IDs, qpos/qvel payloads, simulation timestamps, and monotonic sequence numbers. MuJoCo sessions publish each sensor's latest sample after fixed physics steps; update rates are exact integer divisors of the physics rate and remain independent of UI refresh, pause gaps, and target real-time factor.
 
 Primitive actors expose basic physics properties in the Property Panel: Dynamic, Mass, and Friction. Dynamic actors export with MuJoCo free joints, while static actors export as fixed world geoms.
 
