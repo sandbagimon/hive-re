@@ -389,5 +389,141 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         )
     )
     assert trajectory_screenshot.save(str(trajectory_output))
+
+    editor_history_before_keyframes = json.loads(
+        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+    )
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-keyframe-add]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: _javascript(
+            app,
+            window.web_view.page(),
+            "document.querySelectorAll('[data-keyframe-id]').length",
+        )
+        == 3,
+    )
+    keyframe_time_selector = json.dumps(
+        '[data-keyframe-id="keyframe-2"] [data-keyframe-time]'
+    )
+    _javascript(
+        app,
+        window.web_view.page(),
+        f"(()=>{{const input=document.querySelector({keyframe_time_selector});"
+        "input.value='0.4';input.dispatchEvent(new Event('change',{bubbles:true}));"
+        "return true})()",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(
+                app,
+                window.web_view.page(),
+                "JSON.stringify([...document.querySelectorAll('[data-keyframe-id]')].map("
+                "row=>row.dataset.keyframeId))",
+            )
+        )
+        == ["keyframe-0", "keyframe-2", "keyframe-1"],
+    )
+    target_selector = json.dumps(
+        f'[data-keyframe-id="keyframe-2"] [data-keyframe-target="{joint_id}"]'
+    )
+    _javascript(
+        app,
+        window.web_view.page(),
+        f"const target=document.querySelector({target_selector});"
+        "target.value='-0.4';target.dispatchEvent(new Event('change',{bubbles:true}));true",
+    )
+    keyframe_ui = json.loads(
+        _javascript(
+            app,
+            window.web_view.page(),
+            "JSON.stringify([...document.querySelectorAll('[data-keyframe-id]')].map(row=>({"
+            "id:row.dataset.keyframeId,"
+            "time:Number(row.querySelector('[data-keyframe-time]').value)"
+            "})))",
+        )
+    )
+    assert keyframe_ui == [
+        {"id": "keyframe-0", "time": 0},
+        {"id": "keyframe-2", "time": 0.4},
+        {"id": "keyframe-1", "time": 0.8},
+    ]
+    editor_history_after_edit = json.loads(
+        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+    )
+    assert editor_history_after_edit["dirty"] == editor_history_before_keyframes["dirty"]
+    assert editor_history_after_edit["canUndo"] == editor_history_before_keyframes["canUndo"]
+    assert editor_history_after_edit["canRedo"] == editor_history_before_keyframes["canRedo"]
+
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-trajectory-command=\"load\"]').click();true",
+    )
+    _wait_until(app, trajectory_is_loaded)
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-trajectory-command=\"play\"]').click();true",
+    )
+
+    def trajectory_crossed_middle_keyframe() -> bool:
+        current = json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )
+        runtime = current["simulationState"]
+        cursor = runtime["trajectory"]["time"]
+        return bool(
+            current["simulationStatus"] == "running"
+            and 0.32 <= cursor <= 0.48
+            and runtime["actuators"][0]["ctrl"] < -0.25
+        )
+
+    _wait_until(app, trajectory_crossed_middle_keyframe)
+    _wait_until(app, trajectory_is_completed)
+    _javascript(
+        app,
+        window.web_view.page(),
+        "const panel=document.querySelector('#inspector-panel');"
+        "panel.scrollTop=panel.scrollHeight;true",
+    )
+    _pump_events(app, 0.3)
+    keyframe_screenshot = window.web_view.grab()
+    keyframe_output = Path(
+        os.environ.get(
+            "SIMLAB_QT_KEYFRAME_SCREENSHOT",
+            tmp_path / "robot-keyframes.png",
+        )
+    )
+    assert keyframe_screenshot.save(str(keyframe_output))
+
+    keyframe_delete_selector = json.dumps(
+        '[data-keyframe-id="keyframe-2"] [data-keyframe-delete]'
+    )
+    _javascript(
+        app,
+        window.web_view.page(),
+        f"document.querySelector({keyframe_delete_selector}).click();true",
+    )
+    _wait_until(
+        app,
+        lambda: _javascript(
+            app,
+            window.web_view.page(),
+            "document.querySelectorAll('[data-keyframe-id]').length",
+        )
+        == 2,
+    )
+    editor_history_after_delete = json.loads(
+        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+    )
+    assert editor_history_after_delete["dirty"] == editor_history_before_keyframes["dirty"]
+    assert editor_history_after_delete["canUndo"] == editor_history_before_keyframes["canUndo"]
+    assert editor_history_after_delete["canRedo"] == editor_history_before_keyframes["canRedo"]
     window.bridge.dirty = False
     window.close()
