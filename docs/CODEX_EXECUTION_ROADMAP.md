@@ -628,7 +628,17 @@ Editor Automation API 可无对话框保存和打开真实 scene 文件。非法
 
 实现证据见 `docs/iterations/2026-07-16-project-path-rpc.md`。
 
-## 42. 当前下一项具体任务
+## 42. Trajectory Save/Open/Replay Qt E2E（已完成 2026-07-16）
 
 > 使用 explicit path RPC 完成 Trajectory Save/Open Qt E2E：保存三帧 clip、验证 undo/redo 与 dirty，
 > 新 MainWindow 重开 scene 后检查 selector/keyframes，并执行恢复轨迹到自然完成。
+
+真实测试已保存 `trajectory_001`，Undo/Redo 验证 clip history 后写入 scene.json；第二个 MainWindow
+重开外部 USD robot、hydrate 三帧 draft，并在 MuJoCo 中播放到 Completed。
+
+实现证据见 `docs/iterations/2026-07-16-trajectory-save-open-e2e.md`。
+
+## 43. 当前下一项具体任务
+
+> 建立 Joint State Recording Contract：按 physics step 采集选定 robot joint 的 qpos/qvel、actuator
+> ctrl/force 和 simulation time，定义 recording manifest 与 JSON/CSV 导出，设置最大采样数保护。

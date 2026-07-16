@@ -525,5 +525,265 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     assert editor_history_after_delete["dirty"] == editor_history_before_keyframes["dirty"]
     assert editor_history_after_delete["canUndo"] == editor_history_before_keyframes["canUndo"]
     assert editor_history_after_delete["canRedo"] == editor_history_before_keyframes["canRedo"]
+
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-keyframe-add]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: _javascript(
+            app,
+            window.web_view.page(),
+            "document.querySelectorAll('[data-keyframe-id]').length",
+        )
+        == 3,
+    )
+    persisted_time_selector = json.dumps(
+        '[data-keyframe-id="keyframe-3"] [data-keyframe-time]'
+    )
+    _javascript(
+        app,
+        window.web_view.page(),
+        f"(()=>{{const input=document.querySelector({persisted_time_selector});"
+        "input.value='0.4';input.dispatchEvent(new Event('change',{bubbles:true}));"
+        "return true})()",
+    )
+    persisted_target_selector = json.dumps(
+        f'[data-keyframe-id="keyframe-3"] [data-keyframe-target="{joint_id}"]'
+    )
+    _javascript(
+        app,
+        window.web_view.page(),
+        f"(()=>{{const input=document.querySelector({persisted_target_selector});"
+        "input.value='-0.4';input.dispatchEvent(new Event('change',{bubbles:true}));"
+        "return true})()",
+    )
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-trajectory-save]').click();true",
+    )
+
+    def trajectory_clip_is_saved() -> bool:
+        current = json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )
+        clips = current["scene"].get("trajectories", [])
+        return bool(
+            len(clips) == 1
+            and clips[0]["id"] == "trajectory_001"
+            and [item["time"] for item in clips[0]["trajectory"]["keyframes"]]
+            == [0, 0.4, 0.8]
+            and clips[0]["trajectory"]["keyframes"][1]["targets"][joint_id]
+            == pytest.approx(-0.4)
+        )
+
+    _wait_until(app, trajectory_clip_is_saved)
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-command=\"undo\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: "trajectories"
+        not in json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )["scene"],
+    )
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-command=\"redo\"]').click();true",
+    )
+    _wait_until(app, trajectory_clip_is_saved)
+    _wait_until(
+        app,
+        lambda: _javascript(
+            app,
+            window.web_view.page(),
+            "document.querySelectorAll('[data-keyframe-id]').length",
+        )
+        == 3,
+    )
+
+    saved_scene_path = tmp_path / "saved-robot-scene.json"
+    saved_scene_json = json.dumps(str(saved_scene_path))
+    _javascript(
+        app,
+        window.web_view.page(),
+        f"window.simlabEditor.saveProjectPath({saved_scene_json}).then("
+        "result=>document.documentElement.dataset.projectSave=JSON.stringify(result));true",
+    )
+    _wait_until(
+        app,
+        lambda: bool(
+            _javascript(
+                app,
+                window.web_view.page(),
+                "document.documentElement.dataset.projectSave || ''",
+            )
+        ),
+    )
+    save_result = json.loads(
+        _javascript(
+            app,
+            window.web_view.page(),
+            "document.documentElement.dataset.projectSave",
+        )
+    )
+    assert save_result["ok"] is True
+    saved_data = json.loads(saved_scene_path.read_text(encoding="utf-8"))
+    assert saved_data["trajectories"][0]["trajectory"]["name"] == "Qt Arm Motion"
+    saved_editor_state = json.loads(
+        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+    )
+    assert saved_editor_state["dirty"] is False
+    assert saved_editor_state["currentPath"] == str(saved_scene_path)
+
     window.bridge.dirty = False
     window.close()
+
+    reopened_window = MainWindow(project_root=tmp_path)
+    reopened_loaded: list[bool] = []
+    reopened_window.web_view.loadFinished.connect(reopened_loaded.append)
+    reopened_window.show()
+    _wait_until(app, lambda: bool(reopened_loaded))
+    assert reopened_loaded[-1] is True
+    _wait_until(
+        app,
+        lambda: bool(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditorReady === true",
+            )
+        ),
+    )
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        f"window.simlabEditor.openProjectPath({saved_scene_json}).then("
+        "result=>document.documentElement.dataset.projectOpen=JSON.stringify(result));true",
+    )
+    _wait_until(
+        app,
+        lambda: bool(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "document.documentElement.dataset.projectOpen || ''",
+            )
+        ),
+    )
+    open_result = json.loads(
+        _javascript(
+            app,
+            reopened_window.web_view.page(),
+            "document.documentElement.dataset.projectOpen",
+        )
+    )
+    assert open_result["ok"] is True
+    reopened_state = json.loads(
+        _javascript(
+            app,
+            reopened_window.web_view.page(),
+            "window.simlabEditor.getStateJson()",
+        )
+    )
+    reopened_actor_id = reopened_state["scene"]["actors"][0]["id"]
+    reopened_articulation = reopened_state["scene"]["robotics"]["articulations"][0]
+    reopened_joint_id = reopened_articulation["joints"][0]["id"]
+    assert _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "window.simlabEditor.selectJoint("
+        f"{json.dumps(reopened_actor_id)},{json.dumps(reopened_joint_id)})",
+    ) is True
+    _wait_until(
+        app,
+        lambda: _javascript(
+            app,
+            reopened_window.web_view.page(),
+            "document.querySelector('[data-trajectory-clip]').value",
+        )
+        == "trajectory_001",
+    )
+    reopened_keyframes = json.loads(
+        _javascript(
+            app,
+            reopened_window.web_view.page(),
+            "JSON.stringify([...document.querySelectorAll('[data-keyframe-id]')].map(row=>({"
+            "time:Number(row.querySelector('[data-keyframe-time]').value),"
+            "target:Number(row.querySelector('[data-keyframe-target]').value)"
+            "})))",
+        )
+    )
+    assert [item["time"] for item in reopened_keyframes] == [0, 0.4, 0.8]
+    assert reopened_keyframes[1]["target"] == pytest.approx(-0.4)
+
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-trajectory-command=\"load\"]').click();true",
+    )
+
+    def reopened_trajectory_is_loaded() -> bool:
+        current = json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )
+        runtime = current["simulationState"]
+        return bool(
+            current["simulationStatus"] == "paused"
+            and runtime
+            and runtime["trajectory"]["status"] == "stopped"
+            and runtime["trajectory"]["duration"] == pytest.approx(0.8)
+        )
+
+    _wait_until(app, reopened_trajectory_is_loaded)
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-trajectory-command=\"play\"]').click();true",
+    )
+
+    def reopened_trajectory_is_completed() -> bool:
+        current = json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )
+        runtime = current["simulationState"]
+        return bool(
+            current["simulationStatus"] == "paused"
+            and runtime
+            and runtime["trajectory"]["status"] == "completed"
+            and runtime["actuators"][0]["ctrl"] == pytest.approx(0.5)
+        )
+
+    _wait_until(app, reopened_trajectory_is_completed)
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "const panel=document.querySelector('#inspector-panel');"
+        "panel.scrollTop=panel.scrollHeight;true",
+    )
+    _pump_events(app, 0.3)
+    reopened_screenshot = reopened_window.web_view.grab()
+    reopened_output = Path(
+        os.environ.get(
+            "SIMLAB_QT_REOPENED_SCREENSHOT",
+            tmp_path / "robot-trajectory-reopened.png",
+        )
+    )
+    assert reopened_screenshot.save(str(reopened_output))
+    reopened_window.bridge.dirty = False
+    reopened_window.close()
