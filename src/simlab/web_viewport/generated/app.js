@@ -757,6 +757,37 @@ function updateRecordingRuntime(simulationState) {
         button.disabled = active || sampleCount === 0;
     }
 }
+let targetRealtimeFactor = 1;
+function updateSimulationClock(simulationState) {
+    if (simulationState)
+        targetRealtimeFactor = simulationState.clock.target_rtf;
+    for (const button of document.querySelectorAll('[data-simulation-speed]')) {
+        const factor = Number(button.dataset.simulationSpeed);
+        const active = factor === targetRealtimeFactor;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-pressed', String(active));
+    }
+    const actual = simulationState?.clock.actual_rtf ?? 0;
+    element('rtf-readout').textContent = `${actual.toFixed(2)}x`;
+}
+async function setSimulationSpeed(factor) {
+    const previous = targetRealtimeFactor;
+    targetRealtimeFactor = factor;
+    updateSimulationClock(null);
+    const result = await bridge.call('setSimulationSpeed', factor);
+    if (result.ok && result.data) {
+        targetRealtimeFactor = result.data.target_rtf;
+        if (result.data.state)
+            store.setSimulationState(result.data.state);
+        else
+            updateSimulationClock(null);
+        return result;
+    }
+    targetRealtimeFactor = previous;
+    updateSimulationClock(store.current.simulationState);
+    showToast(result.error ?? 'Simulation speed update failed', true);
+    return result;
+}
 function render() {
     const state = store.current;
     element('project-label').textContent = `${state.dirty ? '* ' : ''}${state.scene.name}`;
@@ -764,6 +795,7 @@ function render() {
     const badge = element('simulation-badge');
     badge.textContent = state.simulationStatus[0].toUpperCase() + state.simulationStatus.slice(1);
     badge.dataset.status = state.simulationStatus;
+    updateSimulationClock(state.simulationState);
     element('undo-button').disabled = !state.canUndo;
     element('redo-button').disabled = !state.canRedo;
     renderAssets(state.assets);
@@ -898,6 +930,11 @@ async function importOpenUsd(path) {
 for (const button of document.querySelectorAll('[data-command]')) {
     button.addEventListener('click', () => void handleCommand(button.dataset.command ?? ''));
 }
+for (const button of document.querySelectorAll('[data-simulation-speed]')) {
+    button.addEventListener('click', () => {
+        void setSimulationSpeed(Number(button.dataset.simulationSpeed));
+    });
+}
 configureViewport({
     onActorSelected: (actorId) => store.selectActor(actorId),
     onActorTransformChanged: (actorId, transform) => store.updateActorTransform(actorId, transform),
@@ -948,6 +985,7 @@ store.subscribe((state) => {
         updateRuntimeInspector(state.simulationState);
         updateTrajectoryRuntime(state.simulationState);
         updateRecordingRuntime(state.simulationState);
+        updateSimulationClock(state.simulationState);
         previousSimulationState = state.simulationState;
     }
     const nextSync = `${sceneJson}:${state.dirty}`;
@@ -997,6 +1035,7 @@ window.simlabEditor = {
     saveProjectPath,
     getRecording: () => bridge.call('getRecording'),
     exportRecordingPath: (path, formatName) => bridge.call('exportRecording', path, formatName),
+    setSimulationSpeed,
     getStateJson: () => JSON.stringify(store.current),
     selectJoint: (actorId, jointId) => {
         store.selectJoint(actorId, jointId);

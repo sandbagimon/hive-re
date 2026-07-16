@@ -210,6 +210,12 @@ export interface RecordingSimulationState {
   name: string | null;
 }
 
+export interface ClockSimulationState {
+  target_rtf: number;
+  actual_rtf: number;
+  timestep: number;
+}
+
 export interface JointTrajectoryKeyframe {
   time: number;
   targets: Record<string, number>;
@@ -236,6 +242,7 @@ export interface SimulationState {
   actuators: ActuatorSimulationState[];
   trajectory: TrajectorySimulationState;
   recording: RecordingSimulationState;
+  clock: ClockSimulationState;
   controller: ControllerSimulationState;
 }
 
@@ -301,6 +308,7 @@ export interface PythonBridgeObject {
   preflight(sceneJson: string, callback: (result: string) => void): void;
   runSimulation(sceneJson: string, callback: (result: string) => void): void;
   pauseSimulation(callback: (result: string) => void): void;
+  setSimulationSpeed(factor: number, callback: (result: string) => void): void;
   stepSimulation(sceneJson: string, callback: (result: string) => void): void;
   resetSimulation(callback: (result: string) => void): void;
   setJointTargets(sceneJson: string, targetsJson: string, callback: (result: string) => void): void;
@@ -332,6 +340,10 @@ export interface SimLabEditorAutomation {
     path: string,
     formatName: 'json' | 'csv',
   ): Promise<RpcResult<{ path: string; format: string; sample_count: number }>>;
+  setSimulationSpeed(factor: number): Promise<RpcResult<{
+    target_rtf: number;
+    state: SimulationState | null;
+  }>>;
   getStateJson(): string;
   selectJoint(actorId: string, jointId: string): boolean;
 }

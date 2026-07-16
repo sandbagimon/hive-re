@@ -32,6 +32,15 @@
           <button type="button" data-command="step">Step</button>
           <button type="button" data-command="reset">Reset</button>
         </nav>
+        <div id="clock-controls" aria-label="Simulation speed">
+          <div class="speed-segments">
+            <button type="button" data-simulation-speed="0.25">.25x</button>
+            <button type="button" data-simulation-speed="0.5">.5x</button>
+            <button type="button" data-simulation-speed="1" class="active">1x</button>
+            <button type="button" data-simulation-speed="2">2x</button>
+          </div>
+          <output id="rtf-readout" title="Actual real-time factor">0.00x</output>
+        </div>
         <div id="simulation-badge" data-status="stopped">Stopped</div>
       </header>
 

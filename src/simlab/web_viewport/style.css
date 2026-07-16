@@ -34,6 +34,21 @@ button { color: inherit; }
 #project-label { max-width: 170px; overflow: hidden; color: #9ba7b4; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .command-group { display: flex; gap: 4px; padding-left: 8px; border-left: 1px solid #39414c; }
 .simulation-commands { margin-left: auto; }
+#clock-controls { display: flex; align-items: center; gap: 6px; }
+.speed-segments { display: flex; }
+.speed-segments button {
+  width: 36px;
+  min-height: 28px;
+  padding: 3px;
+  border-radius: 0;
+  color: #aeb8c4;
+  font-size: 11px;
+}
+.speed-segments button + button { margin-left: -1px; }
+.speed-segments button:first-child { border-radius: 4px 0 0 4px; }
+.speed-segments button:last-child { border-radius: 0 4px 4px 0; }
+.speed-segments button.active { z-index: 1; border-color: #4d9c82; background: #275f52; color: #e6fff5; }
+#rtf-readout { width: 42px; color: #8f9baa; font-size: 10px; text-align: right; white-space: nowrap; }
 
 button {
   min-height: 30px;
@@ -273,6 +288,7 @@ h2 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; }
   html, body { overflow: auto; }
   #command-bar { flex-wrap: wrap; }
   .simulation-commands { margin-left: 0; }
+  #clock-controls { margin-left: 0; }
   #workspace { min-height: 1100px; grid-template-columns: minmax(0, 1fr); grid-template-rows: 240px 520px minmax(340px, auto); }
   #left-sidebar { grid-column: 1; grid-row: 1; grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr); border-right: 0; border-bottom: 1px solid #303640; }
   .panel-section + .panel-section { border-top: 0; border-left: 1px solid #303640; }

@@ -31,6 +31,8 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert 'data-command="save"' in html
     assert 'data-command="import-openusd"' in html
     assert 'data-command="run"' in html
+    assert 'data-simulation-speed="0.25"' in html
+    assert 'id="rtf-readout"' in html
     assert "class EditorStore" in (root / "ts" / "store.ts").read_text(encoding="utf-8")
     assert "store.undo()" in app
     assert "store.selectActor" in app
@@ -76,6 +78,8 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "data-recording-joint" in app
     assert "data-recording-command" in app
     assert "updateRecordingRuntime" in app
+    assert "updateSimulationClock" in app
+    assert "setSimulationSpeed" in app
     assert "exportRecordingPath" in app
     assert "handleTrajectoryCommand" in app
     assert "updateTrajectoryRuntime" in app
