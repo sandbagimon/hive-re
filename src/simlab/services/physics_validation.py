@@ -73,17 +73,18 @@ def run_physics_preflight(
 
     physics_actor_count = 0
     for actor in scene.actors:
-        if actor.type != "object":
-            continue
-        physics_actor_count += 1
-        _validate_actor(actor, report, asset_root)
+        if actor.type == "object":
+            physics_actor_count += 1
+            _validate_actor(actor, report, asset_root)
+        elif actor.type == "robot" and _validate_robot_actor(actor, scene, report):
+            physics_actor_count += 1
 
     if physics_actor_count == 0:
         report.issues.append(
             PhysicsValidationIssue(
                 severity="warning",
                 code="NO_PHYSICS_ACTORS",
-                message="The scene has no object actors to simulate.",
+                message="The scene has no object or robot actors to simulate.",
             )
         )
 
@@ -146,6 +147,41 @@ def _validate_actor_ids(scene: Scene, report: PhysicsPreflightReport) -> None:
                 )
             )
         seen.add(actor.id)
+
+
+def _validate_robot_actor(
+    actor: Actor,
+    scene: Scene,
+    report: PhysicsPreflightReport,
+) -> bool:
+    raw_ids = actor.properties.get("articulation_ids")
+    if not isinstance(raw_ids, list) or not raw_ids:
+        report.issues.append(
+            _actor_issue(
+                actor,
+                "error",
+                "MISSING_ARTICULATION_IDS",
+                "Robot actors must reference at least one articulation.",
+                "properties.articulation_ids",
+            )
+        )
+        return False
+    available = {
+        articulation.id for articulation in scene.robotics.articulations
+    } if scene.robotics is not None else set()
+    missing = [str(value) for value in raw_ids if str(value) not in available]
+    if missing:
+        report.issues.append(
+            _actor_issue(
+                actor,
+                "error",
+                "UNKNOWN_ARTICULATION",
+                f"Robot actor references unknown articulation(s): {', '.join(missing)}.",
+                "properties.articulation_ids",
+            )
+        )
+        return False
+    return True
 
 
 def _validate_actor(

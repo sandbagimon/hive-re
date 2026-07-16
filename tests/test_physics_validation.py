@@ -1,4 +1,8 @@
+import json
+from pathlib import Path
+
 from simlab.models.actor import Actor
+from simlab.models.robotics import RoboticsModel
 from simlab.models.scene import Scene
 from simlab.services.physics_validation import run_physics_preflight
 
@@ -121,3 +125,49 @@ def test_preflight_surfaces_mujoco_compile_error() -> None:
     assert not report.is_valid
     assert report.errors[0].code == "MJCF_LOAD_FAILED"
     assert "duplicate name" in report.errors[0].message
+
+
+def test_preflight_accepts_robot_only_scene_without_no_actor_warning() -> None:
+    robotics = RoboticsModel.from_dict(
+        json.loads(
+            Path("tests/fixtures/robotics/two_joint_arm.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id="external_arm",
+                properties={"articulation_ids": ["arm_demo"]},
+            )
+        ],
+        robotics=robotics,
+    )
+
+    report = run_physics_preflight(scene, model_loader=lambda _xml: object())
+
+    assert report.is_valid
+    assert "NO_PHYSICS_ACTORS" not in {issue.code for issue in report.issues}
+
+
+def test_preflight_rejects_robot_actor_with_unknown_articulation() -> None:
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id="external_arm",
+                properties={"articulation_ids": ["arm_missing"]},
+            )
+        ]
+    )
+
+    report = run_physics_preflight(scene, model_loader=lambda _xml: object())
+
+    assert not report.is_valid
+    assert "UNKNOWN_ARTICULATION" in {issue.code for issue in report.errors}

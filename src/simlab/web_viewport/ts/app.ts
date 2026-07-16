@@ -358,7 +358,8 @@ async function sendJointTargets(targets: Record<string, number>): Promise<void> 
     showToast(result.error ?? 'Joint control failed', true);
     return;
   }
-  store.setSimulation('paused', result.data.state);
+  const status = store.current.simulationStatus === 'running' ? 'running' : 'paused';
+  store.setSimulation(status, result.data.state);
 }
 
 function updateProperty(actorId: string, input: HTMLInputElement | HTMLSelectElement): void {

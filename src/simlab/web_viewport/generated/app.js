@@ -296,7 +296,8 @@ async function sendJointTargets(targets) {
         showToast(result.error ?? 'Joint control failed', true);
         return;
     }
-    store.setSimulation('paused', result.data.state);
+    const status = store.current.simulationStatus === 'running' ? 'running' : 'paused';
+    store.setSimulation(status, result.data.state);
 }
 function updateProperty(actorId, input) {
     const actor = store.current.scene.actors.find((item) => item.id === actorId);

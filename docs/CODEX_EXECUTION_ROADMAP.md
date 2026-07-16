@@ -517,7 +517,16 @@ Frame Selected 会使用 child Link bounds，Store 拒绝不属于 actor 的 joi
 MainWindow 支持注入临时 project root，视觉测试不会污染仓库资产。显式视觉门禁通过并生成
 `/tmp/simlab-robot-joint-ui.png`。实现证据见 `docs/iterations/2026-07-16-qt-robot-ui-e2e.md`。
 
-## 30. 当前下一项具体任务
+## 30. Qt Robot Run/Jog/Pause/Reset E2E（已完成 2026-07-16）
 
-> 扩展 Qt robot UI E2E：通过真实 Run/Jog/Pause/Reset 按钮驱动机械臂，等待 qpos 与 child Link pose
-> 变化，验证 live Inspector 反馈和 Reset Home，并保存运行态截图。
+> 真实 Qt 页面通过 Run、Jog、Pause、Reset 完成机械臂控制闭环；自动验证 qpos、child Link
+> quaternion、live Inspector、暂停时间冻结和 Reset Home，运行态截图非空。
+
+运行中 Jog 现在保持 Running status。Preflight 将有效 robot articulation 计为 physics actor，并拒绝
+悬空 articulation reference，不再误报 `NO_PHYSICS_ACTORS`。实现证据见
+`docs/iterations/2026-07-16-qt-robot-control-e2e.md`。
+
+## 31. 当前下一项具体任务
+
+> 建立 Joint Trajectory 数据契约与最小播放器：时间戳 + stable joint targets，支持 Play/Pause/Stop、
+> 线性插值和固定物理时钟执行；先覆盖单机械臂离线轨迹，不引入训练框架。

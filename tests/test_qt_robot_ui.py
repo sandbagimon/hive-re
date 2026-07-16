@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import os
 import time
 from pathlib import Path
@@ -135,5 +136,109 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         for y in range(0, image.height(), max(image.height() // 20, 1))
     }
     assert len(colors) > 10
+
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-command=\"run\"]').click(); true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )["simulationStatus"] == "running",
+    )
+    home_runtime = json.loads(
+        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+    )["simulationState"]
+    _javascript(
+        app,
+        window.web_view.page(),
+        "const step=document.querySelector('[data-joint-step]');"
+        "step.value='0.5';step.dispatchEvent(new Event('change',{bubbles:true}));"
+        "document.querySelector('[data-joint-jog][data-direction=\"1\"]').click();true",
+    )
+
+    def robot_has_moved() -> bool:
+        current = json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )
+        runtime = current["simulationState"]
+        return bool(
+            current["simulationStatus"] == "running"
+            and runtime
+            and runtime["controller"]["status"] == "active"
+            and runtime["actuators"][0]["ctrl"] == pytest.approx(0.5)
+            and runtime["joints"][0]["qpos"] > 0.1
+        )
+
+    _wait_until(app, robot_has_moved)
+    running_state = json.loads(
+        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+    )
+    running_runtime = running_state["simulationState"]
+    assert running_state["simulationStatus"] == "running"
+    assert running_state["validationIssues"] == []
+    assert running_runtime["time"] > home_runtime["time"]
+    child_link_id = articulation["joints"][0]["child_link_id"]
+    home_link = next(item for item in home_runtime["links"] if item["id"] == child_link_id)
+    moved_link = next(item for item in running_runtime["links"] if item["id"] == child_link_id)
+    assert math.dist(home_link["quaternion"], moved_link["quaternion"]) > 0.01
+    live_position = _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-joint-position-field]').value",
+    )
+    assert abs(float(live_position)) > 0.1
+
+    _pump_events(app, 0.3)
+    running_screenshot = window.web_view.grab()
+    running_output = Path(
+        os.environ.get(
+            "SIMLAB_QT_RUNNING_SCREENSHOT",
+            tmp_path / "robot-joint-running.png",
+        )
+    )
+    assert running_screenshot.save(str(running_output))
+
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-command=\"pause\"]').click(); true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )["simulationStatus"] == "paused",
+    )
+    paused_time = json.loads(
+        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+    )["simulationState"]["time"]
+    _pump_events(app, 0.2)
+    assert json.loads(
+        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+    )["simulationState"]["time"] == pytest.approx(paused_time)
+
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-command=\"reset\"]').click(); true",
+    )
+
+    def robot_is_home() -> bool:
+        current = json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )
+        runtime = current["simulationState"]
+        return bool(
+            current["simulationStatus"] == "paused"
+            and runtime
+            and runtime["time"] == 0
+            and runtime["controller"]["status"] == "ready"
+            and abs(runtime["joints"][0]["qpos"]) < 1e-9
+        )
+
+    _wait_until(app, robot_is_home)
     window.bridge.dirty = False
     window.close()

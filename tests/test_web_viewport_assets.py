@@ -57,3 +57,4 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "selectedLinkId" in viewport
     assert "window.simlabEditor" in app
     assert "simlabEditorReady" in app
+    assert "simulationStatus === 'running' ? 'running' : 'paused'" in app
