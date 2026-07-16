@@ -618,7 +618,17 @@ Panel 已提供 saved clip selector、Save 和 Delete；clip payload 可 hydrate
 
 实现证据见 `docs/iterations/2026-07-16-trajectory-persistence-ui.md`。
 
-## 41. 当前下一项具体任务
+## 41. Explicit Project Path RPC（已完成 2026-07-16）
 
 > 增加 Trajectory Save/Open Qt E2E：保存三帧 clip 后验证 dirty/undo/redo，调用项目 Save 写入
 > scene.json，再在新 MainWindow 打开同一 scene，验证 clip selector、keyframes 和 MuJoCo playback。
+
+EditorBridge 已增加 `saveProjectPath` / `openProjectPath`，原生文件对话框方法复用同一实现；受控
+Editor Automation API 可无对话框保存和打开真实 scene 文件。非法 payload 不会落盘。
+
+实现证据见 `docs/iterations/2026-07-16-project-path-rpc.md`。
+
+## 42. 当前下一项具体任务
+
+> 使用 explicit path RPC 完成 Trajectory Save/Open Qt E2E：保存三帧 clip、验证 undo/redo 与 dirty，
+> 新 MainWindow 重开 scene 后检查 selector/keyframes，并执行恢复轨迹到自然完成。

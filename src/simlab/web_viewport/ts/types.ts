@@ -286,7 +286,9 @@ export interface PythonBridgeObject {
   importOpenUsdPath(path: string, callback: (result: string) => void): void;
   getVisualGeometry(cachePath: string, callback: (result: string) => void): void;
   openProject(callback: (result: string) => void): void;
+  openProjectPath(path: string, callback: (result: string) => void): void;
   saveProject(sceneJson: string, saveAs: boolean, callback: (result: string) => void): void;
+  saveProjectPath(sceneJson: string, path: string, callback: (result: string) => void): void;
   exportMjcf(sceneJson: string, callback: (result: string) => void): void;
   preflight(sceneJson: string, callback: (result: string) => void): void;
   runSimulation(sceneJson: string, callback: (result: string) => void): void;
@@ -310,6 +312,8 @@ export interface QWebChannelInstance {
 
 export interface SimLabEditorAutomation {
   importOpenUsdPath(path: string): Promise<RpcResult<OpenUsdImportPayload>>;
+  openProjectPath(path: string): Promise<RpcResult<ProjectPayload>>;
+  saveProjectPath(path: string): Promise<RpcResult<SavePayload>>;
   getStateJson(): string;
   selectJoint(actorId: string, jointId: string): boolean;
 }

@@ -701,7 +701,7 @@ SimLab Desktop
 | M7 Asset Pipeline | 🔶 部分完成 | 40% | OpenUSD mesh import，缺少 texture/material、asset library、thumbnails |
 | M8 Controller API | 🔶 已开始 | 85% | Run/Jog/Pause/Reset 与 trajectory RPC/UI/E2E 已闭环 |
 | M9 Experiment/Env | 🔴 仅 stub | 5% | `SimLabEnv` 占位，不可训练 |
-| M10 Diagnostics | 🔶 部分完成 | 70% | preflight、soak、fault、live control 与 multi-keyframe Qt E2E |
+| M10 Diagnostics | 🔶 部分完成 | 72% | 增加 explicit project path RPC，准备 Save/Open Qt E2E |
 | M11 Packaging | ❌ 未开始 | 0% | 无 installer、无版本信息 |
 | M12 Polish | ❌ 未开始 | 0% | 视觉设计系统、快捷键系统、documentation site |
 

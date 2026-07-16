@@ -100,6 +100,10 @@ class EditorBridge(QObject):
         )
         if not path:
             return self._failure("Cancelled")
+        return self.openProjectPath(path)
+
+    @Slot(str, result=str)
+    def openProjectPath(self, path: str) -> str:
         try:
             scene = load_scene(path)
             self._stop_simulation()
@@ -114,7 +118,7 @@ class EditorBridge(QObject):
     @Slot(str, bool, result=str)
     def saveProject(self, scene_json: str, save_as: bool) -> str:
         try:
-            scene = self._scene_from_json(scene_json)
+            self._scene_from_json(scene_json)
             path = self.current_path
             if save_as or path is None:
                 selected, _ = QFileDialog.getSaveFileName(
@@ -126,12 +130,21 @@ class EditorBridge(QObject):
                 if not selected:
                     return self._failure("Cancelled")
                 path = Path(selected)
-            save_scene(path, scene)
-            self.current_path = path
+            return self.saveProjectPath(scene_json, str(path))
+        except Exception as exc:
+            return self._failure(exc)
+
+    @Slot(str, str, result=str)
+    def saveProjectPath(self, scene_json: str, path: str) -> str:
+        try:
+            scene = self._scene_from_json(scene_json)
+            output_path = Path(path)
+            save_scene(output_path, scene)
+            self.current_path = output_path
             self.synced_scene_json = scene_json
             self.dirty = False
             self._emit_title(scene.name)
-            return self._success({"path": str(path)})
+            return self._success({"path": str(output_path)})
         except Exception as exc:
             return self._failure(exc)
 

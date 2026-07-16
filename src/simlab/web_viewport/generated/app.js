@@ -665,6 +665,23 @@ async function saveProject(saveAs = false) {
     store.appendLog(`Saved scene: ${result.data.path}`);
     return true;
 }
+async function saveProjectPath(path) {
+    const result = await bridge.call('saveProjectPath', JSON.stringify(store.current.scene), path);
+    if (result.ok && result.data) {
+        store.markSaved(result.data.path);
+        store.appendLog(`Saved scene: ${result.data.path}`);
+    }
+    return result;
+}
+async function openProjectPath(path) {
+    const result = await bridge.call('openProjectPath', path);
+    if (result.ok && result.data) {
+        trajectoryDrafts.clear();
+        store.loadScene(result.data.scene, result.data.path);
+        store.appendLog(`Opened scene: ${result.data.path}`);
+    }
+    return result;
+}
 function allowDiscard() {
     return !store.current.dirty || window.confirm('Discard unsaved scene changes?');
 }
@@ -852,6 +869,8 @@ async function initialize() {
 window.simlabEditorReady = false;
 window.simlabEditor = {
     importOpenUsdPath: (path) => importOpenUsd(path),
+    openProjectPath,
+    saveProjectPath,
     getStateJson: () => JSON.stringify(store.current),
     selectJoint: (actorId, jointId) => {
         store.selectJoint(actorId, jointId);

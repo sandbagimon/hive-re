@@ -32,6 +32,32 @@ def test_editor_bridge_returns_enriched_assets() -> None:
     assert len(physics["solimp"]) == 5
 
 
+def test_editor_bridge_saves_and_opens_explicit_project_path(tmp_path: Path) -> None:
+    scene = Scene(name="Explicit Path")
+    path = tmp_path / "saved" / "scene.json"
+    bridge = _bridge(tmp_path)
+
+    saved = json.loads(bridge.saveProjectPath(json.dumps(scene.to_dict()), str(path)))
+    reopened = json.loads(_bridge(tmp_path).openProjectPath(str(path)))
+
+    assert saved == {"ok": True, "data": {"path": str(path)}}
+    assert bridge.current_path == path
+    assert reopened["ok"] is True
+    assert reopened["data"]["scene"] == scene.to_dict()
+    assert reopened["data"]["path"] == str(path)
+
+
+def test_editor_bridge_explicit_project_path_reports_invalid_scene(
+    tmp_path: Path,
+) -> None:
+    bridge = _bridge(tmp_path)
+
+    response = json.loads(bridge.saveProjectPath("{}", str(tmp_path / "scene.json")))
+
+    assert response["ok"] is False
+    assert not (tmp_path / "scene.json").exists()
+
+
 def test_editor_bridge_preflight_uses_scene_snapshot() -> None:
     bridge = _bridge()
     scene = load_scene("examples/demo_project/scene.json")

@@ -71,3 +71,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-16 Trajectory Library Contract](2026-07-16-trajectory-library-contract.md)
 - [2026-07-16 EditorStore Trajectory Library](2026-07-16-editor-store-trajectory-library.md)
 - [2026-07-16 Trajectory Persistence UI](2026-07-16-trajectory-persistence-ui.md)
+- [2026-07-16 Project Path RPC](2026-07-16-project-path-rpc.md)
