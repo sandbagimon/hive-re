@@ -9,6 +9,7 @@ const materialPresets = {
     ice: { density: 917, friction: [0.03, 0.001, 0.00005], solref: [0.01, 1], solimp: [0.92, 0.98, 0.0005, 0.5, 2], roughness: 0.12, metalness: 0.08 },
 };
 const store = new EditorStore();
+const trajectoryDraft = { name: 'Joint Motion', duration: 2, loop: false };
 let bridge = new EditorBridgeClient(null);
 let previousSceneJson = '';
 let previousSelectedActorId = null;
@@ -351,6 +352,123 @@ function renderConsole(logs) {
     output.innerHTML = logs.map((line) => `<div class="console-line">${escapeHtml(line)}</div>`).join('');
     output.scrollTop = output.scrollHeight;
 }
+function renderTrajectoryPanel(actor, scene, simulationState) {
+    const panel = element('trajectory-panel');
+    panel.hidden = actor?.type !== 'robot';
+    if (panel.hidden || !actor)
+        return;
+    const controls = element('trajectory-controls');
+    controls.innerHTML = `
+    <div class="trajectory-fields">
+      <input type="text" value="${escapeHtml(trajectoryDraft.name)}" data-trajectory-name title="Trajectory name">
+      <input type="number" min="0.05" step="0.1" value="${trajectoryDraft.duration}" data-trajectory-duration title="Duration in seconds">
+      <label><input type="checkbox" data-trajectory-loop ${trajectoryDraft.loop ? 'checked' : ''}>Loop</label>
+    </div>
+    <progress class="trajectory-progress" value="0" max="1" data-trajectory-progress></progress>
+    <div class="trajectory-time" data-trajectory-time>0.00 / 0.00 s</div>
+    <div class="trajectory-actions">
+      <button type="button" data-trajectory-command="load">Load</button>
+      <button type="button" class="icon-button" data-trajectory-command="play" title="Play">▶</button>
+      <button type="button" class="icon-button" data-trajectory-command="pause" title="Pause">Ⅱ</button>
+      <button type="button" class="icon-button" data-trajectory-command="stop" title="Stop">■</button>
+    </div>`;
+    controls.querySelector('[data-trajectory-name]')?.addEventListener('change', (event) => { trajectoryDraft.name = event.currentTarget.value; });
+    controls.querySelector('[data-trajectory-duration]')?.addEventListener('change', (event) => { trajectoryDraft.duration = Number(event.currentTarget.value); });
+    controls.querySelector('[data-trajectory-loop]')?.addEventListener('change', (event) => { trajectoryDraft.loop = event.currentTarget.checked; });
+    for (const button of controls.querySelectorAll('[data-trajectory-command]')) {
+        button.addEventListener('click', () => {
+            void handleTrajectoryCommand(button.dataset.trajectoryCommand ?? '', actor, scene);
+        });
+    }
+    updateTrajectoryRuntime(simulationState);
+}
+function buildTrajectory(actor, scene) {
+    const articulationIds = actor.properties.articulation_ids;
+    const articulations = scene.robotics?.articulations.filter((item) => articulationIds?.includes(item.id)) ?? [];
+    const actuatorStates = new Map((store.current.simulationState?.actuators ?? []).map((item) => [item.id, item.ctrl]));
+    const homeTargets = {};
+    const endTargets = {};
+    for (const articulation of articulations) {
+        for (const actuator of articulation.actuators) {
+            if (actuator.control_type !== 'position')
+                continue;
+            const joint = articulation.joints.find((item) => item.id === actuator.joint_id);
+            if (!joint)
+                continue;
+            homeTargets[joint.id] = joint.initial_position;
+            endTargets[joint.id] = actuatorStates.get(actuator.id) ?? joint.initial_position;
+        }
+    }
+    if (Object.keys(homeTargets).length === 0)
+        return null;
+    return {
+        version: '1.0',
+        name: trajectoryDraft.name.trim() || 'Joint Motion',
+        loop: trajectoryDraft.loop,
+        keyframes: [
+            { time: 0, targets: homeTargets },
+            { time: trajectoryDraft.duration, targets: endTargets },
+        ],
+    };
+}
+async function handleTrajectoryCommand(command, actor, scene) {
+    let result;
+    if (command === 'load') {
+        if (!Number.isFinite(trajectoryDraft.duration) || trajectoryDraft.duration <= 0) {
+            showToast('Trajectory duration must be greater than zero', true);
+            return;
+        }
+        const trajectory = buildTrajectory(actor, scene);
+        if (!trajectory) {
+            showToast('Robot has no position joints', true);
+            return;
+        }
+        result = await bridge.call('loadTrajectory', JSON.stringify(scene), JSON.stringify(trajectory));
+        store.setValidationIssues(result.data?.issues ?? []);
+    }
+    else if (command === 'play')
+        result = await bridge.call('playTrajectory');
+    else if (command === 'pause')
+        result = await bridge.call('pauseTrajectory');
+    else if (command === 'stop')
+        result = await bridge.call('stopTrajectory');
+    else
+        return;
+    if (!result.ok || !result.data) {
+        showToast(result.error ?? `Trajectory ${command} failed`, true);
+        return;
+    }
+    const status = command === 'play' ? 'running' : 'paused';
+    store.setSimulation(status, result.data.state);
+}
+function updateTrajectoryRuntime(simulationState) {
+    const panel = element('trajectory-panel');
+    if (panel.hidden)
+        return;
+    const trajectory = simulationState?.trajectory;
+    const status = trajectory?.status ?? 'stopped';
+    const time = trajectory?.time ?? 0;
+    const duration = trajectory?.duration ?? 0;
+    element('trajectory-status').textContent = status.replace('_', ' ');
+    const progress = panel.querySelector('[data-trajectory-progress]');
+    if (progress) {
+        progress.max = Math.max(duration, 0.001);
+        progress.value = Math.min(time, progress.max);
+    }
+    const timeLabel = panel.querySelector('[data-trajectory-time]');
+    if (timeLabel)
+        timeLabel.textContent = `${time.toFixed(2)} / ${duration.toFixed(2)} s`;
+    const loaded = trajectory?.name !== null && trajectory?.name !== undefined;
+    const play = panel.querySelector('[data-trajectory-command="play"]');
+    const pause = panel.querySelector('[data-trajectory-command="pause"]');
+    const stop = panel.querySelector('[data-trajectory-command="stop"]');
+    if (play)
+        play.disabled = !loaded || status === 'playing';
+    if (pause)
+        pause.disabled = status !== 'playing';
+    if (stop)
+        stop.disabled = !loaded;
+}
 function render() {
     const state = store.current;
     element('project-label').textContent = `${state.dirty ? '* ' : ''}${state.scene.name}`;
@@ -363,6 +481,7 @@ function render() {
     renderAssets(state.assets);
     renderSceneTree(state.scene, state.selectedActorId, state.selectedJointId);
     renderInspector(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.scene, state.simulationState, state.selectedJointId);
+    renderTrajectoryPanel(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.scene, state.simulationState);
     renderValidation(state.validationIssues);
     renderConsole(state.logs);
 }
@@ -515,6 +634,7 @@ store.subscribe((state) => {
     if (state.simulationState !== previousSimulationState) {
         applySimulationState(state.simulationState);
         updateRuntimeInspector(state.simulationState);
+        updateTrajectoryRuntime(state.simulationState);
         previousSimulationState = state.simulationState;
     }
     const nextSync = `${sceneJson}:${state.dirty}`;

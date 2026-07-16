@@ -202,6 +202,18 @@ export interface TrajectorySimulationState {
   name: string | null;
 }
 
+export interface JointTrajectoryKeyframe {
+  time: number;
+  targets: Record<string, number>;
+}
+
+export interface JointTrajectory {
+  version: '1.0';
+  name: string;
+  loop: boolean;
+  keyframes: JointTrajectoryKeyframe[];
+}
+
 export interface SimulationState {
   time: number;
   actors: ActorSimulationState[];

@@ -61,3 +61,7 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     types = (root / "ts" / "types.ts").read_text(encoding="utf-8")
     assert "loadTrajectory" in types
     assert "TrajectorySimulationState" in types
+    assert 'id="trajectory-panel"' in html
+    assert "buildTrajectory" in app
+    assert "handleTrajectoryCommand" in app
+    assert "updateTrajectoryRuntime" in app
