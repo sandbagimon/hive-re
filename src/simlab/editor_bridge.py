@@ -259,6 +259,41 @@ class EditorBridge(QObject):
             data = {"state": session.state().to_dict()} if session is not None else None
             return self._failure(exc, data)
 
+    @Slot(str, result=str)
+    def loadController(self, scene_json: str) -> str:
+        path, _ = QFileDialog.getOpenFileName(
+            self.parent_widget,
+            "Load Python Controller",
+            str(self.project_root / "controllers"),
+            "Python (*.py)",
+        )
+        if not path:
+            return self._failure("Cancelled")
+        return self.loadControllerPath(scene_json, path)
+
+    @Slot(str, str, result=str)
+    def loadControllerPath(self, scene_json: str, path: str) -> str:
+        try:
+            scene = self._scene_from_json(scene_json)
+            self.simulation_timer.stop()
+            state, loaded = self.simulation_service.load_project_controller(scene, path)
+            payload = state.to_dict()
+            self.simulationStateChanged.emit(json.dumps(payload))
+            self.simulationStatusChanged.emit("paused")
+            return self._success({"state": payload, "controller": loaded.metadata()})
+        except Exception as exc:
+            return self._failure(exc)
+
+    @Slot(result=str)
+    def detachController(self) -> str:
+        try:
+            state = self.simulation_service.detach_controller()
+            payload = state.to_dict()
+            self.simulationStateChanged.emit(json.dumps(payload))
+            return self._success({"state": payload})
+        except Exception as exc:
+            return self._failure(exc)
+
     @Slot(str, str, result=str)
     def loadTrajectory(self, scene_json: str, trajectory_json: str) -> str:
         try:

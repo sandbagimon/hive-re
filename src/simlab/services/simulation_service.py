@@ -9,6 +9,7 @@ from pathlib import Path
 from simlab.models.recording import JointStateRecording
 from simlab.models.scene import Scene
 from simlab.models.trajectory import JointTrajectory
+from simlab.services.controller_loader import LoadedController, ProjectControllerLoader
 from simlab.services.controller_runtime import StepController
 from simlab.services.simulation_session import (
     ClockSimulationState,
@@ -47,6 +48,8 @@ class SimulationService:
         self._time_accumulator = 0.0
         self._rtf_wall_elapsed = 0.0
         self._rtf_simulated_elapsed = 0.0
+        self.controller_loader = ProjectControllerLoader(project_root)
+        self.loaded_controller: LoadedController | None = None
 
     def is_running(self) -> bool:
         return self.running
@@ -157,10 +160,21 @@ class SimulationService:
         self.console(f"Attached Python controller: {name or type(controller).__name__}")
         return self._with_clock(state)
 
+    def load_project_controller(
+        self,
+        scene: Scene,
+        path: str | Path,
+    ) -> tuple[SimulationState, LoadedController]:
+        loaded = self.controller_loader.load(path)
+        state = self.attach_controller(scene, loaded.controller, name=loaded.name)
+        self.loaded_controller = loaded
+        return state, loaded
+
     def detach_controller(self) -> SimulationState:
         if self.session is None:
             raise RuntimeError("No simulation is loaded")
         state = self.session.detach_controller()
+        self.loaded_controller = None
         self.console("Detached Python controller.")
         return self._with_clock(state)
 
@@ -265,6 +279,7 @@ class SimulationService:
 
     def stop(self) -> None:
         self.session = None
+        self.loaded_controller = None
         self.running = False
         self._reset_clock_tracking()
         self.console("Simulation stopped.")

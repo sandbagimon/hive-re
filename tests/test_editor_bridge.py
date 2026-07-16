@@ -280,6 +280,60 @@ def test_editor_bridge_sets_robot_joint_target(tmp_path: Path) -> None:
     assert response["data"]["state"]["actuators"][0]["ctrl"] == pytest.approx(0.5)
 
 
+def test_editor_bridge_loads_and_detaches_project_controller(tmp_path: Path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    assert imported.robotics_model is not None
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+    )
+    shoulder, elbow = imported.robotics_model.articulations[0].joints
+    source = tmp_path / "controllers" / "bridge_controller.py"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        "from simlab.services.controller_runtime import ControllerAction\n"
+        "class BridgeController:\n"
+        "    name = 'Bridge Controller'\n"
+        "    def reset(self, observation): pass\n"
+        "    def step(self, observation):\n"
+        f"        return ControllerAction({{{shoulder.id!r}: 0.4, {elbow.id!r}: -0.8}})\n"
+        "def create_controller(): return BridgeController()\n",
+        encoding="utf-8",
+    )
+    bridge = _bridge(tmp_path)
+    statuses: list[str] = []
+    bridge.simulationStatusChanged.connect(statuses.append)
+
+    loaded = json.loads(
+        bridge.loadControllerPath(json.dumps(scene.to_dict()), str(source))
+    )
+    assert bridge.simulation_service.session is not None
+    stepped = bridge.simulation_service.session.step(steps=5)
+    detached = json.loads(bridge.detachController())
+
+    assert loaded["ok"] is True
+    assert loaded["data"]["controller"] == {
+        "path": str(source.resolve()),
+        "name": "Bridge Controller",
+    }
+    assert loaded["data"]["state"]["controller"]["mode"] == "python"
+    assert stepped.controller.step_count == 5
+    assert [state.ctrl for state in stepped.actuators] == pytest.approx([0.4, -0.8])
+    assert detached["data"]["state"]["controller"]["mode"] == "manual"
+    assert statuses == ["paused"]
+
+
 def test_editor_bridge_returns_controller_fault_state(tmp_path: Path) -> None:
     pytest.importorskip("mujoco")
     imported = import_openusd_asset(

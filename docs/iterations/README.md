@@ -82,3 +82,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-16 Simulation Speed Qt E2E](2026-07-16-simulation-speed-qt-e2e.md)
 - [2026-07-16 Controller API Contract](2026-07-16-controller-api-contract.md)
 - [2026-07-16 MuJoCo Controller Integration](2026-07-16-mujoco-controller-integration.md)
+- [2026-07-16 Project Controller Loader](2026-07-16-project-controller-loader.md)

@@ -42,6 +42,17 @@ Set `simulation_config.controller_deadline` to a positive number of seconds to e
 deadline. This is elapsed-time detection, not thread preemption: an overrun is detected after the user
 callback returns, its action is discarded, and later callbacks are disabled.
 
-The first API version is in-process and trusted. Project Python module loading is not yet exposed in the
-desktop editor; applications instantiate controller objects explicitly and attach them through
-`MuJoCoSimulationSession` or `SimulationService`.
+Project controller files define a no-argument factory:
+
+```python
+def create_controller():
+    return ReachController()
+```
+
+`ProjectControllerLoader` only accepts `.py` files whose resolved path is inside the project root. Loading
+is always explicit, recompiles the source for reload, and reports path validation, import, factory, or
+contract validation as distinct phases. Scene Open never executes controller code. The Python Bridge
+provides `loadController`, `loadControllerPath`, and `detachController`; a TypeScript panel is planned next.
+
+Controller modules are trusted in-process Python code with the same filesystem permissions as SimLab. The
+project-root check prevents accidental selection outside the project, but it is not a security sandbox.

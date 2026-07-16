@@ -736,8 +736,20 @@ position action。controller fault 后 physics 保持运行；Reset 对健康 co
 
 实现证据见 `docs/iterations/2026-07-16-mujoco-controller-integration.md`。
 
-## 52. 当前下一项具体任务
+## 52. Project Controller Loader（已完成 2026-07-16）
 
 > 增加 Project Controller Loader：用户显式选择项目内 Python module，加载约定的 `create_controller()`
 > factory；模块不会随 scene open 自动执行。提供 reload/detach、import traceback、project-root path 限制，
 > 并用临时外部 controller 文件验证加载后驱动 OpenUSD 机械臂。
+
+Loader 每次显式 Load 都重新编译项目内 `.py` 源码，验证 factory/reset/step；目录外路径、syntax 和 factory
+错误按 phase/path 报告。SimulationService/Bridge 提供 load path 与 detach，测试中的独立 Python 文件已
+通过同一 RPC 驱动外部 USD 双关节手臂。
+
+实现证据见 `docs/iterations/2026-07-16-project-controller-loader.md`。
+
+## 53. 当前下一项具体任务
+
+> 增加 TypeScript Controller Panel：选择 Python 文件、显示 loaded name/path、Load/Reload/Detach，runtime
+> 显示 ready/active/fault、step count、last duration/deadline；只有用户点击时执行代码，并对 trusted-code
+> 风险给出原生确认。controller attach 时禁用 trajectory Play 与 manual Jog。
