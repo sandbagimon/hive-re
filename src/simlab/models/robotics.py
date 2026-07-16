@@ -6,6 +6,7 @@ from typing import Any, Literal
 GeometryType = Literal["box", "sphere", "ellipsoid", "cylinder", "capsule", "mesh"]
 JointType = Literal["fixed", "revolute", "continuous", "prismatic"]
 ControlType = Literal["position", "velocity", "motor"]
+ContactAggregationMode = Literal["sum"]
 SensorType = Literal[
     "joint_state",
     "joint_position",
@@ -362,6 +363,8 @@ class Sensor:
     sensor_type: SensorType
     link_id: str | None = None
     joint_id: str | None = None
+    collider_id: str | None = None
+    aggregation_mode: ContactAggregationMode | None = None
     update_rate_hz: float | None = None
     local_transform: RigidTransform | None = None
     source_prim_path: str | None = None
@@ -381,6 +384,10 @@ class Sensor:
         }
         if self.local_transform is not None:
             data["local_transform"] = self.local_transform.to_dict()
+        if self.collider_id is not None:
+            data["collider_id"] = self.collider_id
+        if self.aggregation_mode is not None:
+            data["aggregation_mode"] = self.aggregation_mode
         return data
 
     @classmethod
@@ -391,6 +398,8 @@ class Sensor:
             sensor_type=data["sensor_type"],
             link_id=data.get("link_id"),
             joint_id=data.get("joint_id"),
+            collider_id=data.get("collider_id"),
+            aggregation_mode=data.get("aggregation_mode"),
             update_rate_hz=data.get("update_rate_hz"),
             local_transform=(
                 RigidTransform.from_dict(data["local_transform"])

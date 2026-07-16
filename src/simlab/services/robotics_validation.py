@@ -160,6 +160,9 @@ def _validate_articulation(
     _validate_link_tree(articulation, path, issues)
     link_ids = {link.id for link in articulation.links}
     joint_ids = {joint.id for joint in articulation.joints}
+    collider_ids = {
+        collider.id for link in articulation.links for collider in link.colliders
+    }
     link_parents = {link.id: link.parent_link_id for link in articulation.links}
 
     for joint_index, joint in enumerate(articulation.joints):
@@ -294,6 +297,34 @@ def _validate_articulation(
                         "invalid_sensor_quaternion",
                         f"{sensor_path}.local_transform.quaternion",
                         "imu sensor local quaternion must be normalized",
+                    )
+                )
+        if sensor.sensor_type == "contact":
+            scope_count = int(sensor.link_id is not None) + int(
+                sensor.collider_id is not None
+            )
+            if scope_count != 1:
+                issues.append(
+                    RoboticsValidationIssue(
+                        "invalid_contact_scope",
+                        sensor_path,
+                        "contact sensor requires exactly one link_id or collider_id",
+                    )
+                )
+            if sensor.aggregation_mode != "sum":
+                issues.append(
+                    RoboticsValidationIssue(
+                        "invalid_contact_aggregation",
+                        f"{sensor_path}.aggregation_mode",
+                        "contact sensor aggregation_mode must be sum",
+                    )
+                )
+            if sensor.collider_id is not None and sensor.collider_id not in collider_ids:
+                issues.append(
+                    RoboticsValidationIssue(
+                        "dangling_sensor_collider",
+                        f"{sensor_path}.collider_id",
+                        f"Unknown collider: {sensor.collider_id}",
                     )
                 )
         if sensor.link_id is not None and sensor.link_id not in link_ids:

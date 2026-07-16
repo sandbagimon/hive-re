@@ -215,6 +215,8 @@
         },
         "link_id": { "type": ["string", "null"] },
         "joint_id": { "type": ["string", "null"] },
+        "collider_id": { "type": "string", "minLength": 1 },
+        "aggregation_mode": { "const": "sum" },
         "update_rate_hz": { "type": ["number", "null"], "exclusiveMinimum": 0 },
         "local_transform": { "$ref": "#/$defs/transform" },
         "source_prim_path": { "type": ["string", "null"] }

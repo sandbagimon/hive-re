@@ -141,6 +141,8 @@ export interface RobotSensor {
   sensor_type: string;
   link_id: string | null;
   joint_id: string | null;
+  collider_id?: string;
+  aggregation_mode?: 'sum';
   update_rate_hz: number | null;
   local_transform?: {
     position: [number, number, number];

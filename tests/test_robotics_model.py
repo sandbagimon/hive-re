@@ -117,6 +117,55 @@ def test_imu_sensor_rejects_dangling_link_and_invalid_quaternion() -> None:
     )
 
 
+def test_contact_sensor_round_trip_preserves_collider_scope() -> None:
+    data = fixture_data()
+    contact = {
+        "id": "sensor_forearm_contact",
+        "name": "Forearm Contact",
+        "sensor_type": "contact",
+        "link_id": None,
+        "joint_id": None,
+        "collider_id": "collider_forearm",
+        "aggregation_mode": "sum",
+        "update_rate_hz": 100.0,
+        "source_prim_path": None,
+    }
+    data["articulations"][0]["sensors"].append(contact)
+
+    restored = RoboticsModel.from_dict(data)
+
+    assert restored.to_dict() == data
+    restored_contact = restored.articulations[0].sensors[-1]
+    assert restored_contact.collider_id == "collider_forearm"
+    assert restored_contact.aggregation_mode == "sum"
+
+
+def test_contact_sensor_requires_one_valid_scope_and_sum_aggregation() -> None:
+    data = fixture_data()
+    contact = {
+        "id": "sensor_bad_contact",
+        "name": "Bad Contact",
+        "sensor_type": "contact",
+        "link_id": "link_forearm",
+        "joint_id": None,
+        "collider_id": "collider_missing",
+        "update_rate_hz": 100.0,
+        "source_prim_path": None,
+    }
+    data["articulations"][0]["sensors"].append(contact)
+
+    with pytest.raises(RoboticsValidationError) as exc_info:
+        RoboticsModel.from_dict(data)
+
+    assert {issue.code for issue in exc_info.value.issues}.issuperset(
+        {
+            "invalid_contact_scope",
+            "invalid_contact_aggregation",
+            "dangling_sensor_collider",
+        }
+    )
+
+
 def test_legacy_scene_without_robotics_remains_compatible() -> None:
     legacy = {
         "version": "1.0",
