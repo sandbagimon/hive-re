@@ -1,7 +1,12 @@
 import pytest
 
 from simlab.models.actor import Actor
-from simlab.models.robotics import RigidTransform, Sensor
+from simlab.models.robotics import (
+    RigidTransform,
+    Sensor,
+    SensorNoise,
+    SensorNoiseChannel,
+)
 from simlab.models.scene import Scene
 from simlab.models.trajectory import JointTrajectory
 from simlab.models.transform import Transform
@@ -169,6 +174,75 @@ def test_robot_session_publishes_fixed_step_joint_sensor_samples(tmp_path) -> No
     ]
 
 
+def test_robot_session_replays_noisy_sensor_sequence_after_reset(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    articulation = imported.robotics_model.articulations[0]
+    shoulder = articulation.joints[0]
+    sensor = Sensor(
+        id="sensor_noisy_shoulder",
+        name="Noisy Shoulder",
+        sensor_type="joint_state",
+        joint_id=shoulder.id,
+        update_rate_hz=50.0,
+        noise=SensorNoise(
+            seed=77,
+            channels={
+                "qpos": SensorNoiseChannel(bias=0.1, standard_deviation=0.01),
+                "qvel": SensorNoiseChannel(bias=0.0, standard_deviation=0.02),
+            },
+        ),
+    )
+    articulation.sensors.append(sensor)
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+        simulation_config={"timestep": 0.01},
+    )
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+
+    initial = session.state().sensors[0]
+    session.start_joint_recording(
+        name="Noisy Sensor",
+        joint_ids=[],
+        actuator_ids=[],
+        sensor_ids=[sensor.id],
+    )
+    stepped = session.step(steps=2).sensors[0]
+    _, recording = session.stop_joint_recording()
+    reset = session.reset().sensors[0]
+    replayed = session.step(steps=2).sensors[0]
+
+    assert initial.qpos != pytest.approx(shoulder.initial_position)
+    assert (reset.sequence, reset.qpos, reset.qvel) == (
+        initial.sequence,
+        initial.qpos,
+        initial.qvel,
+    )
+    assert (replayed.sequence, replayed.qpos, replayed.qvel) == (
+        stepped.sequence,
+        stepped.qpos,
+        stepped.qvel,
+    )
+    events = [
+        sample.sensors[sensor.id]
+        for sample in recording.samples
+        if sensor.id in sample.sensors
+    ]
+    assert [(event.sequence, event.qpos, event.qvel) for event in events] == [
+        (initial.sequence, initial.qpos, initial.qvel),
+        (stepped.sequence, stepped.qpos, stepped.qvel),
+    ]
 def test_robot_session_publishes_mujoco_imu_samples(tmp_path) -> None:
     pytest.importorskip("mujoco")
     imported = import_openusd_asset(

@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import math
+
 import pytest
 
-from simlab.models.robotics import RigidTransform, Sensor
+from simlab.models.robotics import (
+    RigidTransform,
+    Sensor,
+    SensorNoise,
+    SensorNoiseChannel,
+)
 from simlab.services.imu_sensors import ImuKinematics, ImuSensorScheduler
 
 
@@ -84,3 +91,34 @@ def test_imu_kinematics_requires_normalized_finite_orientation() -> None:
             angular_velocity=(0.0, 0.0, 0.0),
             linear_acceleration=(0.0, 0.0, 0.0),
         )
+
+
+def test_imu_noise_composes_small_angle_and_adds_vector_bias() -> None:
+    sensor = _sensor("imu_noise", 100.0)
+    sensor.noise = SensorNoise(
+        seed=3,
+        channels={
+            "orientation": SensorNoiseChannel(
+                bias=[0.0, 0.0, math.pi / 2.0],
+                standard_deviation=[0.0, 0.0, 0.0],
+            ),
+            "angular_velocity": SensorNoiseChannel(
+                bias=[0.1, -0.2, 0.3],
+                standard_deviation=[0.0, 0.0, 0.0],
+            ),
+            "linear_acceleration": SensorNoiseChannel(
+                bias=[1.0, 2.0, 3.0],
+                standard_deviation=[0.0, 0.0, 0.0],
+            ),
+        },
+    )
+    scheduler = ImuSensorScheduler([sensor], 0.01)
+
+    sample = scheduler.reset(0.0, {sensor.id: _measurement(1.0)})[0]
+
+    assert sample.orientation == pytest.approx(
+        (0.0, 0.0, math.sqrt(0.5), math.sqrt(0.5))
+    )
+    assert sum(value * value for value in sample.orientation) == pytest.approx(1.0)
+    assert sample.angular_velocity == pytest.approx((0.1, 0.8, 0.3))
+    assert sample.linear_acceleration == pytest.approx((1.0, 2.0, 12.81))

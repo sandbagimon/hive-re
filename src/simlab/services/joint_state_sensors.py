@@ -5,6 +5,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from simlab.models.robotics import Sensor
+from simlab.services.sensor_noise import SensorNoiseSampler
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +53,7 @@ class _SensorBinding:
     sensor_id: str
     joint_id: str
     period_steps: int
+    noise: SensorNoiseSampler
 
 
 class JointStateSensorScheduler:
@@ -89,6 +91,7 @@ class JointStateSensorScheduler:
                     sensor_id=sensor.id,
                     joint_id=sensor.joint_id,
                     period_steps=period_steps,
+                    noise=SensorNoiseSampler(sensor.id, sensor.noise),
                 )
             )
         self._bindings = tuple(bindings)
@@ -110,6 +113,8 @@ class JointStateSensorScheduler:
     ) -> tuple[JointStateSensorSample, ...]:
         self._sequences = {binding.sensor_id: 0 for binding in self._bindings}
         self._latest.clear()
+        for binding in self._bindings:
+            binding.noise.reset()
         emitted = tuple(self._sample(binding, time, joints, 0) for binding in self._bindings)
         self._latest.update({sample.sensor_id: sample for sample in emitted})
         return emitted
@@ -133,8 +138,8 @@ class JointStateSensorScheduler:
             emitted.append(sample)
         return tuple(emitted)
 
-    @staticmethod
     def _sample(
+        self,
         binding: _SensorBinding,
         time: float,
         joints: Mapping[str, JointKinematics],
@@ -151,6 +156,6 @@ class JointStateSensorScheduler:
             joint_id=binding.joint_id,
             time=float(time),
             sequence=sequence,
-            qpos=state.qpos,
-            qvel=state.qvel,
+            qpos=binding.noise.scalar("qpos", state.qpos),
+            qvel=binding.noise.scalar("qvel", state.qvel),
         )

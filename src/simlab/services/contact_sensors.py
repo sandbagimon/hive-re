@@ -5,6 +5,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from simlab.models.robotics import Sensor
+from simlab.services.sensor_noise import SensorNoiseSampler
 
 Vector3 = tuple[float, float, float]
 MAX_CONTACT_POINTS = 8
@@ -87,6 +88,7 @@ class ContactSensorSample:
 class _ContactBinding:
     sensor_id: str
     period_steps: int
+    noise: SensorNoiseSampler
 
 
 class ContactSensorScheduler:
@@ -120,7 +122,13 @@ class ContactSensorScheduler:
                     f"Sensor {sensor.id} update_rate_hz must be an exact divisor "
                     f"of physics rate {physics_rate:g} Hz"
                 )
-            bindings.append(_ContactBinding(sensor.id, period_steps))
+            bindings.append(
+                _ContactBinding(
+                    sensor.id,
+                    period_steps,
+                    SensorNoiseSampler(sensor.id, sensor.noise),
+                )
+            )
         self._bindings = tuple(bindings)
         self._sequences = {binding.sensor_id: 0 for binding in bindings}
         self._latest: dict[str, ContactSensorSample] = {}
@@ -140,6 +148,8 @@ class ContactSensorScheduler:
     ) -> tuple[ContactSensorSample, ...]:
         self._sequences = {binding.sensor_id: 0 for binding in self._bindings}
         self._latest.clear()
+        for binding in self._bindings:
+            binding.noise.reset()
         emitted = tuple(
             self._sample(binding, time, measurements, 0) for binding in self._bindings
         )
@@ -165,8 +175,8 @@ class ContactSensorScheduler:
             emitted.append(sample)
         return tuple(emitted)
 
-    @staticmethod
     def _sample(
+        self,
         binding: _ContactBinding,
         time: float,
         measurements: Mapping[str, ContactMeasurement],
@@ -175,9 +185,33 @@ class ContactSensorScheduler:
         measurement = measurements.get(binding.sensor_id)
         if measurement is None:
             raise ValueError(f"Missing contact measurement for sensor: {binding.sensor_id}")
+        normal_force = max(
+            0.0,
+            binding.noise.scalar("normal_force", measurement.normal_force),
+        )
+        tangent_values = binding.noise.vector(
+            "tangent_force", measurement.tangent_force
+        )
+        if measurement.contact_count == 0:
+            normal_force = 0.0
+            tangent_force: Vector3 = (0.0, 0.0, 0.0)
+        else:
+            tangent_force = (
+                tangent_values[0],
+                tangent_values[1],
+                tangent_values[2],
+            )
+        noisy_measurement = ContactMeasurement(
+            contact_count=measurement.contact_count,
+            normal_force=normal_force,
+            tangent_force=tangent_force,
+            normal_impulse=normal_force * self.timestep,
+            points=measurement.points,
+            normals=measurement.normals,
+        )
         return ContactSensorSample(
             sensor_id=binding.sensor_id,
             time=float(time),
             sequence=sequence,
-            measurement=measurement,
+            measurement=noisy_measurement,
         )

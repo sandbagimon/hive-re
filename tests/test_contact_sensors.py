@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from simlab.models.robotics import Sensor
+from simlab.models.robotics import Sensor, SensorNoise, SensorNoiseChannel
 from simlab.services.contact_sensors import (
     ContactMeasurement,
     ContactSensorScheduler,
@@ -117,3 +117,50 @@ def test_contact_scheduler_requires_scope_aggregation_and_measurement() -> None:
     scheduler = ContactSensorScheduler([_sensor("missing_value", 100.0)], 0.01)
     with pytest.raises(ValueError, match="Missing contact measurement"):
         scheduler.reset(0.0, {})
+
+
+def test_contact_noise_preserves_empty_and_recomputes_impulse() -> None:
+    sensor = _sensor("contact_noise", 100.0)
+    sensor.noise = SensorNoise(
+        seed=9,
+        channels={
+            "normal_force": SensorNoiseChannel(
+                bias=2.0,
+                standard_deviation=0.0,
+            ),
+            "tangent_force": SensorNoiseChannel(
+                bias=[1.0, 2.0, 3.0],
+                standard_deviation=[0.0, 0.0, 0.0],
+            ),
+        },
+    )
+    scheduler = ContactSensorScheduler([sensor], 0.01)
+
+    empty = scheduler.reset(0.0, {sensor.id: _empty()})[0].measurement
+    active = scheduler.capture(1, 0.01, {sensor.id: _contact()})[0].measurement
+
+    assert empty == _empty()
+    assert active.normal_force == pytest.approx(14.0)
+    assert active.normal_impulse == pytest.approx(0.14)
+    assert active.tangent_force == pytest.approx((2.0, 1.5, 3.0))
+    assert active.points == _contact().points
+    assert active.normals == _contact().normals
+
+
+def test_contact_normal_force_noise_clamps_to_zero() -> None:
+    sensor = _sensor("contact_clamp", 100.0)
+    sensor.noise = SensorNoise(
+        seed=9,
+        channels={
+            "normal_force": SensorNoiseChannel(
+                bias=-20.0,
+                standard_deviation=0.0,
+            )
+        },
+    )
+    measurement = ContactSensorScheduler([sensor], 0.01).reset(
+        0.0, {sensor.id: _contact()}
+    )[0].measurement
+
+    assert measurement.normal_force == 0.0
+    assert measurement.normal_impulse == 0.0

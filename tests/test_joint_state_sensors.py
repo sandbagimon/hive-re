@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from simlab.models.robotics import Sensor
+from simlab.models.robotics import Sensor, SensorNoise, SensorNoiseChannel
 from simlab.services.joint_state_sensors import (
     JointKinematics,
     JointStateSensorScheduler,
@@ -79,3 +79,28 @@ def test_joint_state_sensor_scheduler_rejects_missing_or_unknown_joint() -> None
     scheduler = JointStateSensorScheduler([_sensor("sensor_unknown", None)], 0.01)
     with pytest.raises(ValueError, match="unknown joint"):
         scheduler.reset(0.0, {})
+
+
+def test_joint_state_noise_samples_only_on_cadence_and_replays_after_reset() -> None:
+    sensor = _sensor("sensor_noise", 50.0)
+    sensor.noise = SensorNoise(
+        seed=12,
+        channels={
+            "qpos": SensorNoiseChannel(bias=0.1, standard_deviation=0.01),
+            "qvel": SensorNoiseChannel(bias=-0.2, standard_deviation=0.02),
+        },
+    )
+    scheduler = JointStateSensorScheduler([sensor], timestep=0.01)
+    state = {"shoulder": JointKinematics(qpos=1.0, qvel=2.0)}
+
+    initial = scheduler.reset(0.0, state)[0]
+    assert scheduler.capture(1, 0.01, state) == ()
+    first = scheduler.capture(2, 0.02, state)[0]
+    replay_initial = scheduler.reset(0.0, state)[0]
+    assert scheduler.capture(1, 0.01, state) == ()
+    replay_first = scheduler.capture(2, 0.02, state)[0]
+
+    assert (replay_initial.qpos, replay_initial.qvel) == (initial.qpos, initial.qvel)
+    assert (replay_first.qpos, replay_first.qvel) == (first.qpos, first.qvel)
+    assert first.qpos != pytest.approx(1.0)
+    assert first.qvel != pytest.approx(2.0)
