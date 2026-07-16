@@ -56,6 +56,7 @@ def test_legacy_scene_without_robotics_remains_compatible() -> None:
     scene = Scene.from_dict(legacy)
 
     assert scene.robotics is None
+    assert scene.trajectories == []
     assert scene.to_dict() == legacy
 
 

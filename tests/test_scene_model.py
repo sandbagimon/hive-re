@@ -1,5 +1,10 @@
 from simlab.models.actor import Actor
 from simlab.models.scene import Scene
+from simlab.models.trajectory import (
+    JointTrajectory,
+    JointTrajectoryKeyframe,
+    SceneTrajectory,
+)
 from simlab.models.transform import Transform
 from simlab.services.scene_service import SceneService
 
@@ -22,6 +27,32 @@ def test_scene_serializes_round_trip() -> None:
     assert restored.name == "Test Scene"
     assert restored.actors[0].id == "actor_001"
     assert restored.actors[0].transform.position == [1.0, 2.0, 3.0]
+
+
+def test_scene_trajectory_library_serializes_round_trip() -> None:
+    scene = Scene(
+        trajectories=[
+            SceneTrajectory(
+                id="trajectory_pick",
+                actor_id="actor_001",
+                trajectory=JointTrajectory(
+                    name="Pick",
+                    keyframes=[
+                        JointTrajectoryKeyframe(0, {"shoulder": 0}),
+                        JointTrajectoryKeyframe(1, {"shoulder": 0.5}),
+                    ],
+                ),
+            )
+        ]
+    )
+
+    restored = Scene.from_dict(scene.to_dict())
+
+    assert restored.trajectories[0].id == "trajectory_pick"
+    assert restored.trajectories[0].trajectory.duration == 1
+    assert restored.trajectories[0].trajectory.keyframes[-1].targets == {
+        "shoulder": 0.5
+    }
 
 
 def test_scene_service_adds_and_removes_actors() -> None:

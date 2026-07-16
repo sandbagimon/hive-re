@@ -151,6 +151,7 @@ export interface Scene {
   units: 'meters';
   actors: Actor[];
   robotics?: RoboticsModel;
+  trajectories?: SceneTrajectory[];
   simulation_config: {
     timestep: number;
     duration: number;
@@ -212,6 +213,12 @@ export interface JointTrajectory {
   name: string;
   loop: boolean;
   keyframes: JointTrajectoryKeyframe[];
+}
+
+export interface SceneTrajectory {
+  id: string;
+  actor_id: string;
+  trajectory: JointTrajectory;
 }
 
 export interface SimulationState {

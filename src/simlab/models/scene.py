@@ -5,6 +5,7 @@ from typing import Any
 
 from simlab.models.actor import Actor
 from simlab.models.robotics import RoboticsModel
+from simlab.models.trajectory import SceneTrajectory
 
 
 @dataclass(slots=True)
@@ -16,6 +17,7 @@ class Scene:
     units: str = "meters"
     actors: list[Actor] = field(default_factory=list)
     robotics: RoboticsModel | None = None
+    trajectories: list[SceneTrajectory] = field(default_factory=list)
     simulation_config: dict[str, Any] = field(
         default_factory=lambda: {"timestep": 0.01, "duration": 1.0}
     )
@@ -30,6 +32,8 @@ class Scene:
         }
         if self.robotics is not None:
             data["robotics"] = self.robotics.to_dict()
+        if self.trajectories:
+            data["trajectories"] = [item.to_dict() for item in self.trajectories]
         return data
 
     @classmethod
@@ -44,5 +48,8 @@ class Scene:
                 if data.get("robotics") is not None
                 else None
             ),
+            trajectories=[
+                SceneTrajectory.from_dict(item) for item in data.get("trajectories", [])
+            ],
             simulation_config=dict(data.get("simulation_config", {})),
         )

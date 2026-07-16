@@ -58,3 +58,30 @@ class JointTrajectory:
             loop=bool(data.get("loop", False)),
             keyframes=[JointTrajectoryKeyframe.from_dict(item) for item in keyframes],
         )
+
+
+@dataclass(slots=True)
+class SceneTrajectory:
+    """A named trajectory owned by one robot actor in a scene."""
+
+    id: str
+    actor_id: str
+    trajectory: JointTrajectory
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "actor_id": self.actor_id,
+            "trajectory": self.trajectory.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> SceneTrajectory:
+        trajectory = data.get("trajectory")
+        if not isinstance(trajectory, dict):
+            raise ValueError("Scene trajectory payload must be an object")
+        return cls(
+            id=str(data["id"]),
+            actor_id=str(data["actor_id"]),
+            trajectory=JointTrajectory.from_dict(trajectory),
+        )

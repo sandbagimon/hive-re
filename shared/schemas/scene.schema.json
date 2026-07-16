@@ -88,6 +88,16 @@
       },
       "required": ["id", "name", "type", "asset_id", "transform", "properties"],
       "additionalProperties": false
+    },
+    "trajectoryClip": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^trajectory_[A-Za-z0-9_.-]+$" },
+        "actor_id": { "type": "string", "pattern": "^actor_[0-9]{3,}$" },
+        "trajectory": { "$ref": "joint-trajectory.schema.json" }
+      },
+      "required": ["id", "actor_id", "trajectory"],
+      "additionalProperties": false
     }
   },
   "properties": {
@@ -96,6 +106,10 @@
     "units": { "type": "string", "enum": ["meters"] },
     "actors": { "type": "array", "items": { "$ref": "#/$defs/actor" } },
     "robotics": { "$ref": "robotics.schema.json" },
+    "trajectories": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/trajectoryClip" }
+    },
     "simulation_config": {
       "type": "object",
       "properties": {

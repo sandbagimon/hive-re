@@ -33,6 +33,12 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     )
     assert "meshGeometry" in scene["$defs"]
     assert scene["properties"]["robotics"]["$ref"] == "robotics.schema.json"
+    assert scene["properties"]["trajectories"]["items"]["$ref"] == (
+        "#/$defs/trajectoryClip"
+    )
+    assert scene["$defs"]["trajectoryClip"]["properties"]["trajectory"]["$ref"] == (
+        "joint-trajectory.schema.json"
+    )
     assert robotics["title"] == "SimLabRoboticsModel"
     assert trajectory["title"] == "SimLabJointTrajectory"
     assert trajectory["properties"]["keyframes"]["minItems"] == 2
