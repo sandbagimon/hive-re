@@ -14,6 +14,18 @@ export function createTrajectoryDraft(actorId, homeTargets, duration = 2) {
         ],
     };
 }
+export function trajectoryDraftFromTrajectory(actorId, trajectory) {
+    return {
+        actorId,
+        name: trajectory.name,
+        loop: trajectory.loop,
+        keyframes: trajectory.keyframes.map((keyframe, index) => ({
+            id: `keyframe-${index}`,
+            time: keyframe.time,
+            targets: cloneTargets(keyframe.targets),
+        })),
+    };
+}
 export function trajectoryDuration(draft) {
     return draft.keyframes.at(-1)?.time ?? 0;
 }

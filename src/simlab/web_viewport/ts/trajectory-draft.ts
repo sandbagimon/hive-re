@@ -38,6 +38,22 @@ export function createTrajectoryDraft(
   };
 }
 
+export function trajectoryDraftFromTrajectory(
+  actorId: string,
+  trajectory: JointTrajectory,
+): TrajectoryDraft {
+  return {
+    actorId,
+    name: trajectory.name,
+    loop: trajectory.loop,
+    keyframes: trajectory.keyframes.map((keyframe, index) => ({
+      id: `keyframe-${index}`,
+      time: keyframe.time,
+      targets: cloneTargets(keyframe.targets),
+    })),
+  };
+}
+
 export function trajectoryDuration(draft: TrajectoryDraft): number {
   return draft.keyframes.at(-1)?.time ?? 0;
 }

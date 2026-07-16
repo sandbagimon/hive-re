@@ -608,7 +608,17 @@ robot 会级联清理所属 clips。Node 测试覆盖 dirty、undo/redo、remove
 
 实现证据见 `docs/iterations/2026-07-16-editor-store-trajectory-library.md`。
 
-## 40. 当前下一项具体任务
+## 40. Trajectory Clip Persistence UI（已完成 2026-07-16）
 
 > 在 Trajectory Panel 增加 Save Clip 和已保存 clip 选择/删除；draft 从 scene library 初始化，并在
 > loadScene、undo、redo 后恢复对应 payload，最终通过 Save/Open 项目 E2E 验收。
+
+Panel 已提供 saved clip selector、Save 和 Delete；clip payload 可 hydrate 为 editable draft，New/Open
+隔离跨项目缓存，clip 的 undo/redo 会根据 source signature 恢复。原 multi-keyframe Qt E2E 保持通过。
+
+实现证据见 `docs/iterations/2026-07-16-trajectory-persistence-ui.md`。
+
+## 41. 当前下一项具体任务
+
+> 增加 Trajectory Save/Open Qt E2E：保存三帧 clip 后验证 dirty/undo/redo，调用项目 Save 写入
+> scene.json，再在新 MainWindow 打开同一 scene，验证 clip selector、keyframes 和 MuJoCo playback。

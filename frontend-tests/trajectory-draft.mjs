@@ -5,6 +5,7 @@ import {
   createTrajectoryDraft,
   removeTrajectoryKeyframe,
   setTrajectoryDuration,
+  trajectoryDraftFromTrajectory,
   trajectoryFromDraft,
   updateTrajectoryKeyframeTarget,
   updateTrajectoryKeyframeTime,
@@ -30,6 +31,14 @@ const trajectory = trajectoryFromDraft(draft);
 assert.equal(trajectory.keyframes.at(-1).targets.shoulder, 1);
 assert.equal(trajectory.keyframes[1].targets.elbow, -0.25);
 assert.equal(trajectory.name, 'Joint Motion');
+const restoredDraft = trajectoryDraftFromTrajectory('robot_002', trajectory);
+assert.equal(restoredDraft.actorId, 'robot_002');
+assert.deepEqual(restoredDraft.keyframes.map((item) => item.id), [
+  'keyframe-0',
+  'keyframe-1',
+  'keyframe-2',
+]);
+assert.deepEqual(trajectoryFromDraft(restoredDraft), trajectory);
 
 draft = removeTrajectoryKeyframe(draft, 'keyframe-2');
 assert.equal(draft.keyframes.length, 2);

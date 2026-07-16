@@ -65,5 +65,8 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "data-keyframe-add" in app
     assert "data-keyframe-target" in app
     assert "trajectoryFromDraft" in app
+    assert "data-trajectory-clip" in app
+    assert "data-trajectory-save" in app
+    assert "store.upsertTrajectory" in app
     assert "handleTrajectoryCommand" in app
     assert "updateTrajectoryRuntime" in app

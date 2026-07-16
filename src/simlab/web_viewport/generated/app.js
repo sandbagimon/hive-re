@@ -1,6 +1,6 @@
 import { EditorBridgeClient } from './bridge.js';
 import { EditorStore } from './store.js';
-import { captureTrajectoryKeyframe, createTrajectoryDraft, removeTrajectoryKeyframe, setTrajectoryDuration, trajectoryDuration, trajectoryFromDraft, updateTrajectoryKeyframeTarget, updateTrajectoryKeyframeTime, } from './trajectory-draft.js';
+import { captureTrajectoryKeyframe, createTrajectoryDraft, removeTrajectoryKeyframe, setTrajectoryDuration, trajectoryDraftFromTrajectory, trajectoryDuration, trajectoryFromDraft, updateTrajectoryKeyframeTarget, updateTrajectoryKeyframeTime, } from './trajectory-draft.js';
 import { applySimulationState, configureViewport, selectViewportActor, selectViewportLink, setViewportScene, } from './viewport.js';
 const materialPresets = {
     default: { density: 1000, friction: [0.8, 0.005, 0.0001], solref: [0.02, 1], solimp: [0.9, 0.95, 0.001, 0.5, 2], roughness: 0.55, metalness: 0.04 },
@@ -365,8 +365,18 @@ function renderTrajectoryPanel(actor, scene, simulationState) {
     }
     const { draft } = draftState;
     const bindings = positionJointBindings(actor, scene);
+    const clips = scene.trajectories?.filter((item) => item.actor_id === actor.id) ?? [];
+    const activeClip = clips.find((item) => item.id === draftState.clipId);
     const controls = element('trajectory-controls');
     controls.innerHTML = `
+    <div class="trajectory-library-controls">
+      <select data-trajectory-clip title="Saved trajectory">
+        <option value="" ${activeClip ? '' : 'selected'}>New Clip</option>
+        ${clips.map((clip) => `<option value="${escapeHtml(clip.id)}" ${clip.id === activeClip?.id ? 'selected' : ''}>${escapeHtml(clip.trajectory.name)}</option>`).join('')}
+      </select>
+      <button type="button" data-trajectory-save title="Save clip">Save</button>
+      <button type="button" class="icon-button" data-trajectory-delete title="Delete clip" ${activeClip ? '' : 'disabled'}>×</button>
+    </div>
     <div class="trajectory-fields">
       <input type="text" value="${escapeHtml(draft.name)}" data-trajectory-name title="Trajectory name">
       <input type="number" min="0.05" step="0.1" value="${trajectoryDuration(draft)}" data-trajectory-duration title="Duration in seconds">
@@ -401,6 +411,40 @@ function renderTrajectoryPanel(actor, scene, simulationState) {
           </div>
         </div>`).join('')}
     </div>`;
+    controls.querySelector('[data-trajectory-clip]')?.addEventListener('change', (event) => {
+        setTrajectoryDraftClip(actor, scene, event.currentTarget.value || null);
+        renderTrajectoryPanel(actor, scene, store.current.simulationState);
+    });
+    controls.querySelector('[data-trajectory-save]')?.addEventListener('click', () => {
+        try {
+            const trajectory = trajectoryFromDraft(draftState.draft);
+            const clipId = store.upsertTrajectory(actor.id, trajectory, draftState.clipId ?? undefined);
+            if (!clipId)
+                throw new Error('Trajectory owner must be a robot actor');
+            draftState.clipId = clipId;
+            draftState.sourceSignature = JSON.stringify([clipId, trajectory]);
+            draftState.targetsTouched = true;
+            showToast('Trajectory clip saved');
+            renderTrajectoryPanel(actor, store.current.scene, store.current.simulationState);
+        }
+        catch (error) {
+            showToast(error instanceof Error ? error.message : String(error), true);
+        }
+    });
+    controls.querySelector('[data-trajectory-delete]')?.addEventListener('click', () => {
+        if (!activeClip)
+            return;
+        const homeTargets = Object.fromEntries(bindings.map(({ joint }) => [
+            joint.id,
+            joint.initial_position,
+        ]));
+        const placeholder = createTrajectoryDraftState(actor.id, homeTargets);
+        placeholder.clipId = activeClip.id;
+        placeholder.sourceSignature = `missing:${activeClip.id}:${placeholder.homeSignature}`;
+        trajectoryDrafts.set(actor.id, placeholder);
+        store.removeTrajectory(activeClip.id);
+        showToast('Trajectory clip deleted');
+    });
     controls.querySelector('[data-trajectory-name]')?.addEventListener('change', (event) => { draft.name = event.currentTarget.value; });
     controls.querySelector('[data-trajectory-duration]')?.addEventListener('change', (event) => {
         try {
@@ -471,6 +515,29 @@ function currentRobotTargets(actor, scene) {
         actuatorStates.get(actuator.id) ?? joint.initial_position,
     ]));
 }
+function createTrajectoryDraftState(actorId, homeTargets, clip) {
+    const draft = clip
+        ? trajectoryDraftFromTrajectory(actorId, clip.trajectory)
+        : createTrajectoryDraft(actorId, homeTargets);
+    return {
+        draft,
+        homeSignature: JSON.stringify(homeTargets),
+        sourceSignature: clip
+            ? JSON.stringify([clip.id, clip.trajectory])
+            : `new:${JSON.stringify(homeTargets)}`,
+        clipId: clip?.id ?? null,
+        targetsTouched: Boolean(clip),
+        nextKeyframeId: draft.keyframes.length,
+    };
+}
+function setTrajectoryDraftClip(actor, scene, clipId) {
+    const homeTargets = Object.fromEntries(positionJointBindings(actor, scene).map(({ joint }) => [
+        joint.id,
+        joint.initial_position,
+    ]));
+    const clip = scene.trajectories?.find((item) => item.actor_id === actor.id && item.id === clipId);
+    trajectoryDrafts.set(actor.id, createTrajectoryDraftState(actor.id, homeTargets, clip));
+}
 function ensureTrajectoryDraft(actor, scene) {
     const homeTargets = Object.fromEntries(positionJointBindings(actor, scene).map(({ joint }) => [
         joint.id,
@@ -480,14 +547,24 @@ function ensureTrajectoryDraft(actor, scene) {
         return null;
     const homeSignature = JSON.stringify(homeTargets);
     const existing = trajectoryDrafts.get(actor.id);
-    if (existing?.homeSignature === homeSignature)
+    const clips = scene.trajectories?.filter((item) => item.actor_id === actor.id) ?? [];
+    if (existing?.homeSignature === homeSignature) {
+        if (existing.clipId) {
+            const clip = clips.find((item) => item.id === existing.clipId);
+            const sourceSignature = clip
+                ? JSON.stringify([clip.id, clip.trajectory])
+                : `missing:${existing.clipId}:${homeSignature}`;
+            if (sourceSignature !== existing.sourceSignature) {
+                const restored = createTrajectoryDraftState(actor.id, homeTargets, clip);
+                restored.clipId = existing.clipId;
+                restored.sourceSignature = sourceSignature;
+                trajectoryDrafts.set(actor.id, restored);
+                return restored;
+            }
+        }
         return existing;
-    const created = {
-        draft: createTrajectoryDraft(actor.id, homeTargets),
-        homeSignature,
-        targetsTouched: false,
-        nextKeyframeId: 2,
-    };
+    }
+    const created = createTrajectoryDraftState(actor.id, homeTargets, clips[0]);
     trajectoryDrafts.set(actor.id, created);
     return created;
 }
@@ -592,11 +669,14 @@ function allowDiscard() {
     return !store.current.dirty || window.confirm('Discard unsaved scene changes?');
 }
 async function handleCommand(command) {
-    if (command === 'new' && allowDiscard())
+    if (command === 'new' && allowDiscard()) {
+        trajectoryDrafts.clear();
         store.newScene();
+    }
     else if (command === 'open' && allowDiscard()) {
         const result = await bridge.call('openProject');
         if (result.ok && result.data) {
+            trajectoryDrafts.clear();
             store.loadScene(result.data.scene, result.data.path);
             store.appendLog(`Opened scene: ${result.data.path}`);
         }
