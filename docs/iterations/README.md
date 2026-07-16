@@ -74,3 +74,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-16 Project Path RPC](2026-07-16-project-path-rpc.md)
 - [2026-07-16 Trajectory Save Open E2E](2026-07-16-trajectory-save-open-e2e.md)
 - [2026-07-16 Joint State Recording Contract](2026-07-16-joint-state-recording-contract.md)
+- [2026-07-16 Recording Runtime RPC](2026-07-16-recording-runtime-rpc.md)

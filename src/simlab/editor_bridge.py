@@ -297,6 +297,62 @@ class EditorBridge(QObject):
         except Exception as exc:
             return self._failure(exc)
 
+    @Slot(str, str, result=str)
+    def startRecording(self, scene_json: str, config_json: str) -> str:
+        try:
+            scene = self._scene_from_json(scene_json)
+            config = json.loads(config_json)
+            if not isinstance(config, dict):
+                raise ValueError("Recording config must be a JSON object")
+            joint_ids = self._optional_string_list(config, "joint_ids")
+            actuator_ids = self._optional_string_list(config, "actuator_ids")
+            state = self.simulation_service.start_joint_recording(
+                scene,
+                name=str(config.get("name", "Joint Recording")),
+                joint_ids=joint_ids,
+                actuator_ids=actuator_ids,
+            )
+            self.simulationStateChanged.emit(json.dumps(state.to_dict()))
+            return self._success({"state": state.to_dict()})
+        except Exception as exc:
+            return self._failure(exc)
+
+    @Slot(result=str)
+    def stopRecording(self) -> str:
+        try:
+            state, recording = self.simulation_service.stop_joint_recording()
+            self.simulationStateChanged.emit(json.dumps(state.to_dict()))
+            return self._success(
+                {"state": state.to_dict(), "recording": recording.to_dict()}
+            )
+        except Exception as exc:
+            return self._failure(exc)
+
+    @Slot(result=str)
+    def getRecording(self) -> str:
+        try:
+            recording = self.simulation_service.get_joint_recording()
+            return self._success({"recording": recording.to_dict()})
+        except Exception as exc:
+            return self._failure(exc)
+
+    @Slot(str, str, result=str)
+    def exportRecording(self, path: str, format_name: str) -> str:
+        try:
+            output_path = self.simulation_service.export_joint_recording(
+                path, format_name
+            )
+            recording = self.simulation_service.get_joint_recording()
+            return self._success(
+                {
+                    "path": str(output_path),
+                    "format": format_name,
+                    "sample_count": len(recording.samples),
+                }
+            )
+        except Exception as exc:
+            return self._failure(exc)
+
     @Slot(str, bool, str)
     def setEditorState(self, scene_json: str, dirty: bool, current_path: str) -> None:
         scene_changed = scene_json != self.synced_scene_json
@@ -361,6 +417,17 @@ class EditorBridge(QObject):
         scene = Scene.from_dict(data)
         validate_scene(scene)
         return scene
+
+    @staticmethod
+    def _optional_string_list(data: dict[str, Any], key: str) -> list[str] | None:
+        value = data.get(key)
+        if value is None:
+            return None
+        if not isinstance(value, list) or not all(
+            isinstance(item, str) for item in value
+        ):
+            raise ValueError(f"Recording {key} must be an array of strings")
+        return value
 
     def _enrich_asset(self, source: dict[str, Any]) -> dict[str, Any]:
         asset = copy.deepcopy(source)

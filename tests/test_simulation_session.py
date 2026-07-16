@@ -296,3 +296,80 @@ def test_robot_session_rejects_trajectory_for_unknown_joint(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="unknown position joint"):
         session.load_joint_trajectory(trajectory)
+
+
+def test_robot_session_records_every_physics_step(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+    )
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+    articulation = imported.robotics_model.articulations[0]
+    shoulder = articulation.joints[0]
+    shoulder_drive = articulation.actuators[0]
+
+    started = session.start_joint_recording(
+        name="Shoulder Run",
+        joint_ids=[shoulder.id],
+        actuator_ids=[shoulder_drive.id],
+    )
+    stepped = session.step(steps=4)
+    stopped, recording = session.stop_joint_recording()
+
+    assert started.recording.active is True
+    assert started.recording.sample_count == 1
+    assert stepped.recording.sample_count == 5
+    assert stopped.recording.active is False
+    assert [sample.time for sample in recording.samples] == pytest.approx(
+        [0.0, 0.01, 0.02, 0.03, 0.04]
+    )
+    assert all(set(sample.joints) == {shoulder.id} for sample in recording.samples)
+    assert all(
+        set(sample.actuators) == {shoulder_drive.id} for sample in recording.samples
+    )
+
+
+def test_robot_session_recording_limit_stops_capture(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+        simulation_config={
+            "timestep": 0.01,
+            "duration": 1.0,
+            "recording_max_samples": 3,
+        },
+    )
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+
+    session.start_joint_recording(name="Bounded")
+    limited = session.step(steps=4)
+
+    assert limited.recording.active is False
+    assert limited.recording.limit_reached is True
+    assert limited.recording.sample_count == 3
+    assert session.joint_recording is not None
+    assert len(session.joint_recording.samples) == 3

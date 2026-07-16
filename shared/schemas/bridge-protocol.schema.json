@@ -79,6 +79,17 @@
           "required": ["status", "time", "duration", "name"],
           "additionalProperties": false
         },
+        "recording": {
+          "type": "object",
+          "properties": {
+            "active": { "type": "boolean" },
+            "sample_count": { "type": "integer", "minimum": 0 },
+            "limit_reached": { "type": "boolean" },
+            "name": { "type": ["string", "null"] }
+          },
+          "required": ["active", "sample_count", "limit_reached", "name"],
+          "additionalProperties": false
+        },
         "controller": {
           "type": "object",
           "properties": {
@@ -91,7 +102,7 @@
           "additionalProperties": false
         }
       },
-      "required": ["time", "actors", "links", "joints", "actuators", "trajectory", "controller"],
+      "required": ["time", "actors", "links", "joints", "actuators", "trajectory", "recording", "controller"],
       "additionalProperties": false
     }
   },
@@ -119,6 +130,10 @@
         "playTrajectory",
         "pauseTrajectory",
         "stopTrajectory",
+        "startRecording",
+        "stopRecording",
+        "getRecording",
+        "exportRecording",
         "setEditorState"
       ]
     },

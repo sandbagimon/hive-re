@@ -35,6 +35,8 @@ class JointStateRecorder:
         scene_version: str,
         engine_version: str,
     ) -> JointStateRecording:
+        if self.active:
+            raise RuntimeError("Joint state recording is already active")
         if not name.strip():
             raise ValueError("Recording name cannot be empty")
         if not joint_ids and not actuator_ids:

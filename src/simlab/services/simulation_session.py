@@ -5,8 +5,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from simlab.models.recording import JointStateRecording
 from simlab.models.scene import Scene
 from simlab.models.trajectory import JointTrajectory
+from simlab.services.joint_state_recorder import JointStateRecorder
 from simlab.services.mjcf_exporter import export_scene_to_mjcf
 from simlab.services.trajectory_player import (
     JointTrajectoryPlayer,
@@ -73,6 +75,22 @@ class ControllerSimulationState:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class RecordingSimulationState:
+    active: bool = False
+    sample_count: int = 0
+    limit_reached: bool = False
+    name: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "active": self.active,
+            "sample_count": self.sample_count,
+            "limit_reached": self.limit_reached,
+            "name": self.name,
+        }
+
+
 @dataclass(slots=True)
 class SimulationState:
     time: float
@@ -91,6 +109,9 @@ class SimulationState:
             name=None,
         )
     )
+    recording: RecordingSimulationState = field(
+        default_factory=RecordingSimulationState
+    )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -101,6 +122,7 @@ class SimulationState:
             "actuators": [actuator.to_dict() for actuator in self.actuators],
             "controller": self.controller.to_dict(),
             "trajectory": self.trajectory.to_dict(),
+            "recording": self.recording.to_dict(),
         }
 
 
@@ -129,6 +151,7 @@ class MuJoCoSimulationSession:
         self._link_ids, self._joint_ids, self._actuator_ids = self._map_robotics(scene)
         self._joint_position_actuators = self._map_joint_position_actuators(scene)
         self._trajectory_player = JointTrajectoryPlayer()
+        self._state_recorder = JointStateRecorder(self._read_recording_max_samples(scene))
         self._control_timeout = self._read_control_timeout(scene)
         self._controller_status = "ready"
         self._controller_message: str | None = None
@@ -142,10 +165,14 @@ class MuJoCoSimulationSession:
             self._apply_trajectory_target()
             self._apply_control_watchdog()
             self._mujoco.mj_step(self.model, self.data)
+            if self._state_recorder.active:
+                self._state_recorder.capture(self.state())
         self._apply_trajectory_target()
         return self.state()
 
     def reset(self) -> SimulationState:
+        if self._state_recorder.active:
+            self._state_recorder.stop()
         self._reset_to_home()
         self._mujoco.mj_forward(self.model, self.data)
         return self.state()
@@ -191,6 +218,36 @@ class MuJoCoSimulationSession:
                 self._validate_joint_position_targets(targets)
             )
         return self.state()
+
+    def start_joint_recording(
+        self,
+        *,
+        name: str,
+        joint_ids: list[str] | None = None,
+        actuator_ids: list[str] | None = None,
+    ) -> SimulationState:
+        selected_joint_ids = joint_ids if joint_ids is not None else list(self._joint_ids)
+        selected_actuator_ids = (
+            actuator_ids if actuator_ids is not None else list(self._actuator_ids)
+        )
+        self._state_recorder.start(
+            name=name,
+            joint_ids=selected_joint_ids,
+            actuator_ids=selected_actuator_ids,
+            timestep=float(self.model.opt.timestep),
+            scene_version=self.scene.version,
+            engine_version=str(self._mujoco.__version__),
+        )
+        self._state_recorder.capture(self.state())
+        return self.state()
+
+    def stop_joint_recording(self) -> tuple[SimulationState, JointStateRecording]:
+        recording = self._state_recorder.stop()
+        return self.state(), recording
+
+    @property
+    def joint_recording(self) -> JointStateRecording | None:
+        return self._state_recorder.recording
 
     def state(self) -> SimulationState:
         actor_states = []
@@ -239,6 +296,7 @@ class MuJoCoSimulationSession:
                 timeout=self._control_timeout or None,
             ),
             trajectory=self._trajectory_player.state(float(self.data.time)),
+            recording=self._recording_state(),
         )
         self._validate_finite_state(state)
         return state
@@ -349,6 +407,31 @@ class MuJoCoSimulationSession:
         if not math.isfinite(value) or value < 0:
             raise ValueError("simulation_config.control_timeout must be finite and >= 0")
         return value
+
+    @staticmethod
+    def _read_recording_max_samples(scene: Scene) -> int:
+        raw_value = scene.simulation_config.get("recording_max_samples", 100_000)
+        if isinstance(raw_value, bool):
+            raise ValueError(
+                "simulation_config.recording_max_samples must be an integer >= 1"
+            )
+        value = int(raw_value)
+        if value < 1 or float(raw_value) != value:
+            raise ValueError(
+                "simulation_config.recording_max_samples must be an integer >= 1"
+            )
+        return value
+
+    def _recording_state(self) -> RecordingSimulationState:
+        recording = self._state_recorder.recording
+        if recording is None:
+            return RecordingSimulationState()
+        return RecordingSimulationState(
+            active=self._state_recorder.active,
+            sample_count=len(recording.samples),
+            limit_reached=recording.limit_reached,
+            name=recording.name,
+        )
 
     def _map_joint_position_actuators(self, scene: Scene) -> dict[str, int]:
         result: dict[str, int] = {}

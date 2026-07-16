@@ -203,6 +203,13 @@ export interface TrajectorySimulationState {
   name: string | null;
 }
 
+export interface RecordingSimulationState {
+  active: boolean;
+  sample_count: number;
+  limit_reached: boolean;
+  name: string | null;
+}
+
 export interface JointTrajectoryKeyframe {
   time: number;
   targets: Record<string, number>;
@@ -228,6 +235,7 @@ export interface SimulationState {
   joints: JointSimulationState[];
   actuators: ActuatorSimulationState[];
   trajectory: TrajectorySimulationState;
+  recording: RecordingSimulationState;
   controller: ControllerSimulationState;
 }
 
@@ -300,6 +308,10 @@ export interface PythonBridgeObject {
   playTrajectory(callback: (result: string) => void): void;
   pauseTrajectory(callback: (result: string) => void): void;
   stopTrajectory(callback: (result: string) => void): void;
+  startRecording(sceneJson: string, configJson: string, callback: (result: string) => void): void;
+  stopRecording(callback: (result: string) => void): void;
+  getRecording(callback: (result: string) => void): void;
+  exportRecording(path: string, formatName: string, callback: (result: string) => void): void;
   setEditorState(sceneJson: string, dirty: boolean, currentPath: string): void;
   simulationStateChanged: QtSignal<[string]>;
   simulationStatusChanged: QtSignal<[string]>;

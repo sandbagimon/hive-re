@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 import math
 import time
 from collections.abc import Callable
 from pathlib import Path
 
+from simlab.models.recording import JointStateRecording
 from simlab.models.scene import Scene
 from simlab.models.trajectory import JointTrajectory
 from simlab.services.simulation_session import MuJoCoSimulationSession, SimulationState
@@ -165,6 +167,54 @@ class SimulationService:
         self._time_accumulator = 0.0
         self.console("Trajectory stopped.")
         return state
+
+    def start_joint_recording(
+        self,
+        scene: Scene,
+        *,
+        name: str,
+        joint_ids: list[str] | None = None,
+        actuator_ids: list[str] | None = None,
+    ) -> SimulationState:
+        if self.session is None:
+            self.session = self._create_session(scene)
+            self.console(f"Loaded MuJoCo model: {self.session.xml_path}")
+        state = self.session.start_joint_recording(
+            name=name,
+            joint_ids=joint_ids,
+            actuator_ids=actuator_ids,
+        )
+        self.console(f"Joint state recording started: {name}")
+        return state
+
+    def stop_joint_recording(self) -> tuple[SimulationState, JointStateRecording]:
+        if self.session is None:
+            raise RuntimeError("No simulation is loaded")
+        state, recording = self.session.stop_joint_recording()
+        self.console(
+            f"Joint state recording stopped: {len(recording.samples)} sample(s)."
+        )
+        return state, recording
+
+    def get_joint_recording(self) -> JointStateRecording:
+        recording = self.session.joint_recording if self.session is not None else None
+        if recording is None:
+            raise RuntimeError("No joint state recording is available")
+        return recording
+
+    def export_joint_recording(self, path: str | Path, format_name: str) -> Path:
+        recording = self.get_joint_recording()
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        if format_name == "json":
+            content = json.dumps(recording.to_dict(), indent=2) + "\n"
+        elif format_name == "csv":
+            content = recording.to_csv()
+        else:
+            raise ValueError("Recording format must be 'json' or 'csv'")
+        output_path.write_text(content, encoding="utf-8")
+        self.console(f"Exported joint state recording: {output_path}")
+        return output_path
 
     def reset(self) -> SimulationState | None:
         if self.session is None:

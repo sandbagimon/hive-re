@@ -33,9 +33,18 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     assert "playTrajectory" in bridge["properties"]["rpc_methods"]["const"]
     assert "simulationStateChanged" in bridge["properties"]["events"]["const"]
     simulation_state = bridge["$defs"]["simulationState"]
-    assert {"links", "joints", "actuators", "controller", "trajectory"}.issubset(
+    assert {
+        "links",
+        "joints",
+        "actuators",
+        "controller",
+        "trajectory",
+        "recording",
+    }.issubset(
         simulation_state["required"]
     )
+    assert "startRecording" in bridge["properties"]["rpc_methods"]["const"]
+    assert "exportRecording" in bridge["properties"]["rpc_methods"]["const"]
     assert "meshGeometry" in scene["$defs"]
     assert scene["properties"]["robotics"]["$ref"] == "robotics.schema.json"
     assert scene["properties"]["trajectories"]["items"]["$ref"] == (

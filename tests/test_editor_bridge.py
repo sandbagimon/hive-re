@@ -170,6 +170,72 @@ def test_editor_bridge_external_robot_rpc_workflow(tmp_path: Path) -> None:
     assert statuses[-2:] == ["paused", "paused"]
 
 
+def test_editor_bridge_records_and_exports_robot_joint_state(tmp_path: Path) -> None:
+    pytest.importorskip("mujoco")
+    source = Path(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda"
+    ).resolve()
+    bridge = _bridge(tmp_path)
+    wall_time = [100.0]
+    bridge.simulation_service.clock = lambda: wall_time[0]
+    imported = json.loads(bridge.importOpenUsdPath(str(source)))
+    asset = imported["data"]["asset"]
+    scene = Scene.from_dict(
+        {
+            "version": "1.0",
+            "name": "Recorded Robot",
+            "units": "meters",
+            "actors": [
+                {
+                    "id": "actor_001",
+                    "name": "External Arm",
+                    "type": "robot",
+                    "asset_id": asset["id"],
+                    "properties": asset["default_properties"],
+                }
+            ],
+            "robotics": imported["data"]["robotics"],
+            "simulation_config": {"timestep": 0.01, "max_catch_up_steps": 4},
+        }
+    )
+    articulation = scene.robotics.articulations[0]
+    shoulder = articulation.joints[0]
+    shoulder_drive = articulation.actuators[0]
+    config = {
+        "name": "Bridge Recording",
+        "joint_ids": [shoulder.id],
+        "actuator_ids": [shoulder_drive.id],
+    }
+
+    started = json.loads(
+        bridge.startRecording(json.dumps(scene.to_dict()), json.dumps(config))
+    )
+    running = json.loads(bridge.runSimulation(json.dumps(scene.to_dict())))
+    for _ in range(3):
+        wall_time[0] += 0.02
+        bridge._advance_simulation()
+    stopped = json.loads(bridge.stopRecording())
+    fetched = json.loads(bridge.getRecording())
+    json_path = tmp_path / "recordings" / "arm.json"
+    csv_path = tmp_path / "recordings" / "arm.csv"
+    exported_json = json.loads(bridge.exportRecording(str(json_path), "json"))
+    exported_csv = json.loads(bridge.exportRecording(str(csv_path), "csv"))
+    bridge.pauseSimulation()
+
+    assert started["data"]["state"]["recording"]["sample_count"] == 1
+    assert running["ok"] is True
+    recording = stopped["data"]["recording"]
+    assert stopped["data"]["state"]["recording"]["active"] is False
+    assert len(recording["samples"]) == 7
+    assert fetched["data"]["recording"] == recording
+    assert exported_json["data"]["sample_count"] == 7
+    assert exported_csv["data"]["sample_count"] == 7
+    assert json.loads(json_path.read_text(encoding="utf-8")) == recording
+    csv_lines = csv_path.read_text(encoding="utf-8").splitlines()
+    assert csv_lines[0].startswith("time,joint.")
+    assert len(csv_lines) == 8
+
+
 def test_editor_bridge_sets_robot_joint_target(tmp_path: Path) -> None:
     pytest.importorskip("mujoco")
     imported = import_openusd_asset(
