@@ -184,16 +184,33 @@ function renderInspector(actor, scene, simulationState, selectedJointId, selecte
         ? articulations.flatMap((item) => item.joints)
             .find((item) => item.id === selectedSensor.joint_id)
         : undefined;
+    const sensorLink = selectedSensor
+        ? articulations.flatMap((item) => item.links)
+            .find((item) => item.id === selectedSensor.link_id)
+        : undefined;
+    const selectedJointSensorSample = selectedSensorSample?.sensor_type === 'joint_state'
+        ? selectedSensorSample
+        : undefined;
+    const selectedImuSample = selectedSensorSample?.sensor_type === 'imu'
+        ? selectedSensorSample
+        : undefined;
+    const sensorPayloadFields = selectedSensor?.sensor_type === 'imu' ? `
+      <div class="property-row"><label>Sequence</label><input type="text" value="${selectedImuSample?.sequence ?? '—'}" disabled data-sensor-field="sequence" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Time</label><input type="text" value="${selectedImuSample?.time.toFixed(3) ?? '—'}" disabled data-sensor-field="time" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Orientation</label><input type="text" value="${selectedImuSample?.orientation.map((value) => value.toFixed(3)).join(', ') ?? '—'}" disabled data-sensor-field="orientation" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Angular Vel.</label><input type="text" value="${selectedImuSample?.angular_velocity.map((value) => value.toFixed(3)).join(', ') ?? '—'}" disabled data-sensor-field="angular_velocity" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Linear Accel.</label><input type="text" value="${selectedImuSample?.linear_acceleration.map((value) => value.toFixed(3)).join(', ') ?? '—'}" disabled data-sensor-field="linear_acceleration" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>` : `
+      <div class="property-row"><label>Sequence</label><input type="text" value="${selectedJointSensorSample?.sequence ?? '—'}" disabled data-sensor-field="sequence" data-runtime-sensor-id="${escapeHtml(selectedSensor?.id ?? '')}"></div>
+      <div class="property-row"><label>Time</label><input type="text" value="${selectedJointSensorSample?.time.toFixed(3) ?? '—'}" disabled data-sensor-field="time" data-runtime-sensor-id="${escapeHtml(selectedSensor?.id ?? '')}"></div>
+      <div class="property-row"><label>Position</label><input type="text" value="${selectedJointSensorSample?.qpos.toFixed(3) ?? '—'}" disabled data-sensor-field="qpos" data-runtime-sensor-id="${escapeHtml(selectedSensor?.id ?? '')}"></div>
+      <div class="property-row"><label>Velocity</label><input type="text" value="${selectedJointSensorSample?.qvel.toFixed(3) ?? '—'}" disabled data-sensor-field="qvel" data-runtime-sensor-id="${escapeHtml(selectedSensor?.id ?? '')}"></div>`;
     const identitySections = selectedSensor ? `
     <section class="property-group"><h3>Sensor</h3>
       <div class="property-row"><label>Name</label><input type="text" value="${escapeHtml(selectedSensor.name)}" disabled></div>
       <div class="property-row"><label>Type</label><input type="text" value="${escapeHtml(selectedSensor.sensor_type)}" disabled></div>
-      <div class="property-row"><label>Joint</label><input type="text" value="${escapeHtml(sensorJoint?.name ?? selectedSensor.joint_id ?? '—')}" disabled></div>
+      <div class="property-row"><label>${selectedSensor.sensor_type === 'imu' ? 'Link' : 'Joint'}</label><input type="text" value="${escapeHtml(selectedSensor.sensor_type === 'imu' ? sensorLink?.name ?? selectedSensor.link_id ?? '—' : sensorJoint?.name ?? selectedSensor.joint_id ?? '—')}" disabled></div>
       <div class="property-row"><label>Rate</label><input type="text" value="${selectedSensor.update_rate_hz === null ? 'Physics rate' : `${selectedSensor.update_rate_hz} Hz`}" disabled></div>
-      <div class="property-row"><label>Sequence</label><input type="text" value="${selectedSensorSample?.sequence ?? '—'}" disabled data-sensor-field="sequence" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
-      <div class="property-row"><label>Time</label><input type="text" value="${selectedSensorSample?.time.toFixed(3) ?? '—'}" disabled data-sensor-field="time" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
-      <div class="property-row"><label>Position</label><input type="text" value="${selectedSensorSample?.qpos.toFixed(3) ?? '—'}" disabled data-sensor-field="qpos" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
-      <div class="property-row"><label>Velocity</label><input type="text" value="${selectedSensorSample?.qvel.toFixed(3) ?? '—'}" disabled data-sensor-field="qvel" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      ${sensorPayloadFields}
     </section>` : selectedJoint ? `
     <section class="property-group"><h3>Joint</h3>
       <div class="property-row"><label>Name</label><input type="text" value="${escapeHtml(selectedJoint.name)}" disabled></div>
@@ -330,10 +347,21 @@ function updateRuntimeInspector(simulationState) {
                 input.value = String(sensor.sequence);
             else if (field === 'time')
                 input.value = sensor.time.toFixed(3);
-            else if (field === 'qpos')
+            else if (sensor.sensor_type === 'joint_state' && field === 'qpos') {
                 input.value = sensor.qpos.toFixed(3);
-            else if (field === 'qvel')
+            }
+            else if (sensor.sensor_type === 'joint_state' && field === 'qvel') {
                 input.value = sensor.qvel.toFixed(3);
+            }
+            else if (sensor.sensor_type === 'imu' && field === 'orientation') {
+                input.value = sensor.orientation.map((value) => value.toFixed(3)).join(', ');
+            }
+            else if (sensor.sensor_type === 'imu' && field === 'angular_velocity') {
+                input.value = sensor.angular_velocity.map((value) => value.toFixed(3)).join(', ');
+            }
+            else if (sensor.sensor_type === 'imu' && field === 'linear_acceleration') {
+                input.value = sensor.linear_acceleration.map((value) => value.toFixed(3)).join(', ');
+            }
         }
     }
 }
@@ -693,7 +721,7 @@ function updateTrajectoryRuntime(simulationState) {
 }
 function ensureRecordingDraft(actor, scene) {
     const bindings = positionJointBindings(actor, scene);
-    const sensors = robotSensors(actor, scene);
+    const sensors = robotSensors(actor, scene).filter((sensor) => sensor.sensor_type === 'joint_state');
     const signature = JSON.stringify([
         bindings.map(({ joint }) => joint.id),
         sensors.map((sensor) => sensor.id),
@@ -712,6 +740,7 @@ function ensureRecordingDraft(actor, scene) {
 }
 function sensorsForRecording(actor, scene, draft) {
     return robotSensors(actor, scene)
+        .filter((sensor) => sensor.sensor_type === 'joint_state')
         .filter((sensor) => draft.selectedSensorIds.has(sensor.id))
         .map((sensor) => sensor.id);
 }
@@ -722,7 +751,7 @@ function renderRecordingPanel(actor, scene, simulationState) {
         return;
     const draft = ensureRecordingDraft(actor, scene);
     const bindings = positionJointBindings(actor, scene);
-    const sensors = robotSensors(actor, scene);
+    const sensors = robotSensors(actor, scene).filter((sensor) => sensor.sensor_type === 'joint_state');
     const controls = element('recording-controls');
     controls.innerHTML = `
     <input class="recording-name" type="text" value="${escapeHtml(draft.name)}" data-recording-name title="Recording name">

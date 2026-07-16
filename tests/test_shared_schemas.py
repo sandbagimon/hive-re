@@ -37,6 +37,7 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
         "links",
         "joints",
         "actuators",
+        "sensors",
         "controller",
         "trajectory",
         "recording",

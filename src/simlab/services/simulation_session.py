@@ -15,13 +15,14 @@ from simlab.services.controller_runtime import (
     JointObservation,
     StepController,
 )
+from simlab.services.imu_sensors import ImuKinematics, ImuSensorSample, ImuSensorScheduler
 from simlab.services.joint_state_recorder import JointStateRecorder
 from simlab.services.joint_state_sensors import (
     JointKinematics,
     JointStateSensorSample,
     JointStateSensorScheduler,
 )
-from simlab.services.mjcf_exporter import export_scene_to_mjcf
+from simlab.services.mjcf_exporter import export_scene_to_mjcf, imu_sensor_channel_names
 from simlab.services.trajectory_player import (
     JointTrajectoryPlayer,
     TrajectoryPlaybackState,
@@ -136,7 +137,7 @@ class SimulationState:
     links: list[LinkSimulationState] = field(default_factory=list)
     joints: list[JointSimulationState] = field(default_factory=list)
     actuators: list[ActuatorSimulationState] = field(default_factory=list)
-    sensors: list[JointStateSensorSample] = field(default_factory=list)
+    sensors: list[JointStateSensorSample | ImuSensorSample] = field(default_factory=list)
     controller: ControllerSimulationState = field(
         default_factory=ControllerSimulationState
     )
@@ -199,11 +200,21 @@ class MuJoCoSimulationSession:
             for articulation in (scene.robotics.articulations if scene.robotics else [])
             for sensor in articulation.sensors
         ]
-        self._sensor_ids = {sensor.id for sensor in sensor_definitions}
+        self._sensor_ids = {
+            sensor.id for sensor in sensor_definitions if sensor.sensor_type == "joint_state"
+        }
         self._joint_state_sensors = JointStateSensorScheduler(
             sensor_definitions,
             float(self.model.opt.timestep),
         )
+        self._imu_sensor_definitions = [
+            sensor for sensor in sensor_definitions if sensor.sensor_type == "imu"
+        ]
+        self._imu_sensors = ImuSensorScheduler(
+            self._imu_sensor_definitions,
+            float(self.model.opt.timestep),
+        )
+        self._imu_channel_addresses = self._map_imu_sensor_channels()
         self._physics_step_index = 0
         self._controller_runner = ControllerRunner(
             deadline=self._read_controller_deadline(scene)
@@ -215,7 +226,7 @@ class MuJoCoSimulationSession:
         self._reset_to_home()
         self._home_controls = self.data.ctrl.copy()
         mujoco.mj_forward(self.model, self.data)
-        self._reset_joint_state_sensors()
+        self._reset_sensors()
 
     def step(self, steps: int = 1) -> SimulationState:
         for _ in range(max(steps, 1)):
@@ -230,6 +241,11 @@ class MuJoCoSimulationSession:
                 float(self.data.time),
                 self._joint_kinematics(),
             )
+            self._imu_sensors.capture(
+                self._physics_step_index,
+                float(self.data.time),
+                self._imu_measurements(),
+            )
             if self._state_recorder.active:
                 self._state_recorder.capture(self.state(), emitted_sensors)
         return self.state()
@@ -239,7 +255,7 @@ class MuJoCoSimulationSession:
             self._state_recorder.stop()
         self._reset_to_home()
         self._mujoco.mj_forward(self.model, self.data)
-        self._reset_joint_state_sensors()
+        self._reset_sensors()
         if self._controller_runner.enabled:
             self._controller_runner.reset(self._controller_observation())
             self._sync_python_controller_state()
@@ -395,7 +411,10 @@ class MuJoCoSimulationSession:
             links=link_states,
             joints=joint_states,
             actuators=actuator_states,
-            sensors=list(self._joint_state_sensors.latest_samples),
+            sensors=[
+                *self._joint_state_sensors.latest_samples,
+                *self._imu_sensors.latest_samples,
+            ],
             controller=ControllerSimulationState(
                 status=self._controller_status,
                 message=self._controller_message,
@@ -546,12 +565,74 @@ class MuJoCoSimulationSession:
             for joint_id, mujoco_id in self._joint_ids.items()
         }
 
-    def _reset_joint_state_sensors(self) -> None:
+    def _reset_sensors(self) -> None:
         self._physics_step_index = 0
         self._joint_state_sensors.reset(
             float(self.data.time),
             self._joint_kinematics(),
         )
+        self._imu_sensors.reset(
+            float(self.data.time),
+            self._imu_measurements(),
+        )
+
+    def _map_imu_sensor_channels(self) -> dict[str, tuple[int, int, int]]:
+        result: dict[str, tuple[int, int, int]] = {}
+        expected_dimensions = (4, 3, 3)
+        for sensor in self._imu_sensor_definitions:
+            addresses: list[int] = []
+            for name, expected_dimension in zip(
+                imu_sensor_channel_names(sensor.id), expected_dimensions, strict=True
+            ):
+                sensor_index = self._mujoco.mj_name2id(
+                    self.model,
+                    self._mujoco.mjtObj.mjOBJ_SENSOR,
+                    name,
+                )
+                if sensor_index < 0:
+                    raise ValueError(f"MuJoCo IMU channel is missing: {name}")
+                dimension = int(self.model.sensor_dim[sensor_index])
+                if dimension != expected_dimension:
+                    raise ValueError(
+                        f"MuJoCo IMU channel {name} has dimension {dimension}; "
+                        f"expected {expected_dimension}"
+                    )
+                addresses.append(int(self.model.sensor_adr[sensor_index]))
+            result[sensor.id] = (addresses[0], addresses[1], addresses[2])
+        return result
+
+    def _imu_measurements(self) -> dict[str, ImuKinematics]:
+        result: dict[str, ImuKinematics] = {}
+        for sensor in self._imu_sensor_definitions:
+            orientation_address, velocity_address, acceleration_address = (
+                self._imu_channel_addresses[sensor.id]
+            )
+            w, x, y, z = (
+                float(value)
+                for value in self.data.sensordata[
+                    orientation_address : orientation_address + 4
+                ]
+            )
+            angular_velocity = self.data.sensordata[
+                velocity_address : velocity_address + 3
+            ]
+            linear_acceleration = self.data.sensordata[
+                acceleration_address : acceleration_address + 3
+            ]
+            result[sensor.id] = ImuKinematics(
+                orientation=(x, y, z, w),
+                angular_velocity=(
+                    float(angular_velocity[0]),
+                    float(angular_velocity[1]),
+                    float(angular_velocity[2]),
+                ),
+                linear_acceleration=(
+                    float(linear_acceleration[0]),
+                    float(linear_acceleration[1]),
+                    float(linear_acceleration[2]),
+                ),
+            )
+        return result
 
     def _apply_python_controller(self) -> None:
         if not self._controller_runner.enabled:

@@ -195,12 +195,26 @@ export interface ActuatorSimulationState {
 
 export interface JointStateSensorSample {
   id: string;
+  sensor_type: 'joint_state';
   joint_id: string;
   time: number;
   sequence: number;
   qpos: number;
   qvel: number;
 }
+
+export interface ImuSensorSample {
+  id: string;
+  sensor_type: 'imu';
+  link_id: string;
+  time: number;
+  sequence: number;
+  orientation: [number, number, number, number];
+  angular_velocity: [number, number, number];
+  linear_acceleration: [number, number, number];
+}
+
+export type SensorSample = JointStateSensorSample | ImuSensorSample;
 
 export interface ControllerSimulationState {
   status: 'ready' | 'active' | 'timed_out' | 'fault';
@@ -259,7 +273,7 @@ export interface SimulationState {
   links: LinkSimulationState[];
   joints: JointSimulationState[];
   actuators: ActuatorSimulationState[];
-  sensors: JointStateSensorSample[];
+  sensors: SensorSample[];
   trajectory: TrajectorySimulationState;
   recording: RecordingSimulationState;
   clock: ClockSimulationState;

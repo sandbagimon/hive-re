@@ -45,6 +45,7 @@ def test_joint_state_sensor_scheduler_samples_exact_step_divisors() -> None:
     assert [item.to_dict() for item in scheduler.latest_samples] == [
         {
             "id": "sensor_100hz",
+            "sensor_type": "joint_state",
             "joint_id": "shoulder",
             "time": 0.02,
             "sequence": 2,
@@ -53,6 +54,7 @@ def test_joint_state_sensor_scheduler_samples_exact_step_divisors() -> None:
         },
         {
             "id": "sensor_50hz",
+            "sensor_type": "joint_state",
             "joint_id": "shoulder",
             "time": 0.02,
             "sequence": 1,

@@ -68,6 +68,42 @@
         },
         "joints": { "type": "array" },
         "actuators": { "type": "array" },
+        "sensors": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "sensor_type": { "const": "joint_state" },
+                  "joint_id": { "type": "string" },
+                  "time": { "type": "number", "minimum": 0 },
+                  "sequence": { "type": "integer", "minimum": 0 },
+                  "qpos": { "type": "number" },
+                  "qvel": { "type": "number" }
+                },
+                "required": ["id", "sensor_type", "joint_id", "time", "sequence", "qpos", "qvel"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "sensor_type": { "const": "imu" },
+                  "link_id": { "type": "string" },
+                  "time": { "type": "number", "minimum": 0 },
+                  "sequence": { "type": "integer", "minimum": 0 },
+                  "orientation": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 },
+                  "angular_velocity": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+                  "linear_acceleration": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+                },
+                "required": ["id", "sensor_type", "link_id", "time", "sequence", "orientation", "angular_velocity", "linear_acceleration"],
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
         "trajectory": {
           "type": "object",
           "properties": {
@@ -103,7 +139,7 @@
           "additionalProperties": false
         }
       },
-      "required": ["time", "actors", "links", "joints", "actuators", "trajectory", "recording", "controller"],
+      "required": ["time", "actors", "links", "joints", "actuators", "sensors", "trajectory", "recording", "controller"],
       "additionalProperties": false
     }
   },

@@ -879,9 +879,22 @@ ID 的 fixture 编译为 3 sensors，dimensions 4/3/3。
 
 实现证据见 `docs/iterations/2026-07-16-mjcf-imu-export.md`。
 
-## 64. 当前下一项具体任务
+## 64. MuJoCo IMU Runtime（已完成 2026-07-16）
 
 > 接入 MuJoCo IMU Runtime：Session 用 stable sensor ID 映射 sensordata address/dimension，转换 framequat
 > wxyz->xyzw 后构造 ImuKinematics 并交给 Scheduler。SimulationState 支持 joint_state/imu union。验证静止
-> fixed-base IMU orientation/proper acceleration，以及运动 forearm IMU angular velocity、50Hz cadence、
+> fixed-base IMU orientation/acceleration，以及运动 forearm IMU angular velocity、50Hz cadence、
 > Reset 和 serialization。
+
+Session 通过共享 channel-name helper 映射 MuJoCo sensor ID/address/dimension，严格检查 4/3/3 channels；
+framequat 转为 xyzw 后与 gyro/accelerometer 原值交给 ImuSensorScheduler。SimulationState/Bridge/TS contract
+现为带 sensor_type 的 joint_state/imu union；Inspector 已按类型渲染 Link、orientation、angular velocity 和
+linear acceleration。Recording 明确只列 joint_state，IMU 不会静默生成空 artifact。
+
+实现证据见 `docs/iterations/2026-07-16-mujoco-imu-runtime.md`。
+
+## 65. 当前下一项具体任务
+
+> 增加 IMU Qt E2E 与 Recording Contract：真实 Qt 项目包含 50Hz forearm IMU，Sensor Tree/Inspector 验证
+> orientation/angular velocity/linear acceleration live fields 与 Store 一致、Pause 后冻结、Reset sequence 0。
+> 随后扩展 recording payload/CSV 为 typed sensor events，支持 IMU stable vector columns。

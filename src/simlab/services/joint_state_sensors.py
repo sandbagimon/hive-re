@@ -38,6 +38,7 @@ class JointStateSensorSample:
     def to_dict(self) -> dict[str, str | int | float]:
         return {
             "id": self.sensor_id,
+            "sensor_type": "joint_state",
             "joint_id": self.joint_id,
             "time": self.time,
             "sequence": self.sequence,

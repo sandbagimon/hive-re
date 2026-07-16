@@ -1,7 +1,7 @@
 import pytest
 
 from simlab.models.actor import Actor
-from simlab.models.robotics import Sensor
+from simlab.models.robotics import RigidTransform, Sensor
 from simlab.models.scene import Scene
 from simlab.models.trajectory import JointTrajectory
 from simlab.models.transform import Transform
@@ -161,6 +161,89 @@ def test_robot_session_publishes_fixed_step_joint_sensor_samples(tmp_path) -> No
 
     with pytest.raises(ValueError, match="unknown sensor ID"):
         session.start_joint_recording(name="Invalid Sensor", sensor_ids=["missing"])
+
+    reset = session.reset()
+    assert [(sample.sequence, sample.time) for sample in reset.sensors] == [
+        (0, 0.0),
+        (0, 0.0),
+    ]
+
+
+def test_robot_session_publishes_mujoco_imu_samples(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    articulation = imported.robotics_model.articulations[0]
+    base = articulation.links[0]
+    forearm = articulation.links[-1]
+    articulation.sensors.extend(
+        [
+            Sensor(
+                id="imu_base_100hz",
+                name="Base IMU",
+                sensor_type="imu",
+                link_id=base.id,
+                update_rate_hz=100.0,
+                local_transform=RigidTransform(),
+            ),
+            Sensor(
+                id="imu_forearm_50hz",
+                name="Forearm IMU",
+                sensor_type="imu",
+                link_id=forearm.id,
+                update_rate_hz=50.0,
+                local_transform=RigidTransform(position=[0.0, 0.0, 0.2]),
+            ),
+        ]
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+        simulation_config={"timestep": 0.01},
+    )
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+
+    initial = session.state()
+    session.set_joint_position_targets(
+        {
+            articulation.joints[0].id: 1.0,
+            articulation.joints[1].id: -1.0,
+        }
+    )
+    stepped = session.step(steps=2)
+
+    base_initial, forearm_initial = initial.sensors
+    base_stepped, forearm_stepped = stepped.sensors
+    assert base_initial.to_dict() == {
+        "id": "imu_base_100hz",
+        "sensor_type": "imu",
+        "link_id": base.id,
+        "time": 0.0,
+        "sequence": 0,
+        "orientation": pytest.approx([0.0, 0.0, 0.0, 1.0]),
+        "angular_velocity": pytest.approx([0.0, 0.0, 0.0]),
+        "linear_acceleration": pytest.approx([0.0, 0.0, 0.0]),
+    }
+    assert base_stepped.sequence == 2
+    assert base_stepped.linear_acceleration == pytest.approx([0.0, 0.0, 0.0])
+    assert forearm_initial.sequence == 0
+    assert forearm_stepped.sequence == 1
+    assert forearm_stepped.time == pytest.approx(0.02)
+    assert abs(forearm_stepped.angular_velocity[1]) > 0.1
+    assert sum(value * value for value in forearm_stepped.orientation) == pytest.approx(1.0)
+    assert stepped.to_dict()["sensors"][1]["sensor_type"] == "imu"
+
+    with pytest.raises(ValueError, match="unknown sensor ID"):
+        session.start_joint_recording(name="Unsupported IMU", sensor_ids=["imu_base_100hz"])
 
     reset = session.reset()
     assert [(sample.sequence, sample.time) for sample in reset.sensors] == [

@@ -94,3 +94,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-16 Sensor Recording UI](2026-07-16-sensor-recording-ui.md)
 - [2026-07-16 IMU Sensor Contract](2026-07-16-imu-sensor-contract.md)
 - [2026-07-16 MJCF IMU Export](2026-07-16-mjcf-imu-export.md)
+- [2026-07-16 MuJoCo IMU Runtime](2026-07-16-mujoco-imu-runtime.md)

@@ -185,12 +185,14 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
     if robot_imu_sensors:
         sensor_element = ET.SubElement(root, "sensor")
         for sensor, site_name in robot_imu_sensors:
-            sensor_name = _xml_name(sensor.id)
+            orientation_name, angular_velocity_name, linear_acceleration_name = (
+                imu_sensor_channel_names(sensor.id)
+            )
             ET.SubElement(
                 sensor_element,
                 "framequat",
                 {
-                    "name": f"{sensor_name}_orientation",
+                    "name": orientation_name,
                     "objtype": "site",
                     "objname": site_name,
                 },
@@ -198,12 +200,12 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
             ET.SubElement(
                 sensor_element,
                 "gyro",
-                {"name": f"{sensor_name}_angular_velocity", "site": site_name},
+                {"name": angular_velocity_name, "site": site_name},
             )
             ET.SubElement(
                 sensor_element,
                 "accelerometer",
-                {"name": f"{sensor_name}_linear_acceleration", "site": site_name},
+                {"name": linear_acceleration_name, "site": site_name},
             )
     if home_positions:
         keyframe = ET.SubElement(root, "keyframe")
@@ -384,6 +386,15 @@ def _format_friction(value: Any) -> str:
     else:
         values = [float(item) for item in value]
     return _format_vector((values + [0.8, 0.005, 0.0001])[:3])
+
+
+def imu_sensor_channel_names(sensor_id: str) -> tuple[str, str, str]:
+    sensor_name = _xml_name(sensor_id)
+    return (
+        f"{sensor_name}_orientation",
+        f"{sensor_name}_angular_velocity",
+        f"{sensor_name}_linear_acceleration",
+    )
 
 
 def _xml_name(value: str) -> str:
