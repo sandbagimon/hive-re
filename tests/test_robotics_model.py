@@ -58,6 +58,65 @@ def test_joint_state_sensor_round_trip_and_requires_joint_reference() -> None:
     assert any(issue.code == "missing_sensor_joint" for issue in exc_info.value.issues)
 
 
+def test_imu_sensor_round_trip_requires_link_and_local_transform() -> None:
+    data = fixture_data()
+    imu = {
+        "id": "sensor_forearm_imu",
+        "name": "Forearm IMU",
+        "sensor_type": "imu",
+        "link_id": "link_forearm",
+        "joint_id": None,
+        "update_rate_hz": 100.0,
+        "local_transform": {
+            "position": [0.0, 0.0, 0.25],
+            "quaternion": [0.0, 0.0, 0.0, 1.0],
+        },
+        "source_prim_path": None,
+    }
+    data["articulations"][0]["sensors"].append(imu)
+
+    restored = RoboticsModel.from_dict(data)
+
+    assert restored.to_dict() == data
+    restored_imu = restored.articulations[0].sensors[-1]
+    assert restored_imu.local_transform is not None
+    assert restored_imu.local_transform.position == [0.0, 0.0, 0.25]
+
+    imu["link_id"] = None
+    del imu["local_transform"]
+    with pytest.raises(RoboticsValidationError) as exc_info:
+        RoboticsModel.from_dict(data)
+    assert {issue.code for issue in exc_info.value.issues}.issuperset(
+        {"missing_sensor_link", "missing_sensor_transform"}
+    )
+
+
+def test_imu_sensor_rejects_dangling_link_and_invalid_quaternion() -> None:
+    data = fixture_data()
+    data["articulations"][0]["sensors"].append(
+        {
+            "id": "sensor_bad_imu",
+            "name": "Bad IMU",
+            "sensor_type": "imu",
+            "link_id": "link_missing",
+            "joint_id": None,
+            "update_rate_hz": 50.0,
+            "local_transform": {
+                "position": [0.0, 0.0, 0.0],
+                "quaternion": [0.0, 0.0, 0.0, 0.0],
+            },
+            "source_prim_path": None,
+        }
+    )
+
+    with pytest.raises(RoboticsValidationError) as exc_info:
+        RoboticsModel.from_dict(data)
+
+    assert {issue.code for issue in exc_info.value.issues}.issuperset(
+        {"dangling_sensor_link", "invalid_sensor_quaternion"}
+    )
+
+
 def test_legacy_scene_without_robotics_remains_compatible() -> None:
     legacy = {
         "version": "1.0",

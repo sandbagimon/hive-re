@@ -264,6 +264,38 @@ def _validate_articulation(
                         f"{sensor.sensor_type} sensor requires a joint",
                     )
                 )
+        if sensor.sensor_type == "imu":
+            if sensor.link_id is None:
+                issues.append(
+                    RoboticsValidationIssue(
+                        "missing_sensor_link",
+                        f"{sensor_path}.link_id",
+                        "imu sensor requires a link",
+                    )
+                )
+            if sensor.local_transform is None:
+                issues.append(
+                    RoboticsValidationIssue(
+                        "missing_sensor_transform",
+                        f"{sensor_path}.local_transform",
+                        "imu sensor requires a local transform",
+                    )
+                )
+            elif not math.isclose(
+                math.sqrt(
+                    sum(value * value for value in sensor.local_transform.quaternion)
+                ),
+                1.0,
+                rel_tol=0.0,
+                abs_tol=1e-6,
+            ):
+                issues.append(
+                    RoboticsValidationIssue(
+                        "invalid_sensor_quaternion",
+                        f"{sensor_path}.local_transform.quaternion",
+                        "imu sensor local quaternion must be normalized",
+                    )
+                )
         if sensor.link_id is not None and sensor.link_id not in link_ids:
             issues.append(
                 RoboticsValidationIssue(

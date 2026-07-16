@@ -66,6 +66,7 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     assert {"link", "joint", "actuator", "sensor", "collider", "inertial"}.issubset(
         robotics["$defs"]
     )
+    assert "local_transform" in robotics["$defs"]["sensor"]["properties"]
     Draft202012Validator.check_schema(robotics)
     Draft202012Validator.check_schema(bridge)
     Draft202012Validator.check_schema(trajectory)

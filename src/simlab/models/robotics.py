@@ -363,13 +363,14 @@ class Sensor:
     link_id: str | None = None
     joint_id: str | None = None
     update_rate_hz: float | None = None
+    local_transform: RigidTransform | None = None
     source_prim_path: str | None = None
 
     def __post_init__(self) -> None:
         self.update_rate_hz = _optional_float(self.update_rate_hz)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data: dict[str, Any] = {
             "id": self.id,
             "name": self.name,
             "sensor_type": self.sensor_type,
@@ -378,6 +379,9 @@ class Sensor:
             "update_rate_hz": self.update_rate_hz,
             "source_prim_path": self.source_prim_path,
         }
+        if self.local_transform is not None:
+            data["local_transform"] = self.local_transform.to_dict()
+        return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Sensor:
@@ -388,6 +392,11 @@ class Sensor:
             link_id=data.get("link_id"),
             joint_id=data.get("joint_id"),
             update_rate_hz=data.get("update_rate_hz"),
+            local_transform=(
+                RigidTransform.from_dict(data["local_transform"])
+                if data.get("local_transform") is not None
+                else None
+            ),
             source_prim_path=data.get("source_prim_path"),
         )
 

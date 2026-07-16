@@ -142,6 +142,10 @@ export interface RobotSensor {
   link_id: string | null;
   joint_id: string | null;
   update_rate_hz: number | null;
+  local_transform?: {
+    position: [number, number, number];
+    quaternion: [number, number, number, number];
+  };
   source_prim_path?: string | null;
 }
 

@@ -216,6 +216,7 @@
         "link_id": { "type": ["string", "null"] },
         "joint_id": { "type": ["string", "null"] },
         "update_rate_hz": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "local_transform": { "$ref": "#/$defs/transform" },
         "source_prim_path": { "type": ["string", "null"] }
       },
       "required": ["id", "name", "sensor_type", "link_id", "joint_id", "update_rate_hz"],

@@ -855,8 +855,22 @@ columns、状态文本和非空 viewport。
 
 实现证据见 `docs/iterations/2026-07-16-sensor-recording-ui.md`。
 
-## 62. 当前下一项具体任务
+## 62. IMU Sensor Contract（已完成 2026-07-16）
 
 > 建立 IMU Sensor Contract：在 robotics schema 定义 link-mounted IMU、local pose、update rate 与 frame
 > convention；runtime 第一版输出 orientation quaternion、angular velocity、linear acceleration，固定时钟
 > 调度沿用 Sensor Scheduler 语义。先完成纯 schema/scheduler 与 MuJoCo reference-body 映射测试，再接 UI。
+
+Sensor schema/model 已增加可选 local_transform；IMU 语义强制合法 link、local transform 和 normalized xyzw
+quaternion，旧 sensor JSON round-trip 不增加字段。ImuSensorScheduler 接收预计算的 sensor-frame kinematics，
+按 exact physics divisor 发布 world_from_sensor orientation、sensor-frame angular velocity 和 proper linear
+acceleration；latest/sequence/reset 语义与 joint_state 一致。
+
+实现证据见 `docs/iterations/2026-07-16-imu-sensor-contract.md`。
+
+## 63. 当前下一项具体任务
+
+> 接入 MuJoCo IMU Runtime：exporter 为每个 IMU local_transform 创建 site，并输出 framequat/gyro/
+> accelerometer sensors；Session 用 stable sensor ID 映射 sensordata，转换 wxyz->xyzw 后交给 Scheduler。
+> 验证静止 fixed-base IMU orientation/proper acceleration，以及运动 forearm IMU 的 angular velocity、固定
+> 50Hz cadence、Reset 和 SimulationState serialization。
