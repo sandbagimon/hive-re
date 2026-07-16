@@ -747,6 +747,38 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         )
 
     _wait_until(app, reopened_trajectory_is_loaded)
+    second_joint_id = reopened_articulation["joints"][1]["id"]
+    second_joint_selector = json.dumps(
+        f'[data-recording-joint="{second_joint_id}"]'
+    )
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-recording-name]').value='Qt Physics Samples';"
+        "document.querySelector('[data-recording-name]').dispatchEvent("
+        "new Event('change',{bubbles:true}));"
+        f"document.querySelector({second_joint_selector}).click();"
+        "document.querySelector('[data-recording-command=\"start\"]').click();true",
+    )
+
+    def reopened_recording_is_active() -> bool:
+        current = json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )
+        runtime = current["simulationState"]
+        return bool(
+            current["simulationStatus"] == "paused"
+            and runtime
+            and runtime["recording"]["active"] is True
+            and runtime["recording"]["sample_count"] == 1
+            and runtime["recording"]["name"] == "Qt Physics Samples"
+        )
+
+    _wait_until(app, reopened_recording_is_active)
     _javascript(
         app,
         reopened_window.web_view.page(),
@@ -769,7 +801,139 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             and runtime["actuators"][0]["ctrl"] == pytest.approx(0.5)
         )
 
-    _wait_until(app, reopened_trajectory_is_completed)
+    try:
+        _wait_until(app, reopened_trajectory_is_completed)
+    except AssertionError as exc:
+        failed_state = json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )
+        raise AssertionError(
+            "Reopened recording trajectory did not complete: "
+            + json.dumps(
+                {
+                    "status": failed_state["simulationStatus"],
+                    "runtime": failed_state["simulationState"],
+                    "logs": failed_state["logs"][-8:],
+                }
+            )
+        ) from exc
+    completed_recording_state = json.loads(
+        _javascript(
+            app,
+            reopened_window.web_view.page(),
+            "window.simlabEditor.getStateJson()",
+        )
+    )["simulationState"]["recording"]
+    assert completed_recording_state["active"] is True
+    assert completed_recording_state["sample_count"] >= 81
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-recording-command=\"stop\"]').click();true",
+    )
+
+    def reopened_recording_is_stopped() -> bool:
+        current = json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )
+        recording = current["simulationState"]["recording"]
+        return bool(
+            recording["active"] is False
+            and recording["sample_count"]
+            == completed_recording_state["sample_count"]
+        )
+
+    _wait_until(app, reopened_recording_is_stopped)
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "window.simlabEditor.getRecording().then("
+        "result=>document.documentElement.dataset.recording=JSON.stringify(result));true",
+    )
+    _wait_until(
+        app,
+        lambda: bool(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "document.documentElement.dataset.recording || ''",
+            )
+        ),
+    )
+    recording_result = json.loads(
+        _javascript(
+            app,
+            reopened_window.web_view.page(),
+            "document.documentElement.dataset.recording",
+        )
+    )
+    assert recording_result["ok"] is True
+    recording = recording_result["data"]["recording"]
+    assert recording["name"] == "Qt Physics Samples"
+    assert recording["joint_ids"] == [reopened_joint_id]
+    assert recording["actuator_ids"] == [reopened_articulation["actuators"][0]["id"]]
+    assert len(recording["samples"]) == completed_recording_state["sample_count"]
+    times = [sample["time"] for sample in recording["samples"]]
+    assert times[0] == 0
+    assert 0.8 <= times[-1] <= 0.84
+    assert all(
+        right - left == pytest.approx(0.01)
+        for left, right in zip(times, times[1:], strict=False)
+    )
+    assert all(
+        math.isfinite(sample["joints"][reopened_joint_id]["qpos"])
+        for sample in recording["samples"]
+    )
+
+    recording_json_path = tmp_path / "recordings" / "qt-physics.json"
+    recording_csv_path = tmp_path / "recordings" / "qt-physics.csv"
+    recording_json_path_json = json.dumps(str(recording_json_path))
+    recording_csv_path_json = json.dumps(str(recording_csv_path))
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "Promise.all(["
+        f"window.simlabEditor.exportRecordingPath({recording_json_path_json},'json'),"
+        f"window.simlabEditor.exportRecordingPath({recording_csv_path_json},'csv')"
+        "]).then(result=>document.documentElement.dataset.recordingExport="
+        "JSON.stringify(result));true",
+    )
+    _wait_until(
+        app,
+        lambda: bool(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "document.documentElement.dataset.recordingExport || ''",
+            )
+        ),
+    )
+    export_results = json.loads(
+        _javascript(
+            app,
+            reopened_window.web_view.page(),
+            "document.documentElement.dataset.recordingExport",
+        )
+    )
+    assert all(result["ok"] for result in export_results)
+    assert json.loads(recording_json_path.read_text(encoding="utf-8")) == recording
+    csv_lines = recording_csv_path.read_text(encoding="utf-8").splitlines()
+    assert len(csv_lines) == len(recording["samples"]) + 1
+    assert csv_lines[0].startswith(f"time,joint.{reopened_joint_id}.qpos")
+    recording_status_text = _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('#recording-status').textContent",
+    )
+    assert recording_status_text == f"{len(recording['samples'])} Samples"
     _javascript(
         app,
         reopened_window.web_view.page(),

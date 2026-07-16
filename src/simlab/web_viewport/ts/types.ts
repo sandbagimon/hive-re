@@ -327,6 +327,11 @@ export interface SimLabEditorAutomation {
   importOpenUsdPath(path: string): Promise<RpcResult<OpenUsdImportPayload>>;
   openProjectPath(path: string): Promise<RpcResult<ProjectPayload>>;
   saveProjectPath(path: string): Promise<RpcResult<SavePayload>>;
+  getRecording(): Promise<RpcResult<{ recording: unknown }>>;
+  exportRecordingPath(
+    path: string,
+    formatName: 'json' | 'csv',
+  ): Promise<RpcResult<{ path: string; format: string; sample_count: number }>>;
   getStateJson(): string;
   selectJoint(actorId: string, jointId: string): boolean;
 }

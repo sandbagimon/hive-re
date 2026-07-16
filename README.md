@@ -14,7 +14,7 @@ SimLab Desktop
 |   +-- three.js Viewport
 +-- Python Services
     +-- Project IO / OpenUSD Import / Validation / MJCF Export
-    +-- MuJoCo Session + Live Pose Events
+    +-- MuJoCo Session + Joint Control / Trajectory / Recording
 ```
 
 ## Installation
@@ -48,6 +48,10 @@ Use **Import USD** to add `.usd`, `.usda`, `.usdc`, or `.usdz` assets. The impor
 
 OpenUSD physics values are imported when authored, including rigid-body state, mass/density, and basic friction. The generated project cache contains viewport geometry plus an OBJ collision mesh. Export and simulation convert that asset to a MuJoCo mesh geom, so the default runtime does not require MuJoCo's experimental native USD decoder.
 
+OpenUSD articulations are imported as robot actors with independent links, colliders, inertial properties, revolute joints, and position drives. The Scene Tree and viewport preserve the robot hierarchy; joint targets, jog controls, and editable keyframe trajectories drive the generated MuJoCo articulation while live link poses and joint feedback remain separate from authoring transforms.
+
+Robot trajectories can be saved in the scene, reopened, edited, and replayed. The Recording panel captures selected joint qpos/qvel and actuator ctrl/force on every fixed MuJoCo step, then exports deterministic JSON or CSV artifacts.
+
 Primitive actors expose basic physics properties in the Property Panel: Dynamic, Mass, and Friction. Dynamic actors export with MuJoCo free joints, while static actors export as fixed world geoms.
 
 Primitive geometry follows a shared viewport/MuJoCo contract: Box sizes are half extents, Sphere size is radius, Cylinder size is radius plus half-height, rotations are XYZ radians, and actor scale is baked into exported colliders. Non-uniformly scaled spheres export as Ellipsoids, while cylinders require matching X/Y radial scale. Export contains no implicit collision ground.
@@ -68,10 +72,10 @@ The tests cover the scene model, project save/load behavior, scene service actor
 
 ## Current Limitations
 
-- OpenUSD import currently treats one stage as one rigid-body actor. Multiple USD rigid bodies and articulations are reported and merged rather than silently treated as a working robot.
+- OpenUSD articulation import currently supports the documented fixed/revolute/position-drive subset; advanced joints, sensors, animation, and arbitrary USD physics extensions are reported as unsupported.
 - Imported collision currently uses the merged visual mesh. Dedicated collision prim selection, convex decomposition, complex `UsdPreviewSurface` materials, textures, and animation are not yet supported.
 - The viewport supports primitive and imported mesh editing with live MuJoCo pose playback, but it is not a full MuJoCo-native renderer.
-- The simulation controls are minimal and do not yet include timeline playback, recording, or speed controls.
+- Trajectory playback and recording are available, but simulation speed/real-time-factor controls are not yet exposed.
 - Viewport editing tools do not yet include snapping or advanced transform constraints.
 - MJCF export supports primitive and imported OpenUSD mesh actors with basic static/dynamic physics properties.
 - Plane collision is infinite by MuJoCo definition; the built-in finite Ground uses a thin Box.
@@ -88,14 +92,13 @@ slice is external OpenUSD robot-arm import -> robotics intermediate model -> MJC
 application. Read that document before starting the next implementation
 task; `PRODUCT_PLAN.md` remains the long-term scope document.
 
-The most critical gap: SimLab cannot yet import real robots, control joints, or read sensor data.
+The external OpenUSD robot import and joint-control vertical slice is complete. The next major platform gap is sensor data and a general controller callback API.
 
-1. **Robot schema**: Define `shared/schemas/robotics.schema.json` with Robot/Link/Joint/Actuator/Sensor.
-2. **MJCF importer**: Parse MJCF XML, resolve mesh/material/include/compiler dependencies, reconstruct robot hierarchy.
-3. **Robot actor + scene hierarchy**: Extend the flat actor list to parent/child transforms and articulation trees.
-4. **Joint/actuator/sensor state bridge**: Stream articulation state to viewport and inspector during simulation.
-5. **Controller API**: Per-step Python callback with observation/action buffers, exception isolation, and PID example.
-6. **Clock hardening**: Decouple stepping from UI timer, support fixed timestep, real-time factor, and long-run stability.
+1. **Simulation speed**: Expose target/actual real-time factor while preserving the fixed MuJoCo timestep.
+2. **Controller API**: Add per-step Python callbacks with observation/action buffers, exception isolation, and a PID example.
+3. **Sensors**: Add joint-state, IMU, and contact/force schema, runtime sampling, and UI inspection.
+4. **Clock hardening**: Extend soak coverage for variable host load and long recording sessions.
+5. **Authoring**: Add dedicated collision prim workflows and a consolidated validation panel.
 
 See [`docs/PRODUCT_PLAN.md`](docs/PRODUCT_PLAN.md) for the complete milestone matrix and phased roadmap.
 

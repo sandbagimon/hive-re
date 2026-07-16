@@ -263,6 +263,17 @@ def test_robot_session_plays_pauses_and_stops_joint_trajectory(tmp_path) -> None
         [shoulder.initial_position, elbow.initial_position]
     )
 
+    session.reset()
+    session.load_joint_trajectory(trajectory)
+    session.start_joint_recording(name="Trajectory Recording")
+    session.play_trajectory()
+    recorded = session.step(steps=50)
+    _, recording = session.stop_joint_recording()
+    assert recorded.trajectory.status == "completed"
+    assert [state.ctrl for state in recorded.actuators] == pytest.approx([0.6, -1.0])
+    assert recorded.recording.sample_count == 51
+    assert len(recording.samples) == 51
+
 
 def test_robot_session_rejects_trajectory_for_unknown_joint(tmp_path) -> None:
     pytest.importorskip("mujoco")

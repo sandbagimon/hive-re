@@ -165,9 +165,9 @@ class MuJoCoSimulationSession:
             self._apply_trajectory_target()
             self._apply_control_watchdog()
             self._mujoco.mj_step(self.model, self.data)
+            self._apply_trajectory_target()
             if self._state_recorder.active:
                 self._state_recorder.capture(self.state())
-        self._apply_trajectory_target()
         return self.state()
 
     def reset(self) -> SimulationState:

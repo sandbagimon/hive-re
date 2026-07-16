@@ -1184,6 +1184,12 @@ window.simlabEditor = {
   importOpenUsdPath: (path) => importOpenUsd(path),
   openProjectPath,
   saveProjectPath,
+  getRecording: () => bridge.call('getRecording'),
+  exportRecordingPath: (path, formatName) => bridge.call(
+    'exportRecording',
+    path,
+    formatName,
+  ),
   getStateJson: () => JSON.stringify(store.current),
   selectJoint: (actorId, jointId) => {
     store.selectJoint(actorId, jointId);
