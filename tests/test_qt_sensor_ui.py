@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 import os
 import time
@@ -127,6 +128,37 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
         "heading": "Sensor",
         "rate": "50 Hz",
     }
+    recording_sources = json.loads(
+        _javascript(
+            app,
+            window.web_view.page(),
+            "JSON.stringify({"
+            "count:document.querySelectorAll('[data-recording-sensor]').length,"
+            "checked:document.querySelector('[data-recording-sensor]').checked"
+            "})",
+        )
+    )
+    assert recording_sources == {"count": 1, "checked": False}
+    _javascript(
+        app,
+        window.web_view.page(),
+        "const sensor=document.querySelector('[data-recording-sensor]');"
+        "sensor.click();"
+        "document.querySelector('[data-recording-command=\"start\"]').click();true",
+    )
+
+    def recording_is_active() -> bool:
+        current = json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )["simulationState"]
+        return bool(
+            current
+            and current["recording"]["active"] is True
+            and current["recording"]["sample_count"] == 1
+            and current["recording"]["sensor_event_count"] == 1
+        )
+
+    _wait_until(app, recording_is_active)
 
     _javascript(
         app,
@@ -157,6 +189,18 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
         )["simulationStatus"]
         == "paused",
     )
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-recording-command=\"stop\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )["simulationState"]["recording"]["active"]
+        is False,
+    )
     state = json.loads(
         _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
     )["simulationState"]
@@ -176,6 +220,93 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
     assert float(live_ui["qvel"]) == pytest.approx(sample["qvel"], abs=0.001)
     assert sample["time"] <= state["time"]
 
+    _javascript(
+        app,
+        window.web_view.page(),
+        "window.simlabEditor.getRecording().then("
+        "result=>document.documentElement.dataset.sensorRecording=JSON.stringify(result));true",
+    )
+    _wait_until(
+        app,
+        lambda: bool(
+            _javascript(
+                app,
+                window.web_view.page(),
+                "document.documentElement.dataset.sensorRecording || ''",
+            )
+        ),
+    )
+    recording_result = json.loads(
+        _javascript(
+            app,
+            window.web_view.page(),
+            "document.documentElement.dataset.sensorRecording",
+        )
+    )
+    assert recording_result["ok"] is True
+    recording = recording_result["data"]["recording"]
+    assert recording["sensor_ids"] == [sensor.id]
+    events = [
+        sample["sensors"][sensor.id]
+        for sample in recording["samples"]
+        if sensor.id in sample["sensors"]
+    ]
+    assert [event["sequence"] for event in events] == list(range(len(events)))
+    assert all(
+        right["time"] - left["time"] == pytest.approx(0.02)
+        for left, right in zip(events, events[1:], strict=False)
+    )
+    assert any(not sample["sensors"] for sample in recording["samples"][1:])
+    assert state["recording"]["sensor_event_count"] == len(events)
+
+    json_path = tmp_path / "recordings" / "sensor.json"
+    csv_path = tmp_path / "recordings" / "sensor.csv"
+    _javascript(
+        app,
+        window.web_view.page(),
+        "Promise.all(["
+        f"window.simlabEditor.exportRecordingPath({json.dumps(str(json_path))},'json'),"
+        f"window.simlabEditor.exportRecordingPath({json.dumps(str(csv_path))},'csv')"
+        "]).then(result=>document.documentElement.dataset.sensorExport="
+        "JSON.stringify(result));true",
+    )
+    _wait_until(
+        app,
+        lambda: bool(
+            _javascript(
+                app,
+                window.web_view.page(),
+                "document.documentElement.dataset.sensorExport || ''",
+            )
+        ),
+    )
+    export_result = json.loads(
+        _javascript(
+            app,
+            window.web_view.page(),
+            "document.documentElement.dataset.sensorExport",
+        )
+    )
+    assert all(item["ok"] for item in export_result)
+    assert json.loads(json_path.read_text(encoding="utf-8")) == recording
+    rows = list(csv.reader(csv_path.read_text(encoding="utf-8").splitlines()))
+    sequence_column = rows[0].index(f"sensor.{sensor.id}.sequence")
+    assert any(row[sequence_column] == "" for row in rows[1:])
+    assert [
+        int(row[sequence_column]) for row in rows[1:] if row[sequence_column]
+    ] == list(range(len(events)))
+    recording_status = _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('#recording-status').textContent",
+    )
+    assert recording_status == f"{len(recording['samples'])} Rows · {len(events)} Events"
+
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('#recording-panel').scrollIntoView({block:'start'});true",
+    )
     # QtWebEngine updates the DOM synchronously but composites offscreen a frame later.
     paint_deadline = time.monotonic() + 0.25
     while time.monotonic() < paint_deadline:

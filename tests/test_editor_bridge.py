@@ -246,11 +246,13 @@ def test_editor_bridge_records_and_exports_robot_joint_state(
     bridge.pauseSimulation()
 
     assert started["data"]["state"]["recording"]["sample_count"] == 1
+    assert started["data"]["state"]["recording"]["sensor_event_count"] == 1
     assert running["ok"] is True
     recording = stopped["data"]["recording"]
     assert stopped["data"]["state"]["recording"]["active"] is False
     assert len(recording["samples"]) == 7
     assert recording["sensor_ids"] == [sensor.id]
+    assert stopped["data"]["state"]["recording"]["sensor_event_count"] == 4
     assert [
         sample["sensors"][sensor.id]["sequence"]
         for sample in recording["samples"]

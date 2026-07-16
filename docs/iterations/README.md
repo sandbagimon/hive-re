@@ -91,3 +91,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-16 Sensor Inspector](2026-07-16-sensor-inspector.md)
 - [2026-07-16 Sensor Recording Contract](2026-07-16-sensor-recording-contract.md)
 - [2026-07-16 Sensor Recording Runtime](2026-07-16-sensor-recording-runtime.md)
+- [2026-07-16 Sensor Recording UI](2026-07-16-sensor-recording-ui.md)

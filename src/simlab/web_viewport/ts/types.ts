@@ -220,6 +220,7 @@ export interface TrajectorySimulationState {
 export interface RecordingSimulationState {
   active: boolean;
   sample_count: number;
+  sensor_event_count: number;
   limit_reached: boolean;
   name: string | null;
 }

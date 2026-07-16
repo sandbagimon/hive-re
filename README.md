@@ -50,7 +50,7 @@ OpenUSD physics values are imported when authored, including rigid-body state, m
 
 OpenUSD articulations are imported as robot actors with independent links, colliders, inertial properties, revolute joints, and position drives. The Scene Tree and viewport preserve the robot hierarchy; joint targets, jog controls, and editable keyframe trajectories drive the generated MuJoCo articulation while live link poses and joint feedback remain separate from authoring transforms.
 
-Robot trajectories can be saved in the scene, reopened, edited, and replayed. Recording captures selected joint qpos/qvel and actuator ctrl/force on every fixed MuJoCo step plus selected sensor events only on the steps where they were emitted. Session, Service, and Bridge preserve the fixed-clock cadence in deterministic JSON and CSV using stable robotics IDs; CSV leaves sensor columns empty between real samples instead of duplicating stale latest values.
+Robot trajectories can be saved in the scene, reopened, edited, and replayed. The Recording panel selects joints and sensors independently, then reports fixed physics rows separately from emitted sensor events. Session, Service, and Bridge preserve the fixed-clock cadence in deterministic JSON and CSV using stable robotics IDs; CSV leaves sensor columns empty between real samples instead of duplicating stale latest values.
 
 The command bar provides 0.25x, 0.5x, 1x, and 2x simulation-speed controls plus measured real-time-factor feedback. Speed changes scale fixed-step scheduling without changing the authored MuJoCo timestep or trajectory/recording timestamps.
 
@@ -104,8 +104,8 @@ task; `PRODUCT_PLAN.md` remains the long-term scope document.
 
 The external OpenUSD robot import, joint-control vertical slice, general controller callback API, and first joint-state sensor runtime/Inspector are complete. The next platform gap is deterministic sensor recording/export followed by IMU and contact/force sensing.
 
-1. **Sensor recording**: Export emitted joint-state samples with stable JSON/CSV columns and no UI-rate resampling.
-2. **Sensors**: Add IMU and contact/force schema, runtime sampling, and UI inspection.
+1. **IMU sensor**: Add link-mounted schema, fixed-clock runtime sampling, recording fields, and UI inspection.
+2. **Contact sensing**: Add contact/force schema, aggregation semantics, recording fields, and UI inspection.
 3. **Clock hardening**: Extend soak coverage for variable host load and long recording sessions.
 4. **Authoring**: Add dedicated collision prim workflows and a consolidated validation panel.
 

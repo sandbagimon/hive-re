@@ -1399,7 +1399,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         reopened_window.web_view.page(),
         "document.querySelector('#recording-status').textContent",
     )
-    assert recording_status_text == f"{len(recording['samples'])} Samples"
+    assert recording_status_text == f"{len(recording['samples'])} Rows · 0 Events"
     _javascript(
         app,
         reopened_window.web_view.page(),

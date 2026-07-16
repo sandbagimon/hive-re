@@ -25,6 +25,7 @@ import type {
   RpcResult,
   RobotActuator,
   RobotJoint,
+  RobotSensor,
   SavePayload,
   Scene,
   SceneTrajectory,
@@ -94,6 +95,7 @@ interface RecordingDraftState {
   signature: string;
   name: string;
   selectedJointIds: Set<string>;
+  selectedSensorIds: Set<string>;
 }
 const recordingDrafts = new Map<string, RecordingDraftState>();
 let bridge = new EditorBridgeClient(null);
@@ -719,6 +721,13 @@ function positionJointBindings(actor: Actor, scene: Scene): PositionJointBinding
   return bindings;
 }
 
+function robotSensors(actor: Actor, scene: Scene): RobotSensor[] {
+  const articulationIds = actor.properties.articulation_ids as string[] | undefined;
+  return scene.robotics?.articulations
+    .filter((item) => articulationIds?.includes(item.id))
+    .flatMap((item) => item.sensors) ?? [];
+}
+
 function currentRobotTargets(actor: Actor, scene: Scene): Record<string, number> {
   const actuatorStates = new Map(
     (store.current.simulationState?.actuators ?? []).map((item) => [item.id, item.ctrl]),
@@ -870,16 +879,31 @@ function updateTrajectoryRuntime(simulationState: SimulationState | null): void 
 
 function ensureRecordingDraft(actor: Actor, scene: Scene): RecordingDraftState {
   const bindings = positionJointBindings(actor, scene);
-  const signature = JSON.stringify(bindings.map(({ joint }) => joint.id));
+  const sensors = robotSensors(actor, scene);
+  const signature = JSON.stringify([
+    bindings.map(({ joint }) => joint.id),
+    sensors.map((sensor) => sensor.id),
+  ]);
   const existing = recordingDrafts.get(actor.id);
   if (existing?.signature === signature) return existing;
   const created: RecordingDraftState = {
     signature,
     name: 'Joint Recording',
     selectedJointIds: new Set(bindings.map(({ joint }) => joint.id)),
+    selectedSensorIds: new Set(),
   };
   recordingDrafts.set(actor.id, created);
   return created;
+}
+
+function sensorsForRecording(
+  actor: Actor,
+  scene: Scene,
+  draft: RecordingDraftState,
+): string[] {
+  return robotSensors(actor, scene)
+    .filter((sensor) => draft.selectedSensorIds.has(sensor.id))
+    .map((sensor) => sensor.id);
 }
 
 function renderRecordingPanel(
@@ -892,16 +916,27 @@ function renderRecordingPanel(
   if (panel.hidden || !actor) return;
   const draft = ensureRecordingDraft(actor, scene);
   const bindings = positionJointBindings(actor, scene);
+  const sensors = robotSensors(actor, scene);
   const controls = element('recording-controls');
   controls.innerHTML = `
     <input class="recording-name" type="text" value="${escapeHtml(draft.name)}" data-recording-name title="Recording name">
-    <div class="recording-joints">
+    <div class="recording-source-title">Joints</div>
+    <div class="recording-sources">
       ${bindings.map(({ joint }) => `
         <label title="${escapeHtml(joint.id)}">
           <input type="checkbox" data-recording-joint="${escapeHtml(joint.id)}" ${draft.selectedJointIds.has(joint.id) ? 'checked' : ''}>
           <span>${escapeHtml(joint.name)}</span>
         </label>`).join('')}
     </div>
+    ${sensors.length ? `
+      <div class="recording-source-title">Sensors</div>
+      <div class="recording-sources">
+        ${sensors.map((sensor) => `
+          <label title="${escapeHtml(sensor.id)}">
+            <input type="checkbox" data-recording-sensor="${escapeHtml(sensor.id)}" ${draft.selectedSensorIds.has(sensor.id) ? 'checked' : ''}>
+            <span>${escapeHtml(sensor.name)}</span>
+          </label>`).join('')}
+      </div>` : ''}
     <div class="recording-actions">
       <button type="button" data-recording-command="start">Start</button>
       <button type="button" data-recording-command="stop">Stop</button>
@@ -917,6 +952,13 @@ function renderRecordingPanel(
       const jointId = checkbox.dataset.recordingJoint ?? '';
       if (checkbox.checked) draft.selectedJointIds.add(jointId);
       else draft.selectedJointIds.delete(jointId);
+    });
+  }
+  for (const checkbox of controls.querySelectorAll<HTMLInputElement>('[data-recording-sensor]')) {
+    checkbox.addEventListener('change', () => {
+      const sensorId = checkbox.dataset.recordingSensor ?? '';
+      if (checkbox.checked) draft.selectedSensorIds.add(sensorId);
+      else draft.selectedSensorIds.delete(sensorId);
     });
   }
   for (const button of controls.querySelectorAll<HTMLButtonElement>('[data-recording-command]')) {
@@ -948,8 +990,9 @@ async function handleRecordingCommand(
     const bindings = positionJointBindings(actor, scene).filter(
       ({ joint }) => draft.selectedJointIds.has(joint.id),
     );
-    if (bindings.length === 0) {
-      showToast('Select at least one joint to record', true);
+    const sensorIds = sensorsForRecording(actor, scene, draft);
+    if (bindings.length === 0 && sensorIds.length === 0) {
+      showToast('Select at least one joint or sensor to record', true);
       return;
     }
     result = await bridge.call<RunPayload>(
@@ -959,6 +1002,7 @@ async function handleRecordingCommand(
         name: draft.name,
         joint_ids: bindings.map(({ joint }) => joint.id),
         actuator_ids: bindings.map(({ actuator }) => actuator.id),
+        sensor_ids: sensorIds,
       }),
     );
   } else if (command === 'stop') {
@@ -991,11 +1035,14 @@ function updateRecordingRuntime(simulationState: SimulationState | null): void {
   const recording = simulationState?.recording;
   const active = recording?.active ?? false;
   const sampleCount = recording?.sample_count ?? 0;
+  const sensorEventCount = recording?.sensor_event_count ?? 0;
   const limitReached = recording?.limit_reached ?? false;
   const status = element('recording-status');
   status.textContent = limitReached
     ? `${sampleCount} · Limit`
-    : active ? `${sampleCount} · Recording` : sampleCount ? `${sampleCount} Samples` : 'Idle';
+    : active
+      ? `${sampleCount} Rows · ${sensorEventCount} Events`
+      : sampleCount ? `${sampleCount} Rows · ${sensorEventCount} Events` : 'Idle';
   status.classList.toggle('limit', limitReached);
   const start = panel.querySelector<HTMLButtonElement>('[data-recording-command="start"]');
   const stop = panel.querySelector<HTMLButtonElement>('[data-recording-command="stop"]');

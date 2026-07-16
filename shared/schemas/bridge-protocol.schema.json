@@ -84,10 +84,11 @@
           "properties": {
             "active": { "type": "boolean" },
             "sample_count": { "type": "integer", "minimum": 0 },
+            "sensor_event_count": { "type": "integer", "minimum": 0 },
             "limit_reached": { "type": "boolean" },
             "name": { "type": ["string", "null"] }
           },
-          "required": ["active", "sample_count", "limit_reached", "name"],
+          "required": ["active", "sample_count", "sensor_event_count", "limit_reached", "name"],
           "additionalProperties": false
         },
         "controller": {

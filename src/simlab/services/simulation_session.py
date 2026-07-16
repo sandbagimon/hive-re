@@ -101,6 +101,7 @@ class ControllerSimulationState:
 class RecordingSimulationState:
     active: bool = False
     sample_count: int = 0
+    sensor_event_count: int = 0
     limit_reached: bool = False
     name: str | None = None
 
@@ -108,6 +109,7 @@ class RecordingSimulationState:
         return {
             "active": self.active,
             "sample_count": self.sample_count,
+            "sensor_event_count": self.sensor_event_count,
             "limit_reached": self.limit_reached,
             "name": self.name,
         }
@@ -613,6 +615,7 @@ class MuJoCoSimulationSession:
         return RecordingSimulationState(
             active=self._state_recorder.active,
             sample_count=len(recording.samples),
+            sensor_event_count=sum(len(sample.sensors) for sample in recording.samples),
             limit_reached=recording.limit_reached,
             name=recording.name,
         )

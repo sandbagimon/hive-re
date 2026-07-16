@@ -117,7 +117,7 @@ def test_robot_session_publishes_fixed_step_joint_sensor_samples(tmp_path) -> No
     session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
 
     initial = session.state()
-    session.start_joint_recording(
+    recording_started = session.start_joint_recording(
         name="Sensor Alignment",
         sensor_ids=["sensor_shoulder_100hz", "sensor_shoulder_50hz"],
     )
@@ -139,6 +139,8 @@ def test_robot_session_publishes_fixed_step_joint_sensor_samples(tmp_path) -> No
         "sensor_shoulder_100hz",
         "sensor_shoulder_50hz",
     ]
+    assert recording_started.recording.sensor_event_count == 2
+    assert stepped.recording.sensor_event_count == 8
     assert [set(sample.sensors) for sample in recording.samples] == [
         {"sensor_shoulder_100hz", "sensor_shoulder_50hz"},
         {"sensor_shoulder_100hz"},
@@ -587,6 +589,7 @@ def test_robot_session_records_every_physics_step(tmp_path) -> None:
 
     assert started.recording.active is True
     assert started.recording.sample_count == 1
+    assert started.recording.sensor_event_count == 0
     assert stepped.recording.sample_count == 5
     assert stopped.recording.active is False
     assert [sample.time for sample in recording.samples] == pytest.approx(
