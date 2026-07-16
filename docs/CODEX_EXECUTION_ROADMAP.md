@@ -1004,8 +1004,21 @@ Stop 后 recording 保留，Reset 恢复 sensor runtime。
 
 实现证据见 `docs/iterations/2026-07-16-contact-recording-runtime.md`。
 
-## 74. 当前下一项具体任务
+## 74. Joint/IMU/Contact Qt Recording E2E（已完成 2026-07-16）
 
 > 建立 Joint/IMU/Contact 联合 Qt Recording E2E：真实 QWebEngine 同时勾选三类 sensor，驱动机械臂接触平台，
 > 验证各自 cadence、总 event count、JSON typed payload、CSV 5/13/56 columns 和空 step；同时检查 UI recording
 > 状态与导出文件一致。
+
+真实 QtWebEngine 已在同一外部 USD 机械臂上挂载 50Hz shoulder state、forearm IMU 和 collider contact。三类
+checkbox 同时录制 41 个 state rows；每类 sequence 连续、相邻 event 0.02s，总 event count 等于三类之和，奇数
+physics step 保持空 sensors。JSON 三类 typed payload 与内存 recording 一致，CSV 同时验证 5/13/56 stable columns、
+空 cells 和非零 contact force；UI status、Console 导出路径、viewport highlight 与截图均通过。
+
+实现证据见 `docs/iterations/2026-07-16-contact-recording-qt-e2e.md`。
+
+## 75. 当前下一项具体任务
+
+> 建立 Sensor Noise Contract：在 robotics sensor schema 中增加可选、可复现的 noise 配置，首版定义 Gaussian
+> white noise、constant bias、seed/stream 规则和各 sensor channel 适用单位；实现独立 deterministic sampler，确保
+> Reset 恢复相同序列、不同 stable sensor ID 使用独立 stream，默认配置保持现有精确值不变。

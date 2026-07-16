@@ -410,7 +410,7 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
     app.processEvents()
 
 
-def test_qt_webengine_displays_live_contact_sensor(tmp_path: Path) -> None:
+def test_qt_webengine_records_joint_imu_and_contact_sensors(tmp_path: Path) -> None:
     pytest.importorskip("mujoco")
     pytest.importorskip("pxr")
     pytest.importorskip("PySide6.QtWebEngineWidgets")
@@ -419,7 +419,7 @@ def test_qt_webengine_displays_live_contact_sensor(tmp_path: Path) -> None:
 
     from simlab.main_window import MainWindow
     from simlab.models.actor import Actor
-    from simlab.models.robotics import Sensor
+    from simlab.models.robotics import RigidTransform, Sensor
     from simlab.models.scene import Scene
     from simlab.models.transform import Transform
     from simlab.services.openusd_importer import import_openusd_asset
@@ -432,15 +432,30 @@ def test_qt_webengine_displays_live_contact_sensor(tmp_path: Path) -> None:
     shoulder = articulation.joints[0]
     forearm = articulation.links[-1]
     collider = forearm.colliders[0]
+    joint_sensor = Sensor(
+        id="sensor_qt_contact_shoulder",
+        name="Shoulder State",
+        sensor_type="joint_state",
+        joint_id=shoulder.id,
+        update_rate_hz=50.0,
+    )
+    imu_sensor = Sensor(
+        id="sensor_qt_contact_imu",
+        name="Forearm IMU",
+        sensor_type="imu",
+        link_id=forearm.id,
+        update_rate_hz=50.0,
+        local_transform=RigidTransform(position=[0.0, 0.0, 0.2]),
+    )
     sensor = Sensor(
         id="sensor_qt_forearm_contact",
         name="Forearm Contact",
         sensor_type="contact",
         collider_id=collider.id,
         aggregation_mode="sum",
-        update_rate_hz=100.0,
+        update_rate_hz=50.0,
     )
-    articulation.sensors.append(sensor)
+    articulation.sensors.extend([joint_sensor, imu_sensor, sensor])
     scene = Scene(
         name="Qt Contact Sensor Scene",
         actors=[
@@ -519,10 +534,30 @@ def test_qt_webengine_displays_live_contact_sensor(tmp_path: Path) -> None:
             "})",
         )
     )
-    assert initial_ui["rows"] == 1
-    assert initial_ui["recordable"] == 1
+    assert initial_ui["rows"] == 3
+    assert initial_ui["recordable"] == 3
     assert initial_ui["scope"] == collider.name
     assert forearm.name in initial_ui["hud"]
+
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelectorAll('[data-recording-sensor]').forEach(sensor=>sensor.click());"
+        "document.querySelector('[data-recording-command=\"start\"]').click();true",
+    )
+
+    def recording_is_active() -> bool:
+        current = json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )["simulationState"]
+        return bool(
+            current
+            and current["recording"]["active"] is True
+            and current["recording"]["sample_count"] == 1
+            and current["recording"]["sensor_event_count"] == 3
+        )
+
+    _wait_until(app, recording_is_active)
 
     _javascript(
         app,
@@ -575,6 +610,18 @@ def test_qt_webengine_displays_live_contact_sensor(tmp_path: Path) -> None:
         )["simulationStatus"]
         == "paused",
     )
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-recording-command=\"stop\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )["simulationState"]["recording"]["active"]
+        is False,
+    )
     assert _javascript(
         app,
         window.web_view.page(),
@@ -614,6 +661,118 @@ def test_qt_webengine_displays_live_contact_sensor(tmp_path: Path) -> None:
     )
     assert live_ui["fields"]["first_normal"] == ", ".join(
         f"{value:.3f}" for value in sample["normals"][0]
+    )
+
+    _javascript(
+        app,
+        window.web_view.page(),
+        "window.simlabEditor.getRecording().then("
+        "result=>document.documentElement.dataset.contactRecording=JSON.stringify(result));true",
+    )
+    _wait_until(
+        app,
+        lambda: bool(
+            _javascript(
+                app,
+                window.web_view.page(),
+                "document.documentElement.dataset.contactRecording || ''",
+            )
+        ),
+    )
+    recording_result = json.loads(
+        _javascript(
+            app,
+            window.web_view.page(),
+            "document.documentElement.dataset.contactRecording",
+        )
+    )
+    assert recording_result["ok"] is True
+    recording = recording_result["data"]["recording"]
+    expected_sensor_ids = [joint_sensor.id, imu_sensor.id, sensor.id]
+    assert recording["sensor_ids"] == expected_sensor_ids
+    assert recording["sensor_types"] == {
+        joint_sensor.id: "joint_state",
+        imu_sensor.id: "imu",
+        sensor.id: "contact",
+    }
+    events_by_id = {
+        sensor_id: [
+            row["sensors"][sensor_id]
+            for row in recording["samples"]
+            if sensor_id in row["sensors"]
+        ]
+        for sensor_id in expected_sensor_ids
+    }
+    for events in events_by_id.values():
+        assert [event["sequence"] for event in events] == list(range(len(events)))
+        assert all(
+            right["time"] - left["time"] == pytest.approx(0.02)
+            for left, right in zip(events, events[1:], strict=False)
+        )
+    assert all(
+        event["sensor_type"] == expected_type
+        for sensor_id, expected_type in recording["sensor_types"].items()
+        for event in events_by_id[sensor_id]
+    )
+    assert events_by_id[sensor.id][0]["contact_count"] == 0
+    assert any(event["contact_count"] > 0 for event in events_by_id[sensor.id])
+    assert any(not row["sensors"] for row in recording["samples"][1:])
+    assert state["recording"]["sensor_event_count"] == sum(
+        len(events) for events in events_by_id.values()
+    )
+
+    json_path = tmp_path / "recordings" / "contact-sensors.json"
+    csv_path = tmp_path / "recordings" / "contact-sensors.csv"
+    _javascript(
+        app,
+        window.web_view.page(),
+        "Promise.all(["
+        f"window.simlabEditor.exportRecordingPath({json.dumps(str(json_path))},'json'),"
+        f"window.simlabEditor.exportRecordingPath({json.dumps(str(csv_path))},'csv')"
+        "]).then(result=>document.documentElement.dataset.contactExport="
+        "JSON.stringify(result));true",
+    )
+    _wait_until(
+        app,
+        lambda: bool(
+            _javascript(
+                app,
+                window.web_view.page(),
+                "document.documentElement.dataset.contactExport || ''",
+            )
+        ),
+    )
+    export_result = json.loads(
+        _javascript(
+            app,
+            window.web_view.page(),
+            "document.documentElement.dataset.contactExport",
+        )
+    )
+    assert all(item["ok"] for item in export_result)
+    assert json.loads(json_path.read_text(encoding="utf-8")) == recording
+    rows = list(csv.reader(csv_path.read_text(encoding="utf-8").splitlines()))
+    sequence_columns = {
+        sensor_id: rows[0].index(f"sensor.{sensor_id}.sequence")
+        for sensor_id in expected_sensor_ids
+    }
+    assert f"sensor.{joint_sensor.id}.qvel" in rows[0]
+    assert f"sensor.{imu_sensor.id}.orientation.w" in rows[0]
+    assert f"sensor.{sensor.id}.normal_force" in rows[0]
+    assert f"sensor.{sensor.id}.point.7.x" in rows[0]
+    assert f"sensor.{sensor.id}.normal.7.z" in rows[0]
+    for sensor_id, column in sequence_columns.items():
+        assert [int(row[column]) for row in rows[1:] if row[column]] == list(
+            range(len(events_by_id[sensor_id]))
+        )
+    assert any(
+        all(row[column] == "" for column in sequence_columns.values())
+        for row in rows[2:]
+    )
+    normal_force_column = rows[0].index(f"sensor.{sensor.id}.normal_force")
+    assert any(
+        value and float(value) > 0
+        for value in (row[normal_force_column] for row in rows[1:])
     )
 
     window.web_view.update()
