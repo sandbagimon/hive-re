@@ -2,6 +2,7 @@ import type {
   Actor,
   ActorProperties,
   AssetMetadata,
+  JointTrajectory,
   Scene,
   RoboticsModel,
   SimulationState,
@@ -166,6 +167,10 @@ export class EditorStore {
       );
       if (scene.robotics.articulations.length === 0) delete scene.robotics;
     }
+    if (scene.trajectories) {
+      scene.trajectories = scene.trajectories.filter((item) => item.actor_id !== actorId);
+      if (scene.trajectories.length === 0) delete scene.trajectories;
+    }
     this.commit(scene, this.state.selectedActorId === actorId ? null : this.state.selectedActorId);
     this.appendLog(`Deleted actor: ${actor.name}`);
   }
@@ -188,6 +193,42 @@ export class EditorStore {
         };
       }
     });
+  }
+
+  upsertTrajectory(
+    actorId: string,
+    trajectory: JointTrajectory,
+    trajectoryId?: string,
+  ): string | null {
+    const actor = this.state.scene.actors.find((item) => item.id === actorId);
+    if (actor?.type !== 'robot') return null;
+    const scene = cloneScene(this.state.scene);
+    const id = trajectoryId ?? this.nextTrajectoryId(scene);
+    const item = {
+      id,
+      actor_id: actorId,
+      trajectory: structuredClone(trajectory),
+    };
+    const index = scene.trajectories?.findIndex((existing) => existing.id === id) ?? -1;
+    if (index >= 0 && scene.trajectories) scene.trajectories[index] = item;
+    else scene.trajectories = [...(scene.trajectories ?? []), item];
+    this.commit(scene, actorId, true);
+    this.appendLog(`${index >= 0 ? 'Updated' : 'Saved'} trajectory: ${trajectory.name}`);
+    return id;
+  }
+
+  removeTrajectory(trajectoryId: string): void {
+    const item = this.state.scene.trajectories?.find(
+      (trajectory) => trajectory.id === trajectoryId,
+    );
+    if (!item) return;
+    const scene = cloneScene(this.state.scene);
+    scene.trajectories = scene.trajectories?.filter(
+      (trajectory) => trajectory.id !== trajectoryId,
+    );
+    if (scene.trajectories?.length === 0) delete scene.trajectories;
+    this.commit(scene, this.state.selectedActorId, true);
+    this.appendLog(`Deleted trajectory: ${item.trajectory.name}`);
   }
 
   undo(): void {
@@ -232,7 +273,11 @@ export class EditorStore {
     this.commit(scene, actorId);
   }
 
-  private commit(scene: Scene, selectedActorId: string | null): void {
+  private commit(
+    scene: Scene,
+    selectedActorId: string | null,
+    preserveJointSelection = false,
+  ): void {
     if (sceneSnapshot(scene) === sceneSnapshot(this.state.scene)) return;
     this.undoStack.push(cloneScene(this.state.scene));
     if (this.undoStack.length > 100) this.undoStack.shift();
@@ -240,7 +285,7 @@ export class EditorStore {
     this.patch({
       scene,
       selectedActorId,
-      selectedJointId: null,
+      selectedJointId: preserveJointSelection ? this.state.selectedJointId : null,
       dirty: sceneSnapshot(scene) !== this.savedSnapshot,
       canUndo: true,
       canRedo: false,
@@ -277,6 +322,13 @@ export class EditorStore {
       return match ? Math.max(current, Number(match[1])) : current;
     }, 0);
     return `actor_${String(highest + 1).padStart(3, '0')}`;
+  }
+
+  private nextTrajectoryId(scene: Scene): string {
+    const used = new Set((scene.trajectories ?? []).map((item) => item.id));
+    let index = 1;
+    while (used.has(`trajectory_${String(index).padStart(3, '0')}`)) index += 1;
+    return `trajectory_${String(index).padStart(3, '0')}`;
   }
 
   private patch(values: Partial<EditorState>): void {

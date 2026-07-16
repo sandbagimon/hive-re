@@ -69,3 +69,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-16 Keyframe List UI](2026-07-16-keyframe-list-ui.md)
 - [2026-07-16 Multi-Keyframe Qt E2E](2026-07-16-multi-keyframe-qt-e2e.md)
 - [2026-07-16 Trajectory Library Contract](2026-07-16-trajectory-library-contract.md)
+- [2026-07-16 EditorStore Trajectory Library](2026-07-16-editor-store-trajectory-library.md)

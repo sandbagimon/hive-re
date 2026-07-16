@@ -66,7 +66,41 @@ store.selectJoint(robotActorId, 'joint_missing');
 assert.equal(store.current.selectedJointId, 'joint_001');
 store.selectActor(robotActorId);
 assert.equal(store.current.selectedJointId, null);
+
+store.selectJoint(robotActorId, 'joint_001');
+const trajectory = {
+  version: '1.0',
+  name: 'Reach',
+  loop: false,
+  keyframes: [
+    { time: 0, targets: { joint_001: 0 } },
+    { time: 1, targets: { joint_001: 0.5 } },
+  ],
+};
+const trajectoryId = store.upsertTrajectory(robotActorId, trajectory);
+assert.equal(trajectoryId, 'trajectory_001');
+assert.equal(store.current.scene.trajectories.length, 1);
+assert.equal(store.current.selectedJointId, 'joint_001');
+store.markSaved('/tmp/robot-scene.json');
+
+store.upsertTrajectory(robotActorId, {
+  ...trajectory,
+  name: 'Reach Updated',
+}, trajectoryId);
+assert.equal(store.current.scene.trajectories[0].trajectory.name, 'Reach Updated');
+assert.equal(store.current.dirty, true);
+store.undo();
+assert.equal(store.current.scene.trajectories[0].trajectory.name, 'Reach');
+assert.equal(store.current.dirty, false);
+store.redo();
+assert.equal(store.current.scene.trajectories[0].trajectory.name, 'Reach Updated');
+
+store.removeTrajectory(trajectoryId);
+assert.equal(store.current.scene.trajectories, undefined);
+store.undo();
+assert.equal(store.current.scene.trajectories.length, 1);
 store.deleteActor(store.current.scene.actors.at(-1).id);
 assert.equal(store.current.scene.robotics, undefined);
+assert.equal(store.current.scene.trajectories, undefined);
 
 console.log('EditorStore add/undo/redo/dirty/selection: passed');
