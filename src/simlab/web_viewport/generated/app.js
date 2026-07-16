@@ -757,7 +757,7 @@ function updateTrajectoryRuntime(simulationState) {
 }
 function ensureRecordingDraft(actor, scene) {
     const bindings = positionJointBindings(actor, scene);
-    const sensors = robotSensors(actor, scene).filter((sensor) => ['joint_state', 'imu'].includes(sensor.sensor_type));
+    const sensors = robotSensors(actor, scene).filter((sensor) => ['joint_state', 'imu', 'contact'].includes(sensor.sensor_type));
     const signature = JSON.stringify([
         bindings.map(({ joint }) => joint.id),
         sensors.map((sensor) => sensor.id),
@@ -776,7 +776,7 @@ function ensureRecordingDraft(actor, scene) {
 }
 function sensorsForRecording(actor, scene, draft) {
     return robotSensors(actor, scene)
-        .filter((sensor) => ['joint_state', 'imu'].includes(sensor.sensor_type))
+        .filter((sensor) => ['joint_state', 'imu', 'contact'].includes(sensor.sensor_type))
         .filter((sensor) => draft.selectedSensorIds.has(sensor.id))
         .map((sensor) => sensor.id);
 }
@@ -787,7 +787,7 @@ function renderRecordingPanel(actor, scene, simulationState) {
         return;
     const draft = ensureRecordingDraft(actor, scene);
     const bindings = positionJointBindings(actor, scene);
-    const sensors = robotSensors(actor, scene).filter((sensor) => ['joint_state', 'imu'].includes(sensor.sensor_type));
+    const sensors = robotSensors(actor, scene).filter((sensor) => ['joint_state', 'imu', 'contact'].includes(sensor.sensor_type));
     const controls = element('recording-controls');
     controls.innerHTML = `
     <input class="recording-name" type="text" value="${escapeHtml(draft.name)}" data-recording-name title="Recording name">

@@ -91,6 +91,7 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert 'id="controller-panel"' in html
     assert "data-recording-joint" in app
     assert "data-recording-sensor" in app
+    assert "['joint_state', 'imu', 'contact']" in app
     assert "sensor_ids: sensorIds" in app
     assert "data-recording-command" in app
     assert "updateRecordingRuntime" in app

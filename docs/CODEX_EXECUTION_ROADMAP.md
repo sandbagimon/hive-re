@@ -991,8 +991,21 @@ Recording model/recorder/shared schema 已支持 contact typed event。每个 co
 
 实现证据见 `docs/iterations/2026-07-16-contact-recording-contract.md`。
 
-## 73. 当前下一项具体任务
+## 73. Contact Recording Runtime/UI（已完成 2026-07-16）
 
 > 接入 Contact Recording Runtime/UI：Session 将 contact emitted samples 与 joint/IMU 同步送入 recorder，允许
 > selected contact sensor type；Recording Panel 展示 contact checkbox。验证 t=0 empty event、每步 cadence、接触
 > 发生后的 typed event、event count、Reset/Stop 边界与 JSON/CSV 导出。
+
+Session 已保留 ContactSensorScheduler 的 emitted tuple，并与 joint/IMU events 同步 capture；t=0 latest contact
+sequence 0 进入首行。Recording Panel 已开放 contact checkbox。100Hz physics 下的 50Hz contact 回归验证 251 个
+state rows 中 126 个 sequence 0-125 events、交替空 step、接触 typed payload、event count 和 stable CSV header；
+Stop 后 recording 保留，Reset 恢复 sensor runtime。
+
+实现证据见 `docs/iterations/2026-07-16-contact-recording-runtime.md`。
+
+## 74. 当前下一项具体任务
+
+> 建立 Joint/IMU/Contact 联合 Qt Recording E2E：真实 QWebEngine 同时勾选三类 sensor，驱动机械臂接触平台，
+> 验证各自 cadence、总 event count、JSON typed payload、CSV 5/13/56 columns 和空 step；同时检查 UI recording
+> 状态与导出文件一致。

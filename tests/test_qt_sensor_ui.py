@@ -520,7 +520,7 @@ def test_qt_webengine_displays_live_contact_sensor(tmp_path: Path) -> None:
         )
     )
     assert initial_ui["rows"] == 1
-    assert initial_ui["recordable"] == 0
+    assert initial_ui["recordable"] == 1
     assert initial_ui["scope"] == collider.name
     assert forearm.name in initial_ui["hud"]
 

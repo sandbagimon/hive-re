@@ -939,7 +939,7 @@ function updateTrajectoryRuntime(simulationState: SimulationState | null): void 
 function ensureRecordingDraft(actor: Actor, scene: Scene): RecordingDraftState {
   const bindings = positionJointBindings(actor, scene);
   const sensors = robotSensors(actor, scene).filter(
-    (sensor) => ['joint_state', 'imu'].includes(sensor.sensor_type),
+    (sensor) => ['joint_state', 'imu', 'contact'].includes(sensor.sensor_type),
   );
   const signature = JSON.stringify([
     bindings.map(({ joint }) => joint.id),
@@ -963,7 +963,7 @@ function sensorsForRecording(
   draft: RecordingDraftState,
 ): string[] {
   return robotSensors(actor, scene)
-    .filter((sensor) => ['joint_state', 'imu'].includes(sensor.sensor_type))
+    .filter((sensor) => ['joint_state', 'imu', 'contact'].includes(sensor.sensor_type))
     .filter((sensor) => draft.selectedSensorIds.has(sensor.id))
     .map((sensor) => sensor.id);
 }
@@ -979,7 +979,7 @@ function renderRecordingPanel(
   const draft = ensureRecordingDraft(actor, scene);
   const bindings = positionJointBindings(actor, scene);
   const sensors = robotSensors(actor, scene).filter(
-    (sensor) => ['joint_state', 'imu'].includes(sensor.sensor_type),
+    (sensor) => ['joint_state', 'imu', 'contact'].includes(sensor.sensor_type),
   );
   const controls = element('recording-controls');
   controls.innerHTML = `

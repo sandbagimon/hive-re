@@ -317,7 +317,7 @@ def test_robot_session_publishes_contact_transition_and_empty_reset(tmp_path) ->
         sensor_type="contact",
         collider_id=forearm.colliders[0].id,
         aggregation_mode="sum",
-        update_rate_hz=100.0,
+        update_rate_hz=50.0,
     )
     articulation.sensors.append(contact_sensor)
     scene = Scene(
@@ -351,14 +351,23 @@ def test_robot_session_publishes_contact_transition_and_empty_reset(tmp_path) ->
     session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
 
     initial = session.state().sensors[0]
+    started = session.start_joint_recording(
+        name="Contact Recording",
+        joint_ids=[],
+        actuator_ids=[],
+        sensor_ids=[contact_sensor.id],
+    )
     session.set_joint_position_targets({articulation.joints[0].id: 1.57})
-    active = session.step(steps=250).sensors[0]
+    active_state = session.step(steps=250)
+    active = active_state.sensors[0]
+    _, recording = session.stop_joint_recording()
     reset = session.reset().sensors[0]
 
     assert initial.sensor_id == contact_sensor.id
     assert initial.sequence == 0
     assert initial.measurement.contact_count == 0
-    assert active.sequence == 250
+    assert started.recording.sensor_event_count == 1
+    assert active.sequence == 125
     assert active.measurement.contact_count > 0
     assert active.measurement.normal_force > 0
     assert active.measurement.points
@@ -366,9 +375,19 @@ def test_robot_session_publishes_contact_transition_and_empty_reset(tmp_path) ->
     assert reset.sequence == 0
     assert reset.time == 0
     assert reset.measurement.contact_count == 0
-
-    with pytest.raises(ValueError, match="Recording does not support sensor ID"):
-        session.start_joint_recording(name="Unsupported Contact", sensor_ids=[contact_sensor.id])
+    assert recording.sensor_types == {contact_sensor.id: "contact"}
+    events = [
+        sample.sensors[contact_sensor.id]
+        for sample in recording.samples
+        if contact_sensor.id in sample.sensors
+    ]
+    assert [event.sequence for event in events] == list(range(126))
+    assert events[0].contact_count == 0
+    assert any(event.contact_count > 0 for event in events)
+    assert any(not sample.sensors for sample in recording.samples[1:])
+    assert events[-1].to_dict()["sensor_type"] == "contact"
+    assert f"sensor.{contact_sensor.id}.normal_force" in recording.to_csv().splitlines()[0]
+    assert active_state.recording.sensor_event_count == 126
 
 
 def test_robot_joint_commands_are_atomic_and_publish_fault_state(tmp_path) -> None:
