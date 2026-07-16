@@ -638,7 +638,17 @@ Editor Automation API 可无对话框保存和打开真实 scene 文件。非法
 
 实现证据见 `docs/iterations/2026-07-16-trajectory-save-open-e2e.md`。
 
-## 43. 当前下一项具体任务
+## 43. Joint State Recording Contract（已完成 2026-07-16）
 
 > 建立 Joint State Recording Contract：按 physics step 采集选定 robot joint 的 qpos/qvel、actuator
 > ctrl/force 和 simulation time，定义 recording manifest 与 JSON/CSV 导出，设置最大采样数保护。
+
+共享 schema、Python recording model 和 bounded recorder 已完成；manifest 固定 MuJoCo/version/timestep/
+scene version，JSON/CSV 使用稳定 ID 顺序，未知 ID、非 finite/非递增 sample 会明确拒绝。
+
+实现证据见 `docs/iterations/2026-07-16-joint-state-recording-contract.md`。
+
+## 44. 当前下一项具体任务
+
+> 将 JointStateRecorder 接入 MuJoCo Session 和 SimulationService：每个 `mj_step` 后 capture，而非每个
+> QTimer callback；提供 start/stop/get/export RPC，runtime state 发布 recording active/count/limit。

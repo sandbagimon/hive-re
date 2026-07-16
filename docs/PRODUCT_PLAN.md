@@ -697,7 +697,7 @@ SimLab Desktop
 | M3 MuJoCo Live State Sync | ✅ 第一版 | 90% | pose sync、固定时钟、catch-up cap 与 runtime fault containment |
 | M4 Robot Import | ✅ 第一版 | 100% | 外部 USD 导入、Bridge、MuJoCo、控制、Link sync 与 Reset 已闭环 |
 | M5 Physics Authoring | 🔶 部分完成 | 55% | primitive physics、material presets、collider debug，缺少 solver/constraints |
-| M6 Timeline & Recording | 🔶 已开始 | 88% | trajectory authoring、项目持久化与 Save/Open/Replay Qt E2E 已闭环 |
+| M6 Timeline & Recording | 🔶 已开始 | 90% | trajectory 闭环与 joint state recording contract 已完成 |
 | M7 Asset Pipeline | 🔶 部分完成 | 40% | OpenUSD mesh import，缺少 texture/material、asset library、thumbnails |
 | M8 Controller API | 🔶 已开始 | 90% | trajectory 多帧控制、持久化和重开 replay 已闭环 |
 | M9 Experiment/Env | 🔴 仅 stub | 5% | `SimLabEnv` 占位，不可训练 |

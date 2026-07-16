@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://simlab.local/schemas/joint-recording.schema.json",
+  "title": "SimLabJointStateRecording",
+  "$defs": {
+    "jointState": {
+      "type": "object",
+      "properties": {
+        "qpos": { "type": "number" },
+        "qvel": { "type": "number" }
+      },
+      "required": ["qpos", "qvel"],
+      "additionalProperties": false
+    },
+    "actuatorState": {
+      "type": "object",
+      "properties": {
+        "ctrl": { "type": "number" },
+        "force": { "type": "number" }
+      },
+      "required": ["ctrl", "force"],
+      "additionalProperties": false
+    },
+    "sample": {
+      "type": "object",
+      "properties": {
+        "time": { "type": "number", "minimum": 0 },
+        "joints": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/jointState" }
+        },
+        "actuators": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/actuatorState" }
+        }
+      },
+      "required": ["time", "joints", "actuators"],
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "version": { "const": "1.0" },
+    "name": { "type": "string", "minLength": 1 },
+    "manifest": {
+      "type": "object",
+      "properties": {
+        "engine": { "const": "mujoco" },
+        "engine_version": { "type": "string", "minLength": 1 },
+        "timestep": { "type": "number", "exclusiveMinimum": 0 },
+        "scene_version": { "type": "string", "minLength": 1 }
+      },
+      "required": ["engine", "engine_version", "timestep", "scene_version"],
+      "additionalProperties": false
+    },
+    "joint_ids": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "actuator_ids": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "limit_reached": { "type": "boolean" },
+    "samples": { "type": "array", "items": { "$ref": "#/$defs/sample" } }
+  },
+  "required": ["version", "name", "manifest", "joint_ids", "actuator_ids", "limit_reached", "samples"],
+  "additionalProperties": false
+}
