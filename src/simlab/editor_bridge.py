@@ -353,6 +353,20 @@ class EditorBridge(QObject):
         except Exception as exc:
             return self._failure(exc)
 
+    @Slot(str, result=str)
+    def exportRecordingDialog(self, format_name: str) -> str:
+        if format_name not in {"json", "csv"}:
+            return self._failure("Recording format must be 'json' or 'csv'")
+        selected, _ = QFileDialog.getSaveFileName(
+            self.parent_widget,
+            "Export Joint Recording",
+            str(self.project_root / "recordings" / f"joint-recording.{format_name}"),
+            f"{format_name.upper()} (*.{format_name})",
+        )
+        if not selected:
+            return self._failure("Cancelled")
+        return self.exportRecording(selected, format_name)
+
     @Slot(str, bool, str)
     def setEditorState(self, scene_json: str, dirty: bool, current_path: str) -> None:
         scene_changed = scene_json != self.synced_scene_json

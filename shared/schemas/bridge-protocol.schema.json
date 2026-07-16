@@ -134,6 +134,7 @@
         "stopRecording",
         "getRecording",
         "exportRecording",
+        "exportRecordingDialog",
         "setEditorState"
       ]
     },

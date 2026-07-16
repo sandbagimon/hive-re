@@ -11,6 +11,7 @@ const materialPresets = {
 };
 const store = new EditorStore();
 const trajectoryDrafts = new Map();
+const recordingDrafts = new Map();
 let bridge = new EditorBridgeClient(null);
 let previousSceneJson = '';
 let previousSelectedActorId = null;
@@ -638,6 +639,124 @@ function updateTrajectoryRuntime(simulationState) {
     if (stop)
         stop.disabled = !loaded;
 }
+function ensureRecordingDraft(actor, scene) {
+    const bindings = positionJointBindings(actor, scene);
+    const signature = JSON.stringify(bindings.map(({ joint }) => joint.id));
+    const existing = recordingDrafts.get(actor.id);
+    if (existing?.signature === signature)
+        return existing;
+    const created = {
+        signature,
+        name: 'Joint Recording',
+        selectedJointIds: new Set(bindings.map(({ joint }) => joint.id)),
+    };
+    recordingDrafts.set(actor.id, created);
+    return created;
+}
+function renderRecordingPanel(actor, scene, simulationState) {
+    const panel = element('recording-panel');
+    panel.hidden = actor?.type !== 'robot';
+    if (panel.hidden || !actor)
+        return;
+    const draft = ensureRecordingDraft(actor, scene);
+    const bindings = positionJointBindings(actor, scene);
+    const controls = element('recording-controls');
+    controls.innerHTML = `
+    <input class="recording-name" type="text" value="${escapeHtml(draft.name)}" data-recording-name title="Recording name">
+    <div class="recording-joints">
+      ${bindings.map(({ joint }) => `
+        <label title="${escapeHtml(joint.id)}">
+          <input type="checkbox" data-recording-joint="${escapeHtml(joint.id)}" ${draft.selectedJointIds.has(joint.id) ? 'checked' : ''}>
+          <span>${escapeHtml(joint.name)}</span>
+        </label>`).join('')}
+    </div>
+    <div class="recording-actions">
+      <button type="button" data-recording-command="start">Start</button>
+      <button type="button" data-recording-command="stop">Stop</button>
+      <button type="button" data-recording-export="json">Export JSON</button>
+      <button type="button" data-recording-export="csv">Export CSV</button>
+    </div>`;
+    controls.querySelector('[data-recording-name]')?.addEventListener('change', (event) => { draft.name = event.currentTarget.value; });
+    for (const checkbox of controls.querySelectorAll('[data-recording-joint]')) {
+        checkbox.addEventListener('change', () => {
+            const jointId = checkbox.dataset.recordingJoint ?? '';
+            if (checkbox.checked)
+                draft.selectedJointIds.add(jointId);
+            else
+                draft.selectedJointIds.delete(jointId);
+        });
+    }
+    for (const button of controls.querySelectorAll('[data-recording-command]')) {
+        button.addEventListener('click', () => {
+            void handleRecordingCommand(button.dataset.recordingCommand ?? '', actor, scene, draft);
+        });
+    }
+    for (const button of controls.querySelectorAll('[data-recording-export]')) {
+        button.addEventListener('click', () => {
+            void exportRecording(button.dataset.recordingExport ?? 'json');
+        });
+    }
+    updateRecordingRuntime(simulationState);
+}
+async function handleRecordingCommand(command, actor, scene, draft) {
+    let result;
+    if (command === 'start') {
+        const bindings = positionJointBindings(actor, scene).filter(({ joint }) => draft.selectedJointIds.has(joint.id));
+        if (bindings.length === 0) {
+            showToast('Select at least one joint to record', true);
+            return;
+        }
+        result = await bridge.call('startRecording', JSON.stringify(scene), JSON.stringify({
+            name: draft.name,
+            joint_ids: bindings.map(({ joint }) => joint.id),
+            actuator_ids: bindings.map(({ actuator }) => actuator.id),
+        }));
+    }
+    else if (command === 'stop') {
+        result = await bridge.call('stopRecording');
+    }
+    else
+        return;
+    if (!result.ok || !result.data) {
+        showToast(result.error ?? `Recording ${command} failed`, true);
+        return;
+    }
+    const status = store.current.simulationStatus === 'running' ? 'running' : 'paused';
+    store.setSimulation(status, result.data.state);
+}
+async function exportRecording(formatName) {
+    const result = await bridge.call('exportRecordingDialog', formatName);
+    if (!result.ok || !result.data) {
+        if (result.error !== 'Cancelled')
+            showToast(result.error ?? 'Recording export failed', true);
+        return;
+    }
+    store.appendLog(`Exported recording: ${result.data.path}`);
+    showToast(`Exported ${result.data.sample_count} samples`);
+}
+function updateRecordingRuntime(simulationState) {
+    const panel = element('recording-panel');
+    if (panel.hidden)
+        return;
+    const recording = simulationState?.recording;
+    const active = recording?.active ?? false;
+    const sampleCount = recording?.sample_count ?? 0;
+    const limitReached = recording?.limit_reached ?? false;
+    const status = element('recording-status');
+    status.textContent = limitReached
+        ? `${sampleCount} · Limit`
+        : active ? `${sampleCount} · Recording` : sampleCount ? `${sampleCount} Samples` : 'Idle';
+    status.classList.toggle('limit', limitReached);
+    const start = panel.querySelector('[data-recording-command="start"]');
+    const stop = panel.querySelector('[data-recording-command="stop"]');
+    if (start)
+        start.disabled = active;
+    if (stop)
+        stop.disabled = !active;
+    for (const button of panel.querySelectorAll('[data-recording-export]')) {
+        button.disabled = active || sampleCount === 0;
+    }
+}
 function render() {
     const state = store.current;
     element('project-label').textContent = `${state.dirty ? '* ' : ''}${state.scene.name}`;
@@ -651,6 +770,7 @@ function render() {
     renderSceneTree(state.scene, state.selectedActorId, state.selectedJointId);
     renderInspector(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.scene, state.simulationState, state.selectedJointId);
     renderTrajectoryPanel(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.scene, state.simulationState);
+    renderRecordingPanel(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.scene, state.simulationState);
     renderValidation(state.validationIssues);
     renderConsole(state.logs);
 }
@@ -677,6 +797,7 @@ async function openProjectPath(path) {
     const result = await bridge.call('openProjectPath', path);
     if (result.ok && result.data) {
         trajectoryDrafts.clear();
+        recordingDrafts.clear();
         store.loadScene(result.data.scene, result.data.path);
         store.appendLog(`Opened scene: ${result.data.path}`);
     }
@@ -688,12 +809,14 @@ function allowDiscard() {
 async function handleCommand(command) {
     if (command === 'new' && allowDiscard()) {
         trajectoryDrafts.clear();
+        recordingDrafts.clear();
         store.newScene();
     }
     else if (command === 'open' && allowDiscard()) {
         const result = await bridge.call('openProject');
         if (result.ok && result.data) {
             trajectoryDrafts.clear();
+            recordingDrafts.clear();
             store.loadScene(result.data.scene, result.data.path);
             store.appendLog(`Opened scene: ${result.data.path}`);
         }
@@ -824,6 +947,7 @@ store.subscribe((state) => {
         applySimulationState(state.simulationState);
         updateRuntimeInspector(state.simulationState);
         updateTrajectoryRuntime(state.simulationState);
+        updateRecordingRuntime(state.simulationState);
         previousSimulationState = state.simulationState;
     }
     const nextSync = `${sceneJson}:${state.dirty}`;

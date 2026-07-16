@@ -658,7 +658,17 @@ Bridge 已提供 start/stop/get/export，JSON/CSV 显式路径导出通过真实
 
 实现证据见 `docs/iterations/2026-07-16-recording-runtime-rpc.md`。
 
-## 45. 当前下一项具体任务
+## 45. TypeScript Recording Panel（已完成 2026-07-16）
 
 > 实现 TypeScript Recording Panel：名称、joint selection、Start/Stop、live sample count/limit badge 和
 > JSON/CSV Export；默认选中当前 robot 全部 joints/actuators，runtime 更新使用局部 DOM。
+
+独立 Recording section 已提供名称、逐 joint selection、Start/Stop 和 JSON/CSV native dialog export；
+sample count/limit 使用局部 DOM 更新，New/Open 隔离 selection draft。真实 Qt 布局验收通过。
+
+实现证据见 `docs/iterations/2026-07-16-recording-panel.md`。
+
+## 46. 当前下一项具体任务
+
+> 增加 Recording Qt E2E：在重开 robot scene 后只选 AxisA、Start、播放三帧轨迹、Stop；验证 live
+> sample count 等于 artifact 长度，并通过 explicit export RPC 检查 JSON/CSV times/columns/values。

@@ -312,6 +312,7 @@ export interface PythonBridgeObject {
   stopRecording(callback: (result: string) => void): void;
   getRecording(callback: (result: string) => void): void;
   exportRecording(path: string, formatName: string, callback: (result: string) => void): void;
+  exportRecordingDialog(formatName: string, callback: (result: string) => void): void;
   setEditorState(sceneJson: string, dirty: boolean, currentPath: string): void;
   simulationStateChanged: QtSignal<[string]>;
   simulationStatusChanged: QtSignal<[string]>;

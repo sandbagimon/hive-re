@@ -50,6 +50,12 @@ interface RunPayload {
   issues?: ValidationIssue[];
 }
 
+interface RecordingExportPayload {
+  path: string;
+  format: 'json' | 'csv';
+  sample_count: number;
+}
+
 const materialPresets: Record<string, Partial<PhysicsProperties>> = {
   default: { density: 1000, friction: [0.8, 0.005, 0.0001], solref: [0.02, 1], solimp: [0.9, 0.95, 0.001, 0.5, 2], roughness: 0.55, metalness: 0.04 },
   rubber: { density: 1100, friction: [1.2, 0.01, 0.0002], solref: [0.03, 1], solimp: [0.88, 0.96, 0.002, 0.5, 2], roughness: 0.86, metalness: 0 },
@@ -68,6 +74,12 @@ interface TrajectoryDraftState {
   nextKeyframeId: number;
 }
 const trajectoryDrafts = new Map<string, TrajectoryDraftState>();
+interface RecordingDraftState {
+  signature: string;
+  name: string;
+  selectedJointIds: Set<string>;
+}
+const recordingDrafts = new Map<string, RecordingDraftState>();
 let bridge = new EditorBridgeClient(null);
 let previousSceneJson = '';
 let previousSelectedActorId: string | null = null;
@@ -796,6 +808,144 @@ function updateTrajectoryRuntime(simulationState: SimulationState | null): void 
   if (stop) stop.disabled = !loaded;
 }
 
+function ensureRecordingDraft(actor: Actor, scene: Scene): RecordingDraftState {
+  const bindings = positionJointBindings(actor, scene);
+  const signature = JSON.stringify(bindings.map(({ joint }) => joint.id));
+  const existing = recordingDrafts.get(actor.id);
+  if (existing?.signature === signature) return existing;
+  const created: RecordingDraftState = {
+    signature,
+    name: 'Joint Recording',
+    selectedJointIds: new Set(bindings.map(({ joint }) => joint.id)),
+  };
+  recordingDrafts.set(actor.id, created);
+  return created;
+}
+
+function renderRecordingPanel(
+  actor: Actor | undefined,
+  scene: Scene,
+  simulationState: SimulationState | null,
+): void {
+  const panel = element('recording-panel');
+  panel.hidden = actor?.type !== 'robot';
+  if (panel.hidden || !actor) return;
+  const draft = ensureRecordingDraft(actor, scene);
+  const bindings = positionJointBindings(actor, scene);
+  const controls = element('recording-controls');
+  controls.innerHTML = `
+    <input class="recording-name" type="text" value="${escapeHtml(draft.name)}" data-recording-name title="Recording name">
+    <div class="recording-joints">
+      ${bindings.map(({ joint }) => `
+        <label title="${escapeHtml(joint.id)}">
+          <input type="checkbox" data-recording-joint="${escapeHtml(joint.id)}" ${draft.selectedJointIds.has(joint.id) ? 'checked' : ''}>
+          <span>${escapeHtml(joint.name)}</span>
+        </label>`).join('')}
+    </div>
+    <div class="recording-actions">
+      <button type="button" data-recording-command="start">Start</button>
+      <button type="button" data-recording-command="stop">Stop</button>
+      <button type="button" data-recording-export="json">Export JSON</button>
+      <button type="button" data-recording-export="csv">Export CSV</button>
+    </div>`;
+  controls.querySelector<HTMLInputElement>('[data-recording-name]')?.addEventListener(
+    'change',
+    (event) => { draft.name = (event.currentTarget as HTMLInputElement).value; },
+  );
+  for (const checkbox of controls.querySelectorAll<HTMLInputElement>('[data-recording-joint]')) {
+    checkbox.addEventListener('change', () => {
+      const jointId = checkbox.dataset.recordingJoint ?? '';
+      if (checkbox.checked) draft.selectedJointIds.add(jointId);
+      else draft.selectedJointIds.delete(jointId);
+    });
+  }
+  for (const button of controls.querySelectorAll<HTMLButtonElement>('[data-recording-command]')) {
+    button.addEventListener('click', () => {
+      void handleRecordingCommand(
+        button.dataset.recordingCommand ?? '',
+        actor,
+        scene,
+        draft,
+      );
+    });
+  }
+  for (const button of controls.querySelectorAll<HTMLButtonElement>('[data-recording-export]')) {
+    button.addEventListener('click', () => {
+      void exportRecording(button.dataset.recordingExport ?? 'json');
+    });
+  }
+  updateRecordingRuntime(simulationState);
+}
+
+async function handleRecordingCommand(
+  command: string,
+  actor: Actor,
+  scene: Scene,
+  draft: RecordingDraftState,
+): Promise<void> {
+  let result: RpcResult<RunPayload>;
+  if (command === 'start') {
+    const bindings = positionJointBindings(actor, scene).filter(
+      ({ joint }) => draft.selectedJointIds.has(joint.id),
+    );
+    if (bindings.length === 0) {
+      showToast('Select at least one joint to record', true);
+      return;
+    }
+    result = await bridge.call<RunPayload>(
+      'startRecording',
+      JSON.stringify(scene),
+      JSON.stringify({
+        name: draft.name,
+        joint_ids: bindings.map(({ joint }) => joint.id),
+        actuator_ids: bindings.map(({ actuator }) => actuator.id),
+      }),
+    );
+  } else if (command === 'stop') {
+    result = await bridge.call<RunPayload>('stopRecording');
+  } else return;
+  if (!result.ok || !result.data) {
+    showToast(result.error ?? `Recording ${command} failed`, true);
+    return;
+  }
+  const status = store.current.simulationStatus === 'running' ? 'running' : 'paused';
+  store.setSimulation(status, result.data.state);
+}
+
+async function exportRecording(formatName: string): Promise<void> {
+  const result = await bridge.call<RecordingExportPayload>(
+    'exportRecordingDialog',
+    formatName,
+  );
+  if (!result.ok || !result.data) {
+    if (result.error !== 'Cancelled') showToast(result.error ?? 'Recording export failed', true);
+    return;
+  }
+  store.appendLog(`Exported recording: ${result.data.path}`);
+  showToast(`Exported ${result.data.sample_count} samples`);
+}
+
+function updateRecordingRuntime(simulationState: SimulationState | null): void {
+  const panel = element('recording-panel');
+  if (panel.hidden) return;
+  const recording = simulationState?.recording;
+  const active = recording?.active ?? false;
+  const sampleCount = recording?.sample_count ?? 0;
+  const limitReached = recording?.limit_reached ?? false;
+  const status = element('recording-status');
+  status.textContent = limitReached
+    ? `${sampleCount} · Limit`
+    : active ? `${sampleCount} · Recording` : sampleCount ? `${sampleCount} Samples` : 'Idle';
+  status.classList.toggle('limit', limitReached);
+  const start = panel.querySelector<HTMLButtonElement>('[data-recording-command="start"]');
+  const stop = panel.querySelector<HTMLButtonElement>('[data-recording-command="stop"]');
+  if (start) start.disabled = active;
+  if (stop) stop.disabled = !active;
+  for (const button of panel.querySelectorAll<HTMLButtonElement>('[data-recording-export]')) {
+    button.disabled = active || sampleCount === 0;
+  }
+}
+
 function render(): void {
   const state = store.current;
   element('project-label').textContent = `${state.dirty ? '* ' : ''}${state.scene.name}`;
@@ -814,6 +964,11 @@ function render(): void {
     state.selectedJointId,
   );
   renderTrajectoryPanel(
+    state.scene.actors.find((actor) => actor.id === state.selectedActorId),
+    state.scene,
+    state.simulationState,
+  );
+  renderRecordingPanel(
     state.scene.actors.find((actor) => actor.id === state.selectedActorId),
     state.scene,
     state.simulationState,
@@ -850,6 +1005,7 @@ async function openProjectPath(path: string): Promise<RpcResult<ProjectPayload>>
   const result = await bridge.call<ProjectPayload>('openProjectPath', path);
   if (result.ok && result.data) {
     trajectoryDrafts.clear();
+    recordingDrafts.clear();
     store.loadScene(result.data.scene, result.data.path);
     store.appendLog(`Opened scene: ${result.data.path}`);
   }
@@ -863,12 +1019,14 @@ function allowDiscard(): boolean {
 async function handleCommand(command: string): Promise<void> {
   if (command === 'new' && allowDiscard()) {
     trajectoryDrafts.clear();
+    recordingDrafts.clear();
     store.newScene();
   }
   else if (command === 'open' && allowDiscard()) {
     const result = await bridge.call<ProjectPayload>('openProject');
     if (result.ok && result.data) {
       trajectoryDrafts.clear();
+      recordingDrafts.clear();
       store.loadScene(result.data.scene, result.data.path);
       store.appendLog(`Opened scene: ${result.data.path}`);
     } else if (result.error !== 'Cancelled') showToast(result.error ?? 'Open failed', true);
@@ -978,6 +1136,7 @@ store.subscribe((state) => {
     applySimulationState(state.simulationState);
     updateRuntimeInspector(state.simulationState);
     updateTrajectoryRuntime(state.simulationState);
+    updateRecordingRuntime(state.simulationState);
     previousSimulationState = state.simulationState;
   }
   const nextSync = `${sceneJson}:${state.dirty}`;

@@ -45,6 +45,7 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     )
     assert "startRecording" in bridge["properties"]["rpc_methods"]["const"]
     assert "exportRecording" in bridge["properties"]["rpc_methods"]["const"]
+    assert "exportRecordingDialog" in bridge["properties"]["rpc_methods"]["const"]
     assert "meshGeometry" in scene["$defs"]
     assert scene["properties"]["robotics"]["$ref"] == "robotics.schema.json"
     assert scene["properties"]["trajectories"]["items"]["$ref"] == (

@@ -170,7 +170,10 @@ def test_editor_bridge_external_robot_rpc_workflow(tmp_path: Path) -> None:
     assert statuses[-2:] == ["paused", "paused"]
 
 
-def test_editor_bridge_records_and_exports_robot_joint_state(tmp_path: Path) -> None:
+def test_editor_bridge_records_and_exports_robot_joint_state(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     pytest.importorskip("mujoco")
     source = Path(
         "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda"
@@ -220,6 +223,13 @@ def test_editor_bridge_records_and_exports_robot_joint_state(tmp_path: Path) -> 
     csv_path = tmp_path / "recordings" / "arm.csv"
     exported_json = json.loads(bridge.exportRecording(str(json_path), "json"))
     exported_csv = json.loads(bridge.exportRecording(str(csv_path), "csv"))
+    dialog_path = tmp_path / "recordings" / "dialog.json"
+    monkeypatch.setattr(
+        QFileDialog,
+        "getSaveFileName",
+        lambda *args: (str(dialog_path), ""),
+    )
+    exported_dialog = json.loads(bridge.exportRecordingDialog("json"))
     bridge.pauseSimulation()
 
     assert started["data"]["state"]["recording"]["sample_count"] == 1
@@ -230,10 +240,12 @@ def test_editor_bridge_records_and_exports_robot_joint_state(tmp_path: Path) -> 
     assert fetched["data"]["recording"] == recording
     assert exported_json["data"]["sample_count"] == 7
     assert exported_csv["data"]["sample_count"] == 7
+    assert exported_dialog["data"]["path"] == str(dialog_path)
     assert json.loads(json_path.read_text(encoding="utf-8")) == recording
     csv_lines = csv_path.read_text(encoding="utf-8").splitlines()
     assert csv_lines[0].startswith("time,joint.")
     assert len(csv_lines) == 8
+    assert dialog_path.exists()
 
 
 def test_editor_bridge_sets_robot_joint_target(tmp_path: Path) -> None:
