@@ -64,3 +64,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-16 Joint Trajectory Contract](2026-07-16-joint-trajectory-contract.md)
 - [2026-07-16 MuJoCo Trajectory Runtime](2026-07-16-mujoco-trajectory-runtime.md)
 - [2026-07-16 Trajectory Panel](2026-07-16-trajectory-panel.md)
+- [2026-07-16 Trajectory Qt E2E](2026-07-16-trajectory-qt-e2e.md)

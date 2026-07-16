@@ -9,7 +9,6 @@ from typing import Any
 
 import pytest
 
-
 pytestmark = pytest.mark.skipif(
     os.environ.get("SIMLAB_QT_WEBENGINE_E2E") != "1",
     reason="Set SIMLAB_QT_WEBENGINE_E2E=1 to run the QtWebEngine visual smoke test.",
@@ -154,8 +153,9 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     _javascript(
         app,
         window.web_view.page(),
-        "const step=document.querySelector('[data-joint-step]');"
-        "step.value='0.5';step.dispatchEvent(new Event('change',{bubbles:true}));"
+        "document.querySelector('[data-joint-step]').value='0.5';"
+        "document.querySelector('[data-joint-step]').dispatchEvent("
+        "new Event('change',{bubbles:true}));"
         "document.querySelector('[data-joint-jog][data-direction=\"1\"]').click();true",
     )
 
@@ -240,5 +240,154 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         )
 
     _wait_until(app, robot_is_home)
+
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-joint-step]').value='0.5';"
+        "document.querySelector('[data-joint-step]').dispatchEvent("
+        "new Event('change',{bubbles:true}));"
+        "document.querySelector('[data-joint-jog][data-direction=\"1\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )["simulationState"]["actuators"][0]["ctrl"]
+        == pytest.approx(0.5),
+    )
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-trajectory-name]').value='Qt Arm Motion';"
+        "document.querySelector('[data-trajectory-name]').dispatchEvent("
+        "new Event('change',{bubbles:true}));"
+        "document.querySelector('[data-trajectory-duration]').value='0.8';"
+        "document.querySelector('[data-trajectory-duration]').dispatchEvent("
+        "new Event('change',{bubbles:true}));"
+        "document.querySelector('[data-trajectory-command=\"load\"]').click();true",
+    )
+
+    def trajectory_is_loaded() -> bool:
+        current = json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )
+        runtime = current["simulationState"]
+        trajectory = runtime["trajectory"]
+        return bool(
+            current["simulationStatus"] == "paused"
+            and trajectory["name"] == "Qt Arm Motion"
+            and trajectory["status"] == "stopped"
+            and trajectory["duration"] == pytest.approx(0.8)
+            and trajectory["time"] == 0
+            and runtime["actuators"][0]["ctrl"] == pytest.approx(0)
+        )
+
+    _wait_until(app, trajectory_is_loaded)
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-trajectory-command=\"play\"]').click();true",
+    )
+
+    def trajectory_is_in_progress() -> bool:
+        current = json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )
+        trajectory = current["simulationState"]["trajectory"]
+        return bool(
+            current["simulationStatus"] == "running"
+            and trajectory["status"] == "playing"
+            and 0.1 < trajectory["time"] < trajectory["duration"]
+        )
+
+    _wait_until(app, trajectory_is_in_progress)
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-trajectory-command=\"pause\"]').click();true",
+    )
+
+    def trajectory_is_paused() -> bool:
+        current = json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )
+        return bool(
+            current["simulationStatus"] == "paused"
+            and current["simulationState"]["trajectory"]["status"] == "paused"
+        )
+
+    _wait_until(app, trajectory_is_paused)
+    paused_trajectory_state = json.loads(
+        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+    )["simulationState"]
+    _pump_events(app, 0.2)
+    frozen_trajectory_state = json.loads(
+        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+    )["simulationState"]
+    assert frozen_trajectory_state["time"] == pytest.approx(paused_trajectory_state["time"])
+    assert frozen_trajectory_state["trajectory"]["time"] == pytest.approx(
+        paused_trajectory_state["trajectory"]["time"]
+    )
+
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-trajectory-command=\"stop\"]').click();true",
+    )
+    _wait_until(app, trajectory_is_loaded)
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-trajectory-command=\"play\"]').click();true",
+    )
+
+    def trajectory_is_completed() -> bool:
+        current = json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )
+        runtime = current["simulationState"]
+        trajectory = runtime["trajectory"]
+        return bool(
+            current["simulationStatus"] == "paused"
+            and trajectory["status"] == "completed"
+            and trajectory["time"] == pytest.approx(trajectory["duration"])
+            and runtime["actuators"][0]["ctrl"] == pytest.approx(0.5)
+            and runtime["joints"][0]["qpos"] > 0.1
+        )
+
+    _wait_until(app, trajectory_is_completed)
+    completed_state = json.loads(
+        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+    )["simulationState"]
+    completed_link = next(
+        item for item in completed_state["links"] if item["id"] == child_link_id
+    )
+    assert math.dist(home_link["quaternion"], completed_link["quaternion"]) > 0.01
+    trajectory_ui = json.loads(
+        _javascript(
+            app,
+            window.web_view.page(),
+            "JSON.stringify({"
+            "status:document.querySelector('#trajectory-status').textContent,"
+            "time:document.querySelector('[data-trajectory-time]').textContent,"
+            "progress:document.querySelector('[data-trajectory-progress]').value,"
+            "max:document.querySelector('[data-trajectory-progress]').max"
+            "})",
+        )
+    )
+    assert trajectory_ui["status"] == "completed"
+    assert trajectory_ui["time"] == "0.80 / 0.80 s"
+    assert trajectory_ui["progress"] == pytest.approx(trajectory_ui["max"])
+
+    _pump_events(app, 0.3)
+    trajectory_screenshot = window.web_view.grab()
+    trajectory_output = Path(
+        os.environ.get(
+            "SIMLAB_QT_TRAJECTORY_SCREENSHOT",
+            tmp_path / "robot-trajectory-completed.png",
+        )
+    )
+    assert trajectory_screenshot.save(str(trajectory_output))
     window.bridge.dirty = False
     window.close()

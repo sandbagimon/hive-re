@@ -51,7 +51,7 @@ class JointTrajectoryPlayer:
         return self.state()
 
     def play(self, simulation_time: float) -> TrajectoryPlaybackState:
-        trajectory = self._require_trajectory()
+        self._require_trajectory()
         if self.status == "completed":
             self._position = 0.0
         self._started_at = simulation_time - self._position
