@@ -748,8 +748,20 @@ Loader 每次显式 Load 都重新编译项目内 `.py` 源码，验证 factory/
 
 实现证据见 `docs/iterations/2026-07-16-project-controller-loader.md`。
 
-## 53. 当前下一项具体任务
+## 53. TypeScript Controller Panel（已完成 2026-07-16）
 
 > 增加 TypeScript Controller Panel：选择 Python 文件、显示 loaded name/path、Load/Reload/Detach，runtime
 > 显示 ready/active/fault、step count、last duration/deadline；只有用户点击时执行代码，并对 trusted-code
 > 风险给出原生确认。controller attach 时禁用 trajectory Play 与 manual Jog。
+
+Robot Inspector 已提供 Controller section；Load/Reload 前使用 confirm，后端 path/factory 验证保持最终边界。
+Panel 局部更新 status/steps/duration，fault 时仍可 Detach；python mode 会禁用 Jog/target/Home 和 trajectory
+Play。New/Open/stopped 清除前端 metadata，controller 不进入 Scene dirty/history。
+
+实现证据见 `docs/iterations/2026-07-16-controller-panel.md`。
+
+## 54. 当前下一项具体任务
+
+> 增加 Controller Qt E2E：通过 automation 显式加载 project-root 内 controller 文件，验证 Panel metadata、
+> Jog/Trajectory Play 禁用、Run 后 step count/duration/qpos 更新、Reload 应用新 target、Detach 恢复手动控制；
+> 再加载抛异常 controller，确认 UI fault 但 simulation time 继续推进。

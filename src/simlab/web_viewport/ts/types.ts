@@ -194,6 +194,11 @@ export interface ControllerSimulationState {
   message: string | null;
   command_time: number | null;
   timeout: number | null;
+  mode: 'manual' | 'python';
+  name: string | null;
+  step_count: number;
+  last_duration: number | null;
+  deadline: number | null;
 }
 
 export interface TrajectorySimulationState {
@@ -312,6 +317,9 @@ export interface PythonBridgeObject {
   stepSimulation(sceneJson: string, callback: (result: string) => void): void;
   resetSimulation(callback: (result: string) => void): void;
   setJointTargets(sceneJson: string, targetsJson: string, callback: (result: string) => void): void;
+  loadController(sceneJson: string, callback: (result: string) => void): void;
+  loadControllerPath(sceneJson: string, path: string, callback: (result: string) => void): void;
+  detachController(callback: (result: string) => void): void;
   loadTrajectory(sceneJson: string, trajectoryJson: string, callback: (result: string) => void): void;
   playTrajectory(callback: (result: string) => void): void;
   pauseTrajectory(callback: (result: string) => void): void;
@@ -343,6 +351,10 @@ export interface SimLabEditorAutomation {
   setSimulationSpeed(factor: number): Promise<RpcResult<{
     target_rtf: number;
     state: SimulationState | null;
+  }>>;
+  loadControllerPath(path: string): Promise<RpcResult<{
+    state: SimulationState;
+    controller: { path: string; name: string };
   }>>;
   getStateJson(): string;
   selectJoint(actorId: string, jointId: string): boolean;

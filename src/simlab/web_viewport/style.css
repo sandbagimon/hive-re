@@ -92,7 +92,7 @@ button.primary { border-color: #4d8e78; background: #276a57; }
 
 .panel-section { display: flex; min-height: 0; flex-direction: column; }
 .panel-section + .panel-section { border-top: 1px solid #303640; }
-.panel-section > header, #inspector-panel > header, #console-panel > header, #validation-panel > header, #trajectory-panel > header, #recording-panel > header {
+.panel-section > header, #inspector-panel > header, #console-panel > header, #validation-panel > header, #controller-panel > header, #trajectory-panel > header, #recording-panel > header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -102,6 +102,17 @@ button.primary { border-color: #4d8e78; background: #276a57; }
 }
 h2 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; }
 #trajectory-panel { border-top: 1px solid #303640; }
+#controller-panel { border-top: 1px solid #303640; }
+#controller-panel-status { color: #9ca8b5; font-size: 10px; text-transform: capitalize; }
+#controller-panel-status.fault { color: #ff8c8c; }
+#controller-controls { padding: 8px 10px 10px; }
+.controller-identity { min-width: 0; }
+.controller-name { overflow: hidden; color: #d8e0e8; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.controller-path { overflow: hidden; margin-top: 3px; color: #7f8b98; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.controller-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; margin-top: 7px; color: #9aa5b1; font-size: 10px; }
+.controller-actions { display: grid; grid-template-columns: minmax(0, 1fr) 32px 32px; gap: 5px; margin-top: 8px; }
+.controller-actions button { min-width: 0; height: 28px; min-height: 28px; padding: 0 7px; }
+.controller-actions .icon-button { padding: 0; }
 #trajectory-status { color: #9ca8b5; font-size: 10px; text-transform: capitalize; }
 #recording-panel { border-top: 1px solid #303640; }
 #recording-status { color: #9ca8b5; font-size: 10px; }

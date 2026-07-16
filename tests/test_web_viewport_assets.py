@@ -75,9 +75,13 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "data-trajectory-save" in app
     assert "store.upsertTrajectory" in app
     assert 'id="recording-panel"' in html
+    assert 'id="controller-panel"' in html
     assert "data-recording-joint" in app
     assert "data-recording-command" in app
     assert "updateRecordingRuntime" in app
+    assert "renderControllerPanel" in app
+    assert "loadProjectController" in app
+    assert "updateControllerRuntime" in app
     assert "updateSimulationClock" in app
     assert "setSimulationSpeed" in app
     assert "exportRecordingPath" in app

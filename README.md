@@ -56,6 +56,8 @@ The command bar provides 0.25x, 0.5x, 1x, and 2x simulation-speed controls plus 
 
 Python controllers can attach to a MuJoCo session through an immutable per-step observation/action API. Controller exceptions and deadline overruns are isolated as runtime faults without stopping physics; manual targets, trajectory playback, and Python controllers are explicit mutually exclusive control sources. See [`docs/CONTROLLER_API.md`](docs/CONTROLLER_API.md).
 
+The robot Inspector Controller section explicitly loads trusted project-local Python files, supports reload and detach, and displays callback status, step count, and execution duration. Controller code is never executed by opening a scene.
+
 Primitive actors expose basic physics properties in the Property Panel: Dynamic, Mass, and Friction. Dynamic actors export with MuJoCo free joints, while static actors export as fixed world geoms.
 
 Primitive geometry follows a shared viewport/MuJoCo contract: Box sizes are half extents, Sphere size is radius, Cylinder size is radius plus half-height, rotations are XYZ radians, and actor scale is baked into exported colliders. Non-uniformly scaled spheres export as Ellipsoids, while cylinders require matching X/Y radial scale. Export contains no implicit collision ground.

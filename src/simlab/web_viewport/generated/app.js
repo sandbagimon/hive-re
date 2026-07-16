@@ -121,6 +121,7 @@ function renderInspector(actor, scene, simulationState, selectedJointId) {
     const actuatorStates = new Map((simulationState?.actuators ?? []).map((item) => [item.id, item]));
     const controller = simulationState?.controller ?? {
         status: 'ready', message: null, command_time: null, timeout: null,
+        mode: 'manual', name: null, step_count: 0, last_duration: null, deadline: null,
     };
     const controllerStatus = `<div class="controller-status" data-controller-status="${controller.status}">
     <span data-controller-status-label>${controller.status.replace('_', ' ')}</span>
@@ -757,6 +758,109 @@ function updateRecordingRuntime(simulationState) {
         button.disabled = active || sampleCount === 0;
     }
 }
+let loadedController = null;
+function renderControllerPanel(actor, simulationState) {
+    const panel = element('controller-panel');
+    panel.hidden = actor?.type !== 'robot';
+    if (panel.hidden || !actor)
+        return;
+    const runtime = simulationState?.controller;
+    const attached = runtime?.mode === 'python';
+    const metadata = loadedController?.actorId === actor.id ? loadedController : null;
+    const name = runtime?.name ?? metadata?.name ?? 'No controller loaded';
+    const path = metadata?.path ?? '';
+    element('controller-controls').innerHTML = `
+    <div class="controller-identity">
+      <div class="controller-name" data-controller-name>${escapeHtml(name)}</div>
+      <div class="controller-path" data-controller-path title="${escapeHtml(path)}">${escapeHtml(path || '—')}</div>
+    </div>
+    <div class="controller-metrics">
+      <span data-controller-steps>0 Steps</span>
+      <span data-controller-duration>—</span>
+    </div>
+    <div class="controller-actions">
+      <button type="button" data-controller-command="load">Load Python</button>
+      <button type="button" class="icon-button" data-controller-command="reload" title="Reload controller" ${path ? '' : 'disabled'}>↻</button>
+      <button type="button" class="icon-button" data-controller-command="detach" title="Detach controller" ${attached ? '' : 'disabled'}>×</button>
+    </div>`;
+    for (const button of panel.querySelectorAll('[data-controller-command]')) {
+        button.addEventListener('click', () => {
+            void handleControllerCommand(button.dataset.controllerCommand ?? '', actor);
+        });
+    }
+    updateControllerRuntime(simulationState);
+}
+async function handleControllerCommand(command, actor) {
+    if (command === 'detach') {
+        const result = await bridge.call('detachController');
+        if (!result.ok || !result.data) {
+            showToast(result.error ?? 'Controller detach failed', true);
+            return;
+        }
+        loadedController = null;
+        store.setSimulation('paused', result.data.state);
+        renderControllerPanel(actor, result.data.state);
+        store.appendLog('Detached Python controller.');
+        return;
+    }
+    if (command !== 'load' && command !== 'reload')
+        return;
+    if (!window.confirm('Run trusted Python controller code from this project?'))
+        return;
+    const path = command === 'reload' && loadedController?.actorId === actor.id
+        ? loadedController.path
+        : undefined;
+    await loadProjectController(actor, path);
+}
+async function loadProjectController(actor, path) {
+    const result = path
+        ? await bridge.call('loadControllerPath', JSON.stringify(store.current.scene), path)
+        : await bridge.call('loadController', JSON.stringify(store.current.scene));
+    if (!result.ok || !result.data) {
+        if (result.error !== 'Cancelled')
+            showToast(result.error ?? 'Controller load failed', true);
+        return result;
+    }
+    loadedController = {
+        actorId: actor.id,
+        path: result.data.controller.path,
+        name: result.data.controller.name,
+    };
+    store.setSimulation('paused', result.data.state);
+    renderControllerPanel(actor, result.data.state);
+    store.appendLog(`Loaded Python controller: ${result.data.controller.name}`);
+    return result;
+}
+function updateControllerRuntime(simulationState) {
+    const panel = element('controller-panel');
+    if (panel.hidden)
+        return;
+    const controller = simulationState?.controller;
+    const attached = controller?.mode === 'python';
+    const status = element('controller-panel-status');
+    status.textContent = attached ? controller.status : 'Detached';
+    status.classList.toggle('fault', controller?.status === 'fault');
+    const name = panel.querySelector('[data-controller-name]');
+    if (name && attached && controller.name)
+        name.textContent = controller.name;
+    const steps = panel.querySelector('[data-controller-steps]');
+    if (steps)
+        steps.textContent = `${controller?.step_count ?? 0} Steps`;
+    const duration = panel.querySelector('[data-controller-duration]');
+    if (duration) {
+        duration.textContent = controller?.last_duration === null || controller?.last_duration === undefined
+            ? '—'
+            : `${(controller.last_duration * 1000).toFixed(2)} ms`;
+    }
+    const detach = panel.querySelector('[data-controller-command="detach"]');
+    if (detach)
+        detach.disabled = !attached;
+    for (const control of document.querySelectorAll('[data-joint-jog], [data-joint-target], [data-joint-home]'))
+        control.disabled = attached;
+    const play = document.querySelector('[data-trajectory-command="play"]');
+    if (play && attached)
+        play.disabled = true;
+}
 let targetRealtimeFactor = 1;
 function updateSimulationClock(simulationState) {
     if (simulationState)
@@ -803,6 +907,7 @@ function render() {
     renderInspector(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.scene, state.simulationState, state.selectedJointId);
     renderTrajectoryPanel(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.scene, state.simulationState);
     renderRecordingPanel(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.scene, state.simulationState);
+    renderControllerPanel(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.simulationState);
     renderValidation(state.validationIssues);
     renderConsole(state.logs);
 }
@@ -830,6 +935,7 @@ async function openProjectPath(path) {
     if (result.ok && result.data) {
         trajectoryDrafts.clear();
         recordingDrafts.clear();
+        loadedController = null;
         store.loadScene(result.data.scene, result.data.path);
         store.appendLog(`Opened scene: ${result.data.path}`);
     }
@@ -842,6 +948,7 @@ async function handleCommand(command) {
     if (command === 'new' && allowDiscard()) {
         trajectoryDrafts.clear();
         recordingDrafts.clear();
+        loadedController = null;
         store.newScene();
     }
     else if (command === 'open' && allowDiscard()) {
@@ -849,6 +956,7 @@ async function handleCommand(command) {
         if (result.ok && result.data) {
             trajectoryDrafts.clear();
             recordingDrafts.clear();
+            loadedController = null;
             store.loadScene(result.data.scene, result.data.path);
             store.appendLog(`Opened scene: ${result.data.path}`);
         }
@@ -985,6 +1093,7 @@ store.subscribe((state) => {
         updateRuntimeInspector(state.simulationState);
         updateTrajectoryRuntime(state.simulationState);
         updateRecordingRuntime(state.simulationState);
+        updateControllerRuntime(state.simulationState);
         updateSimulationClock(state.simulationState);
         previousSimulationState = state.simulationState;
     }
@@ -1017,7 +1126,11 @@ window.addEventListener('keydown', (event) => {
 async function initialize() {
     bridge = await EditorBridgeClient.connect();
     bridge.onSimulationState((state) => store.setSimulationState(state));
-    bridge.onSimulationStatus((status) => store.setSimulation(status, store.current.simulationState));
+    bridge.onSimulationStatus((status) => {
+        if (status === 'stopped')
+            loadedController = null;
+        store.setSimulation(status, store.current.simulationState);
+    });
     bridge.onConsoleMessage((message) => store.appendLog(message));
     const assets = await bridge.call('getAssets');
     if (assets.ok && assets.data)
@@ -1036,6 +1149,12 @@ window.simlabEditor = {
     getRecording: () => bridge.call('getRecording'),
     exportRecordingPath: (path, formatName) => bridge.call('exportRecording', path, formatName),
     setSimulationSpeed,
+    loadControllerPath: (path) => {
+        const actor = store.current.scene.actors.find((item) => item.id === store.current.selectedActorId && item.type === 'robot');
+        if (!actor)
+            return Promise.resolve({ ok: false, error: 'Select a robot actor first' });
+        return loadProjectController(actor, path);
+    },
     getStateJson: () => JSON.stringify(store.current),
     selectJoint: (actorId, jointId) => {
         store.selectJoint(actorId, jointId);

@@ -52,7 +52,8 @@ def create_controller():
 `ProjectControllerLoader` only accepts `.py` files whose resolved path is inside the project root. Loading
 is always explicit, recompiles the source for reload, and reports path validation, import, factory, or
 contract validation as distinct phases. Scene Open never executes controller code. The Python Bridge
-provides `loadController`, `loadControllerPath`, and `detachController`; a TypeScript panel is planned next.
+provides `loadController`, `loadControllerPath`, and `detachController`. The robot Inspector Controller
+section exposes explicit Load, Reload, and Detach controls; Load and Reload require trusted-code confirmation.
 
 Controller modules are trusted in-process Python code with the same filesystem permissions as SimLab. The
 project-root check prevents accidental selection outside the project, but it is not a security sandbox.
