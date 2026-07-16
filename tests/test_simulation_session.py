@@ -117,7 +117,10 @@ def test_robot_session_publishes_fixed_step_joint_sensor_samples(tmp_path) -> No
     session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
 
     initial = session.state()
-    session.start_joint_recording(name="Sensor Alignment")
+    session.start_joint_recording(
+        name="Sensor Alignment",
+        sensor_ids=["sensor_shoulder_100hz", "sensor_shoulder_50hz"],
+    )
     stepped = session.step(steps=4)
     _, recording = session.stop_joint_recording()
 
@@ -132,11 +135,30 @@ def test_robot_session_publishes_fixed_step_joint_sensor_samples(tmp_path) -> No
     assert [sample.time for sample in recording.samples] == pytest.approx(
         [0.0, 0.01, 0.02, 0.03, 0.04]
     )
+    assert recording.sensor_ids == [
+        "sensor_shoulder_100hz",
+        "sensor_shoulder_50hz",
+    ]
+    assert [set(sample.sensors) for sample in recording.samples] == [
+        {"sensor_shoulder_100hz", "sensor_shoulder_50hz"},
+        {"sensor_shoulder_100hz"},
+        {"sensor_shoulder_100hz", "sensor_shoulder_50hz"},
+        {"sensor_shoulder_100hz"},
+        {"sensor_shoulder_100hz", "sensor_shoulder_50hz"},
+    ]
+    assert [
+        sample.sensors["sensor_shoulder_50hz"].sequence
+        for sample in recording.samples
+        if "sensor_shoulder_50hz" in sample.sensors
+    ] == [0, 1, 2]
     latest = stepped.sensors[0]
     recorded_latest = recording.samples[-1].joints[shoulder.id]
     assert latest.qpos == pytest.approx(recorded_latest.qpos)
     assert latest.qvel == pytest.approx(recorded_latest.qvel)
     assert stepped.to_dict()["sensors"][0]["sequence"] == 4
+
+    with pytest.raises(ValueError, match="unknown sensor ID"):
+        session.start_joint_recording(name="Invalid Sensor", sensor_ids=["missing"])
 
     reset = session.reset()
     assert [(sample.sequence, sample.time) for sample in reset.sensors] == [

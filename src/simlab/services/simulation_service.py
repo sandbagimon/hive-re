@@ -228,6 +228,7 @@ class SimulationService:
         name: str,
         joint_ids: list[str] | None = None,
         actuator_ids: list[str] | None = None,
+        sensor_ids: list[str] | None = None,
     ) -> SimulationState:
         if self.session is None:
             self.session = self._create_session(scene)
@@ -236,6 +237,7 @@ class SimulationService:
             name=name,
             joint_ids=joint_ids,
             actuator_ids=actuator_ids,
+            sensor_ids=sensor_ids,
         )
         self.console(f"Joint state recording started: {name}")
         return self._with_clock(state)

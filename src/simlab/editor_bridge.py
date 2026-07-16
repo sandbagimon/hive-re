@@ -360,11 +360,13 @@ class EditorBridge(QObject):
                 raise ValueError("Recording config must be a JSON object")
             joint_ids = self._optional_string_list(config, "joint_ids")
             actuator_ids = self._optional_string_list(config, "actuator_ids")
+            sensor_ids = self._optional_string_list(config, "sensor_ids")
             state = self.simulation_service.start_joint_recording(
                 scene,
                 name=str(config.get("name", "Joint Recording")),
                 joint_ids=joint_ids,
                 actuator_ids=actuator_ids,
+                sensor_ids=sensor_ids,
             )
             self.simulationStateChanged.emit(json.dumps(state.to_dict()))
             return self._success({"state": state.to_dict()})

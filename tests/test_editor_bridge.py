@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QApplication, QFileDialog, QWidget
 
 from simlab.editor_bridge import EditorBridge
 from simlab.models.actor import Actor
+from simlab.models.robotics import Sensor
 from simlab.models.scene import Scene
 from simlab.services.openusd_importer import import_openusd_asset
 from simlab.services.project_service import load_scene
@@ -207,10 +208,19 @@ def test_editor_bridge_records_and_exports_robot_joint_state(
     articulation = scene.robotics.articulations[0]
     shoulder = articulation.joints[0]
     shoulder_drive = articulation.actuators[0]
+    sensor = Sensor(
+        id="sensor_bridge_shoulder",
+        name="Shoulder State",
+        sensor_type="joint_state",
+        joint_id=shoulder.id,
+        update_rate_hz=50.0,
+    )
+    articulation.sensors.append(sensor)
     config = {
         "name": "Bridge Recording",
         "joint_ids": [shoulder.id],
         "actuator_ids": [shoulder_drive.id],
+        "sensor_ids": [sensor.id],
     }
 
     started = json.loads(
@@ -240,6 +250,12 @@ def test_editor_bridge_records_and_exports_robot_joint_state(
     recording = stopped["data"]["recording"]
     assert stopped["data"]["state"]["recording"]["active"] is False
     assert len(recording["samples"]) == 7
+    assert recording["sensor_ids"] == [sensor.id]
+    assert [
+        sample["sensors"][sensor.id]["sequence"]
+        for sample in recording["samples"]
+        if sensor.id in sample["sensors"]
+    ] == [0, 1, 2, 3]
     assert fetched["data"]["recording"] == recording
     assert exported_json["data"]["sample_count"] == 7
     assert exported_csv["data"]["sample_count"] == 7
@@ -247,6 +263,7 @@ def test_editor_bridge_records_and_exports_robot_joint_state(
     assert json.loads(json_path.read_text(encoding="utf-8")) == recording
     csv_lines = csv_path.read_text(encoding="utf-8").splitlines()
     assert csv_lines[0].startswith("time,joint.")
+    assert f"sensor.{sensor.id}.sequence" in csv_lines[0]
     assert len(csv_lines) == 8
     assert dialog_path.exists()
 

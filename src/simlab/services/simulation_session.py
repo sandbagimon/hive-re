@@ -197,6 +197,7 @@ class MuJoCoSimulationSession:
             for articulation in (scene.robotics.articulations if scene.robotics else [])
             for sensor in articulation.sensors
         ]
+        self._sensor_ids = {sensor.id for sensor in sensor_definitions}
         self._joint_state_sensors = JointStateSensorScheduler(
             sensor_definitions,
             float(self.model.opt.timestep),
@@ -222,13 +223,13 @@ class MuJoCoSimulationSession:
             self._mujoco.mj_step(self.model, self.data)
             self._apply_trajectory_target()
             self._physics_step_index += 1
-            self._joint_state_sensors.capture(
+            emitted_sensors = self._joint_state_sensors.capture(
                 self._physics_step_index,
                 float(self.data.time),
                 self._joint_kinematics(),
             )
             if self._state_recorder.active:
-                self._state_recorder.capture(self.state())
+                self._state_recorder.capture(self.state(), emitted_sensors)
         return self.state()
 
     def reset(self) -> SimulationState:
@@ -314,20 +315,34 @@ class MuJoCoSimulationSession:
         name: str,
         joint_ids: list[str] | None = None,
         actuator_ids: list[str] | None = None,
+        sensor_ids: list[str] | None = None,
     ) -> SimulationState:
         selected_joint_ids = joint_ids if joint_ids is not None else list(self._joint_ids)
         selected_actuator_ids = (
             actuator_ids if actuator_ids is not None else list(self._actuator_ids)
         )
+        selected_sensor_ids = sensor_ids or []
+        unknown_sensor_ids = sorted(set(selected_sensor_ids) - self._sensor_ids)
+        if unknown_sensor_ids:
+            raise ValueError(
+                "Recording references unknown sensor ID(s): "
+                + ", ".join(unknown_sensor_ids)
+            )
         self._state_recorder.start(
             name=name,
             joint_ids=selected_joint_ids,
             actuator_ids=selected_actuator_ids,
+            sensor_ids=selected_sensor_ids,
             timestep=float(self.model.opt.timestep),
             scene_version=self.scene.version,
             engine_version=str(self._mujoco.__version__),
         )
-        self._state_recorder.capture(self.state())
+        initial_sensor_samples = (
+            self._joint_state_sensors.latest_samples
+            if math.isclose(float(self.data.time), 0.0, abs_tol=1e-12)
+            else ()
+        )
+        self._state_recorder.capture(self.state(), initial_sensor_samples)
         return self.state()
 
     def stop_joint_recording(self) -> tuple[SimulationState, JointStateRecording]:
