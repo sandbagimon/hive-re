@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:frontend": "node frontend-tests/store.mjs"
+    "test:frontend": "node frontend-tests/store.mjs && node frontend-tests/trajectory-draft.mjs"
   },
   "devDependencies": {
     "typescript": "^5.9.2"

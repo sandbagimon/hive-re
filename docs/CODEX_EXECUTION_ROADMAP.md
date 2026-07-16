@@ -558,7 +558,17 @@ Run/Jog/Pause/Reset 闭环保持通过。实现证据见
 Stop 恢复首帧 target，重播自然完成后停表并同步最终 Link pose。实现证据见
 `docs/iterations/2026-07-16-trajectory-qt-e2e.md`。
 
-## 35. 当前下一项具体任务
+## 35. Trajectory Draft Model（已完成 2026-07-16）
 
 > 实现可编辑 Keyframe List：显示关键帧时间和各关节 target，支持从当前关节状态捕获、修改时间、
 > 删除与排序；所有编辑保存在前端 draft，Load 前通过共享 trajectory schema 校验。
+
+纯 TypeScript draft model 已覆盖创建、时长缩放、捕获、时间排序、target 编辑和最少两帧保护；
+前端校验与 Python player 保持首帧、时间、joint set 和 finite value 不变量一致。
+
+实现证据见 `docs/iterations/2026-07-16-trajectory-draft-model.md`。
+
+## 36. 当前下一项具体任务
+
+> 将 draft model 接入 Trajectory Panel：增加 keyframe rows、Add Current、逐关节 target/time 编辑和
+> Delete；draft 编辑不进入 Scene dirty/undo，Load 时才提交给 Bridge/MuJoCo。
