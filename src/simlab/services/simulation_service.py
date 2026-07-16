@@ -165,6 +165,8 @@ class SimulationService:
         scene: Scene,
         path: str | Path,
     ) -> tuple[SimulationState, LoadedController]:
+        if self.running:
+            self.pause()
         loaded = self.controller_loader.load(path)
         state = self.attach_controller(scene, loaded.controller, name=loaded.name)
         self.loaded_controller = loaded

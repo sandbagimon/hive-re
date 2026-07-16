@@ -287,9 +287,13 @@ class EditorBridge(QObject):
     @Slot(result=str)
     def detachController(self) -> str:
         try:
+            self.simulation_timer.stop()
+            if self.simulation_service.is_running():
+                self.simulation_service.pause()
             state = self.simulation_service.detach_controller()
             payload = state.to_dict()
             self.simulationStateChanged.emit(json.dumps(payload))
+            self.simulationStatusChanged.emit("paused")
             return self._success({"state": payload})
         except Exception as exc:
             return self._failure(exc)

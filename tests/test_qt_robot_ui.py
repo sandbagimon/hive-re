@@ -39,6 +39,37 @@ def _pump_events(app: Any, seconds: float) -> None:
         time.sleep(0.01)
 
 
+def _write_qt_controller(
+    path: Path,
+    shoulder_id: str,
+    elbow_id: str,
+    *,
+    shoulder_target: float = 0.3,
+    elbow_target: float = -0.7,
+    fault: bool = False,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    step_body = (
+        "        raise RuntimeError('Qt controller fault')\n"
+        if fault
+        else (
+            "        return ControllerAction("
+            f"{{{shoulder_id!r}: {shoulder_target!r}, "
+            f"{elbow_id!r}: {elbow_target!r}}})\n"
+        )
+    )
+    path.write_text(
+        "from simlab.services.controller_runtime import ControllerAction\n"
+        "class QtController:\n"
+        "    name = 'Qt Project Controller'\n"
+        "    def reset(self, observation): pass\n"
+        "    def step(self, observation):\n"
+        + step_body
+        + "def create_controller(): return QtController()\n",
+        encoding="utf-8",
+    )
+
+
 def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     pytest.importorskip("pxr")
     pytest.importorskip("PySide6.QtWebEngineWidgets")
@@ -749,6 +780,265 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     _wait_until(app, reopened_trajectory_is_loaded)
     reopened_wall_time = [200.0]
     reopened_window.bridge.simulation_service.clock = lambda: reopened_wall_time[0]
+    controller_elbow_id = reopened_articulation["joints"][1]["id"]
+    controller_path = tmp_path / "controllers" / "qt_controller.py"
+    _write_qt_controller(controller_path, reopened_joint_id, controller_elbow_id)
+    controller_path_json = json.dumps(str(controller_path))
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        f"window.simlabEditor.loadControllerPath({controller_path_json}).then("
+        "result=>document.documentElement.dataset.controllerLoad=JSON.stringify(result));true",
+    )
+    _wait_until(
+        app,
+        lambda: bool(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "document.documentElement.dataset.controllerLoad || ''",
+            )
+        ),
+    )
+    controller_load = json.loads(
+        _javascript(
+            app,
+            reopened_window.web_view.page(),
+            "document.documentElement.dataset.controllerLoad",
+        )
+    )
+    assert controller_load["ok"] is True
+    assert controller_load["data"]["controller"] == {
+        "path": str(controller_path.resolve()),
+        "name": "Qt Project Controller",
+    }
+
+    def reopened_controller_status(status: str) -> bool:
+        current = json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )
+        runtime = current["simulationState"]
+        return bool(
+            current["simulationStatus"] in {"paused", "running"}
+            and runtime
+            and runtime["controller"]["mode"] == "python"
+            and runtime["controller"]["status"] == status
+        )
+
+    _wait_until(app, lambda: reopened_controller_status("ready"))
+    controller_ui = json.loads(
+        _javascript(
+            app,
+            reopened_window.web_view.page(),
+            "JSON.stringify({"
+            "name:document.querySelector('[data-controller-name]').textContent,"
+            "path:document.querySelector('[data-controller-path]').textContent,"
+            "jogDisabled:[...document.querySelectorAll('[data-joint-jog]')].every(x=>x.disabled),"
+            "playDisabled:document.querySelector('[data-trajectory-command=\"play\"]').disabled"
+            "})",
+        )
+    )
+    assert controller_ui == {
+        "name": "Qt Project Controller",
+        "path": str(controller_path.resolve()),
+        "jogDisabled": True,
+        "playDisabled": True,
+    }
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-command=\"run\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )["simulationStatus"]
+        == "running",
+    )
+    reopened_window.bridge.simulation_timer.stop()
+    reopened_wall_time[0] += 0.08
+    reopened_window.bridge._advance_simulation()
+    app.processEvents()
+    controller_running = json.loads(
+        _javascript(
+            app,
+            reopened_window.web_view.page(),
+            "window.simlabEditor.getStateJson()",
+        )
+    )["simulationState"]
+    assert controller_running["time"] == pytest.approx(0.08)
+    assert controller_running["controller"]["step_count"] == 8
+    assert controller_running["controller"]["last_duration"] >= 0
+    assert [item["ctrl"] for item in controller_running["actuators"]] == pytest.approx(
+        [0.3, -0.7]
+    )
+    assert _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-controller-steps]').textContent",
+    ) == "8 Steps"
+
+    _write_qt_controller(
+        controller_path,
+        reopened_joint_id,
+        controller_elbow_id,
+        shoulder_target=0.6,
+        elbow_target=-1.0,
+    )
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "window.confirm=()=>true;"
+        "document.querySelector('[data-controller-command=\"reload\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: reopened_controller_status("ready")
+        and json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )["simulationStatus"]
+        == "paused",
+    )
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-command=\"run\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )["simulationStatus"]
+        == "running",
+    )
+    reopened_window.bridge.simulation_timer.stop()
+    reopened_wall_time[0] += 0.08
+    reopened_window.bridge._advance_simulation()
+    app.processEvents()
+    controller_reloaded = json.loads(
+        _javascript(
+            app,
+            reopened_window.web_view.page(),
+            "window.simlabEditor.getStateJson()",
+        )
+    )["simulationState"]
+    assert controller_reloaded["time"] == pytest.approx(0.16)
+    assert [item["ctrl"] for item in controller_reloaded["actuators"]] == pytest.approx(
+        [0.6, -1.0]
+    )
+
+    _write_qt_controller(
+        controller_path,
+        reopened_joint_id,
+        controller_elbow_id,
+        fault=True,
+    )
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-controller-command=\"reload\"]').click();true",
+    )
+    _wait_until(app, lambda: reopened_controller_status("ready"))
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-command=\"run\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )["simulationStatus"]
+        == "running",
+    )
+    reopened_window.bridge.simulation_timer.stop()
+    reopened_wall_time[0] += 0.02
+    reopened_window.bridge._advance_simulation()
+    app.processEvents()
+    controller_fault = json.loads(
+        _javascript(
+            app,
+            reopened_window.web_view.page(),
+            "window.simlabEditor.getStateJson()",
+        )
+    )
+    assert controller_fault["simulationStatus"] == "running"
+    assert controller_fault["simulationState"]["time"] == pytest.approx(0.18)
+    assert controller_fault["simulationState"]["controller"]["status"] == "fault"
+    assert "Qt controller fault" in controller_fault["simulationState"]["controller"]["message"]
+    assert _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('#controller-panel-status').textContent",
+    ) == "fault"
+
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-controller-command=\"detach\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )["simulationState"]["controller"]["mode"]
+        == "manual",
+    )
+    detached_ui = json.loads(
+        _javascript(
+            app,
+            reopened_window.web_view.page(),
+            "JSON.stringify({"
+            "status:window.simlabEditor.getStateJson(),"
+            "jogEnabled:[...document.querySelectorAll('[data-joint-jog]')].every(x=>!x.disabled),"
+            "playEnabled:!document.querySelector('[data-trajectory-command=\"play\"]').disabled"
+            "})",
+        )
+    )
+    assert json.loads(detached_ui["status"])["simulationStatus"] == "paused"
+    assert detached_ui["jogEnabled"] is True
+    assert detached_ui["playEnabled"] is True
+    _javascript(
+        app,
+        reopened_window.web_view.page(),
+        "document.querySelector('[data-command=\"reset\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(
+                app,
+                reopened_window.web_view.page(),
+                "window.simlabEditor.getStateJson()",
+            )
+        )["simulationState"]["time"]
+        == 0,
+    )
     _javascript(
         app,
         reopened_window.web_view.page(),

@@ -84,3 +84,4 @@ YYYY-MM-DD-短标题.md
 - [2026-07-16 MuJoCo Controller Integration](2026-07-16-mujoco-controller-integration.md)
 - [2026-07-16 Project Controller Loader](2026-07-16-project-controller-loader.md)
 - [2026-07-16 Controller Panel](2026-07-16-controller-panel.md)
+- [2026-07-16 Controller Qt E2E](2026-07-16-controller-qt-e2e.md)

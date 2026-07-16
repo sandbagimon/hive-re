@@ -331,7 +331,7 @@ def test_editor_bridge_loads_and_detaches_project_controller(tmp_path: Path) -> 
     assert stepped.controller.step_count == 5
     assert [state.ctrl for state in stepped.actuators] == pytest.approx([0.4, -0.8])
     assert detached["data"]["state"]["controller"]["mode"] == "manual"
-    assert statuses == ["paused"]
+    assert statuses == ["paused", "paused"]
 
 
 def test_editor_bridge_returns_controller_fault_state(tmp_path: Path) -> None:

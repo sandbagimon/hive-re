@@ -760,8 +760,20 @@ Play。New/Open/stopped 清除前端 metadata，controller 不进入 Scene dirty
 
 实现证据见 `docs/iterations/2026-07-16-controller-panel.md`。
 
-## 54. 当前下一项具体任务
+## 54. Controller Qt E2E（已完成 2026-07-16）
 
 > 增加 Controller Qt E2E：通过 automation 显式加载 project-root 内 controller 文件，验证 Panel metadata、
 > Jog/Trajectory Play 禁用、Run 后 step count/duration/qpos 更新、Reload 应用新 target、Detach 恢复手动控制；
 > 再加载抛异常 controller，确认 UI fault 但 simulation time 继续推进。
+
+真实 Qt 双窗口测试加载临时项目 controller，8 steps 后验证 metrics/ctrl；同路径改写 Reload 后新 target
+生效。fault controller 只执行一次，UI 显示 fault 且 physics time 继续；Detach 统一暂停时钟并恢复 Jog/
+Trajectory Play。测试随后继续完成 speed、trajectory、recording/export 全回归。
+
+实现证据见 `docs/iterations/2026-07-16-controller-qt-e2e.md`。
+
+## 55. 当前下一项具体任务
+
+> 提供可复用 Joint PD Controller：配置 per-joint target/kp/kd/max_delta，基于 qpos/qvel 每步生成平滑
+> position action；支持 runtime 更新 target 和 Reset，明确 position-drive 外环语义。用外部 USD 双关节手臂
+> 验证收敛、限位、deterministic replay，并提供项目 controller 示例文件。
