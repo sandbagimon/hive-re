@@ -44,6 +44,10 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     }.issubset(
         simulation_state["required"]
     )
+    sensor_variants = simulation_state["properties"]["sensors"]["items"]["oneOf"]
+    assert {
+        variant["properties"]["sensor_type"]["const"] for variant in sensor_variants
+    } == {"joint_state", "imu", "contact"}
     assert "startRecording" in bridge["properties"]["rpc_methods"]["const"]
     assert "exportRecording" in bridge["properties"]["rpc_methods"]["const"]
     assert "exportRecordingDialog" in bridge["properties"]["rpc_methods"]["const"]

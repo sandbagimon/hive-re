@@ -304,6 +304,73 @@ def test_robot_session_clamps_joint_targets_and_reset_restores_home(tmp_path) ->
         session.set_joint_position_targets({"joint_missing": 0.0})
 
 
+def test_robot_session_publishes_contact_transition_and_empty_reset(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    articulation = imported.robotics_model.articulations[0]
+    forearm = articulation.links[-1]
+    contact_sensor = Sensor(
+        id="sensor_forearm_contact",
+        name="Forearm Contact",
+        sensor_type="contact",
+        collider_id=forearm.colliders[0].id,
+        aggregation_mode="sum",
+        update_rate_hz=100.0,
+    )
+    articulation.sensors.append(contact_sensor)
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            ),
+            Actor(
+                id="contact_platform",
+                name="Contact Platform",
+                type="object",
+                asset_id="primitive_ground",
+                transform=Transform(position=[0.85, 0.0, 0.5]),
+                properties={
+                    "primitive": "box",
+                    "size": [0.2, 0.5, 0.1],
+                    "physics": {"dynamic": False},
+                },
+            ),
+        ],
+        robotics=imported.robotics_model,
+        simulation_config={
+            "timestep": 0.01,
+            "control_timeout": 10.0,
+        },
+    )
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+
+    initial = session.state().sensors[0]
+    session.set_joint_position_targets({articulation.joints[0].id: 1.57})
+    active = session.step(steps=250).sensors[0]
+    reset = session.reset().sensors[0]
+
+    assert initial.sensor_id == contact_sensor.id
+    assert initial.sequence == 0
+    assert initial.measurement.contact_count == 0
+    assert active.sequence == 250
+    assert active.measurement.contact_count > 0
+    assert active.measurement.normal_force > 0
+    assert active.measurement.points
+    assert active.to_dict()["sensor_type"] == "contact"
+    assert reset.sequence == 0
+    assert reset.time == 0
+    assert reset.measurement.contact_count == 0
+
+    with pytest.raises(ValueError, match="Recording does not support sensor ID"):
+        session.start_joint_recording(name="Unsupported Contact", sensor_ids=[contact_sensor.id])
+
+
 def test_robot_joint_commands_are_atomic_and_publish_fault_state(tmp_path) -> None:
     pytest.importorskip("mujoco")
     imported = import_openusd_asset(

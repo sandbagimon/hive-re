@@ -100,6 +100,31 @@
                 },
                 "required": ["id", "sensor_type", "link_id", "time", "sequence", "orientation", "angular_velocity", "linear_acceleration"],
                 "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "sensor_type": { "const": "contact" },
+                  "time": { "type": "number", "minimum": 0 },
+                  "sequence": { "type": "integer", "minimum": 0 },
+                  "contact_count": { "type": "integer", "minimum": 0 },
+                  "normal_force": { "type": "number", "minimum": 0 },
+                  "tangent_force": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+                  "normal_impulse": { "type": "number", "minimum": 0 },
+                  "points": {
+                    "type": "array",
+                    "maxItems": 8,
+                    "items": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+                  },
+                  "normals": {
+                    "type": "array",
+                    "maxItems": 8,
+                    "items": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+                  }
+                },
+                "required": ["id", "sensor_type", "time", "sequence", "contact_count", "normal_force", "tangent_force", "normal_impulse", "points", "normals"],
+                "additionalProperties": false
               }
             ]
           }

@@ -297,17 +297,38 @@ function renderInspector(
     ? articulations.flatMap((item) => item.joints)
       .find((item) => item.id === selectedSensor.joint_id)
     : undefined;
+  const sensorArticulation = selectedSensor
+    ? articulations.find((item) => item.sensors.some((sensor) => sensor.id === selectedSensor.id))
+    : undefined;
   const sensorLink = selectedSensor
-    ? articulations.flatMap((item) => item.links)
+    ? sensorArticulation?.links
       .find((item) => item.id === selectedSensor.link_id)
     : undefined;
+  const sensorColliderLink = selectedSensor?.collider_id
+    ? sensorArticulation?.links.find((link) =>
+      link.colliders.some((collider) => collider.id === selectedSensor.collider_id))
+    : undefined;
+  const sensorCollider = sensorColliderLink?.colliders.find(
+    (collider) => collider.id === selectedSensor?.collider_id,
+  );
   const selectedJointSensorSample = selectedSensorSample?.sensor_type === 'joint_state'
     ? selectedSensorSample
     : undefined;
   const selectedImuSample = selectedSensorSample?.sensor_type === 'imu'
     ? selectedSensorSample
     : undefined;
-  const sensorPayloadFields = selectedSensor?.sensor_type === 'imu' ? `
+  const selectedContactSample = selectedSensorSample?.sensor_type === 'contact'
+    ? selectedSensorSample
+    : undefined;
+  const sensorPayloadFields = selectedSensor?.sensor_type === 'contact' ? `
+      <div class="property-row"><label>Sequence</label><input type="text" value="${selectedContactSample?.sequence ?? '—'}" disabled data-sensor-field="sequence" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Time</label><input type="text" value="${selectedContactSample?.time.toFixed(3) ?? '—'}" disabled data-sensor-field="time" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Count</label><input type="text" value="${selectedContactSample?.contact_count ?? '—'}" disabled data-sensor-field="contact_count" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Normal Force</label><input type="text" value="${selectedContactSample?.normal_force.toFixed(3) ?? '—'}" disabled data-sensor-field="normal_force" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Impulse</label><input type="text" value="${selectedContactSample?.normal_impulse.toFixed(4) ?? '—'}" disabled data-sensor-field="normal_impulse" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Tangent</label><input type="text" value="${selectedContactSample?.tangent_force.map((value) => value.toFixed(3)).join(', ') ?? '—'}" disabled data-sensor-field="tangent_force" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>First Point</label><input type="text" value="${selectedContactSample?.points[0]?.map((value) => value.toFixed(3)).join(', ') ?? '—'}" disabled data-sensor-field="first_point" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>First Normal</label><input type="text" value="${selectedContactSample?.normals[0]?.map((value) => value.toFixed(3)).join(', ') ?? '—'}" disabled data-sensor-field="first_normal" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>` : selectedSensor?.sensor_type === 'imu' ? `
       <div class="property-row"><label>Sequence</label><input type="text" value="${selectedImuSample?.sequence ?? '—'}" disabled data-sensor-field="sequence" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
       <div class="property-row"><label>Time</label><input type="text" value="${selectedImuSample?.time.toFixed(3) ?? '—'}" disabled data-sensor-field="time" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
       <div class="property-row"><label>Orientation</label><input type="text" value="${selectedImuSample?.orientation.map((value) => value.toFixed(3)).join(', ') ?? '—'}" disabled data-sensor-field="orientation" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
@@ -321,7 +342,7 @@ function renderInspector(
     <section class="property-group"><h3>Sensor</h3>
       <div class="property-row"><label>Name</label><input type="text" value="${escapeHtml(selectedSensor.name)}" disabled></div>
       <div class="property-row"><label>Type</label><input type="text" value="${escapeHtml(selectedSensor.sensor_type)}" disabled></div>
-      <div class="property-row"><label>${selectedSensor.sensor_type === 'imu' ? 'Link' : 'Joint'}</label><input type="text" value="${escapeHtml(selectedSensor.sensor_type === 'imu' ? sensorLink?.name ?? selectedSensor.link_id ?? '—' : sensorJoint?.name ?? selectedSensor.joint_id ?? '—')}" disabled></div>
+      <div class="property-row"><label>${selectedSensor.sensor_type === 'contact' ? 'Scope' : selectedSensor.sensor_type === 'imu' ? 'Link' : 'Joint'}</label><input type="text" value="${escapeHtml(selectedSensor.sensor_type === 'contact' ? sensorCollider?.name ?? sensorLink?.name ?? selectedSensor.collider_id ?? selectedSensor.link_id ?? '—' : selectedSensor.sensor_type === 'imu' ? sensorLink?.name ?? selectedSensor.link_id ?? '—' : sensorJoint?.name ?? selectedSensor.joint_id ?? '—')}" disabled data-sensor-scope></div>
       <div class="property-row"><label>Rate</label><input type="text" value="${selectedSensor.update_rate_hz === null ? 'Physics rate' : `${selectedSensor.update_rate_hz} Hz`}" disabled></div>
       ${sensorPayloadFields}
     </section>` : selectedJoint ? `
@@ -467,6 +488,18 @@ function updateRuntimeInspector(simulationState: SimulationState | null): void {
         input.value = sensor.angular_velocity.map((value) => value.toFixed(3)).join(', ');
       } else if (sensor.sensor_type === 'imu' && field === 'linear_acceleration') {
         input.value = sensor.linear_acceleration.map((value) => value.toFixed(3)).join(', ');
+      } else if (sensor.sensor_type === 'contact' && field === 'contact_count') {
+        input.value = String(sensor.contact_count);
+      } else if (sensor.sensor_type === 'contact' && field === 'normal_force') {
+        input.value = sensor.normal_force.toFixed(3);
+      } else if (sensor.sensor_type === 'contact' && field === 'normal_impulse') {
+        input.value = sensor.normal_impulse.toFixed(4);
+      } else if (sensor.sensor_type === 'contact' && field === 'tangent_force') {
+        input.value = sensor.tangent_force.map((value) => value.toFixed(3)).join(', ');
+      } else if (sensor.sensor_type === 'contact' && field === 'first_point') {
+        input.value = sensor.points[0]?.map((value) => value.toFixed(3)).join(', ') ?? '—';
+      } else if (sensor.sensor_type === 'contact' && field === 'first_normal') {
+        input.value = sensor.normals[0]?.map((value) => value.toFixed(3)).join(', ') ?? '—';
       }
     }
   }
@@ -905,7 +938,9 @@ function updateTrajectoryRuntime(simulationState: SimulationState | null): void 
 
 function ensureRecordingDraft(actor: Actor, scene: Scene): RecordingDraftState {
   const bindings = positionJointBindings(actor, scene);
-  const sensors = robotSensors(actor, scene);
+  const sensors = robotSensors(actor, scene).filter(
+    (sensor) => ['joint_state', 'imu'].includes(sensor.sensor_type),
+  );
   const signature = JSON.stringify([
     bindings.map(({ joint }) => joint.id),
     sensors.map((sensor) => sensor.id),
@@ -928,6 +963,7 @@ function sensorsForRecording(
   draft: RecordingDraftState,
 ): string[] {
   return robotSensors(actor, scene)
+    .filter((sensor) => ['joint_state', 'imu'].includes(sensor.sensor_type))
     .filter((sensor) => draft.selectedSensorIds.has(sensor.id))
     .map((sensor) => sensor.id);
 }
@@ -942,7 +978,9 @@ function renderRecordingPanel(
   if (panel.hidden || !actor) return;
   const draft = ensureRecordingDraft(actor, scene);
   const bindings = positionJointBindings(actor, scene);
-  const sensors = robotSensors(actor, scene);
+  const sensors = robotSensors(actor, scene).filter(
+    (sensor) => ['joint_state', 'imu'].includes(sensor.sensor_type),
+  );
   const controls = element('recording-controls');
   controls.innerHTML = `
     <input class="recording-name" type="text" value="${escapeHtml(draft.name)}" data-recording-name title="Recording name">
@@ -1427,13 +1465,19 @@ store.subscribe((state) => {
     state.selectedJointId !== previousSelectedJointId
     || state.selectedSensorId !== previousSelectedSensorId
   ) {
-    const relatedJointId = state.selectedJointId ?? state.scene.robotics?.articulations
-      .flatMap((item) => item.sensors)
-      .find((item) => item.id === state.selectedSensorId)?.joint_id ?? null;
-    const childLinkId = state.scene.robotics?.articulations
-      .flatMap((item) => item.joints)
-      .find((item) => item.id === relatedJointId)?.child_link_id ?? null;
-    selectViewportLink(childLinkId);
+    const articulations = state.scene.robotics?.articulations ?? [];
+    const selectedSensor = articulations.flatMap((item) => item.sensors)
+      .find((item) => item.id === state.selectedSensorId);
+    const relatedJointId = state.selectedJointId ?? selectedSensor?.joint_id ?? null;
+    const jointLinkId = articulations.flatMap((item) => item.joints)
+      .find((item) => item.id === relatedJointId)?.child_link_id;
+    const colliderLinkId = selectedSensor?.collider_id
+      ? articulations.flatMap((item) => item.links)
+        .find((link) => link.colliders.some(
+          (collider) => collider.id === selectedSensor.collider_id,
+        ))?.id
+      : undefined;
+    selectViewportLink(jointLinkId ?? selectedSensor?.link_id ?? colliderLinkId ?? null);
     previousSelectedJointId = state.selectedJointId;
     previousSelectedSensorId = state.selectedSensorId;
   }

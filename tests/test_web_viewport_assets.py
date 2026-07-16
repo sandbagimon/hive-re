@@ -22,6 +22,7 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     html = (root / "index.html").read_text(encoding="utf-8")
     style = (root / "style.css").read_text(encoding="utf-8")
     app = (root / "ts" / "app.ts").read_text(encoding="utf-8")
+    types = (root / "ts" / "types.ts").read_text(encoding="utf-8")
     viewport = (root / "ts" / "viewport.ts").read_text(encoding="utf-8")
 
     assert 'id="asset-list"' in html
@@ -65,12 +66,18 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "linear_acceleration" in app
     assert "angular_velocity" in app
     assert "sensor.sensor_type === 'imu'" in app
+    assert "sensor.sensor_type === 'contact'" in app
+    assert 'data-sensor-field="normal_force"' in app
+    assert 'data-sensor-field="first_point"' in app
+    assert (
+        "export type SensorSample = JointStateSensorSample | ImuSensorSample "
+        "| ContactSensorSample"
+    ) in types
     assert "selectViewportLink" in app
     assert "selectedLinkId" in viewport
     assert "window.simlabEditor" in app
     assert "simlabEditorReady" in app
     assert "simulationStatus === 'running' ? 'running' : 'paused'" in app
-    types = (root / "ts" / "types.ts").read_text(encoding="utf-8")
     assert "loadTrajectory" in types
     assert "TrajectorySimulationState" in types
     assert 'id="trajectory-panel"' in html

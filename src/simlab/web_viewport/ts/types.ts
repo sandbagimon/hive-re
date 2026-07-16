@@ -216,7 +216,20 @@ export interface ImuSensorSample {
   linear_acceleration: [number, number, number];
 }
 
-export type SensorSample = JointStateSensorSample | ImuSensorSample;
+export interface ContactSensorSample {
+  id: string;
+  sensor_type: 'contact';
+  time: number;
+  sequence: number;
+  contact_count: number;
+  normal_force: number;
+  tangent_force: [number, number, number];
+  normal_impulse: number;
+  points: [number, number, number][];
+  normals: [number, number, number][];
+}
+
+export type SensorSample = JointStateSensorSample | ImuSensorSample | ContactSensorSample;
 
 export interface ControllerSimulationState {
   status: 'ready' | 'active' | 'timed_out' | 'fault';

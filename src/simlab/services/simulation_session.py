@@ -8,6 +8,7 @@ from typing import Any
 from simlab.models.recording import JointStateRecording
 from simlab.models.scene import Scene
 from simlab.models.trajectory import JointTrajectory
+from simlab.services.contact_sensors import ContactSensorSample, ContactSensorScheduler
 from simlab.services.controller_runtime import (
     ActuatorObservation,
     ControllerObservation,
@@ -23,6 +24,7 @@ from simlab.services.joint_state_sensors import (
     JointStateSensorScheduler,
 )
 from simlab.services.mjcf_exporter import export_scene_to_mjcf, imu_sensor_channel_names
+from simlab.services.mujoco_contact_adapter import MujocoContactAggregator
 from simlab.services.trajectory_player import (
     JointTrajectoryPlayer,
     TrajectoryPlaybackState,
@@ -137,7 +139,9 @@ class SimulationState:
     links: list[LinkSimulationState] = field(default_factory=list)
     joints: list[JointSimulationState] = field(default_factory=list)
     actuators: list[ActuatorSimulationState] = field(default_factory=list)
-    sensors: list[JointStateSensorSample | ImuSensorSample] = field(default_factory=list)
+    sensors: list[JointStateSensorSample | ImuSensorSample | ContactSensorSample] = field(
+        default_factory=list
+    )
     controller: ControllerSimulationState = field(
         default_factory=ControllerSimulationState
     )
@@ -203,9 +207,14 @@ class MuJoCoSimulationSession:
         self._sensor_types = {
             sensor.id: sensor.sensor_type
             for sensor in sensor_definitions
-            if sensor.sensor_type in {"joint_state", "imu"}
+            if sensor.sensor_type in {"joint_state", "imu", "contact"}
         }
         self._sensor_ids = set(self._sensor_types)
+        self._recordable_sensor_types = {
+            sensor_id: sensor_type
+            for sensor_id, sensor_type in self._sensor_types.items()
+            if sensor_type in {"joint_state", "imu"}
+        }
         self._joint_state_sensors = JointStateSensorScheduler(
             sensor_definitions,
             float(self.model.opt.timestep),
@@ -218,6 +227,20 @@ class MuJoCoSimulationSession:
             float(self.model.opt.timestep),
         )
         self._imu_channel_addresses = self._map_imu_sensor_channels()
+        self._contact_sensor_definitions = [
+            sensor for sensor in sensor_definitions if sensor.sensor_type == "contact"
+        ]
+        self._contact_sensors = ContactSensorScheduler(
+            self._contact_sensor_definitions,
+            float(self.model.opt.timestep),
+        )
+        self._contact_aggregator = MujocoContactAggregator(
+            self._mujoco,
+            self.model,
+            self.data,
+            scene.robotics,
+            float(self.model.opt.timestep),
+        )
         self._physics_step_index = 0
         self._controller_runner = ControllerRunner(
             deadline=self._read_controller_deadline(scene)
@@ -248,6 +271,11 @@ class MuJoCoSimulationSession:
                 self._physics_step_index,
                 float(self.data.time),
                 self._imu_measurements(),
+            )
+            self._contact_sensors.capture(
+                self._physics_step_index,
+                float(self.data.time),
+                self._contact_aggregator.measurements(),
             )
             if self._state_recorder.active:
                 recording_sensors: list[JointStateSensorSample | ImuSensorSample] = [
@@ -356,13 +384,21 @@ class MuJoCoSimulationSession:
                 "Recording references unknown sensor ID(s): "
                 + ", ".join(unknown_sensor_ids)
             )
+        unsupported_sensor_ids = sorted(
+            set(selected_sensor_ids) - set(self._recordable_sensor_types)
+        )
+        if unsupported_sensor_ids:
+            raise ValueError(
+                "Recording does not support sensor ID(s): "
+                + ", ".join(unsupported_sensor_ids)
+            )
         self._state_recorder.start(
             name=name,
             joint_ids=selected_joint_ids,
             actuator_ids=selected_actuator_ids,
             sensor_ids=selected_sensor_ids,
             sensor_types={
-                sensor_id: self._sensor_types[sensor_id]
+                sensor_id: self._recordable_sensor_types[sensor_id]
                 for sensor_id in selected_sensor_ids
             },
             timestep=float(self.model.opt.timestep),
@@ -429,6 +465,7 @@ class MuJoCoSimulationSession:
             sensors=[
                 *self._joint_state_sensors.latest_samples,
                 *self._imu_sensors.latest_samples,
+                *self._contact_sensors.latest_samples,
             ],
             controller=ControllerSimulationState(
                 status=self._controller_status,
@@ -589,6 +626,10 @@ class MuJoCoSimulationSession:
         self._imu_sensors.reset(
             float(self.data.time),
             self._imu_measurements(),
+        )
+        self._contact_sensors.reset(
+            float(self.data.time),
+            self._contact_aggregator.measurements(),
         )
 
     def _map_imu_sensor_channels(self) -> dict[str, tuple[int, int, int]]:
