@@ -967,8 +967,20 @@ link/collider scope 并实时显示 count、normal force/impulse、world tangent
 
 实现证据见 `docs/iterations/2026-07-16-contact-simulation-runtime.md`。
 
-## 71. 当前下一项具体任务
+## 71. Contact Sensor Qt E2E（已完成 2026-07-16）
 
 > 建立 Contact Sensor Qt E2E：在真实 QWebEngine 编辑器加载带 contact sensor 与可见平台的外部 USD 机械臂，
 > 从 Scene Tree 选择 sensor，驱动关节进入接触并验证 Inspector scope/count/force/point/normal 实时更新、对应
 > link 高亮及 Reset 清空；保留 screenshot 作为视觉验收证据。
+
+真实 QtWebEngine 流程已加载外部 USD 机械臂和可见 Contact Platform；contact sensor 不进入尚未支持的 Recording
+选项。UI 将 shoulder 驱动到 1.57 后，runtime 在 0.38s 报告 2 个接触，Inspector 与 SimulationState 数值一致；
+Scene Tree selection、SecondSegment viewport 高亮、Pause 和 Reset 清空均通过。离屏截图无空白、遮挡或字段溢出。
+
+实现证据见 `docs/iterations/2026-07-16-contact-sensor-qt-e2e.md`。
+
+## 72. 当前下一项具体任务
+
+> 建立 Contact Recording Contract：扩展 sensor recording typed union 与 JSON schema，定义 contact event 的 stable
+> columns（time/sequence/count/normal force/impulse/tangent xyz，以及有界 point/normal slots）；保持空 step cells 与
+> joint/IMU 相同语义，先用纯 recorder round-trip/CSV tests 固定格式。

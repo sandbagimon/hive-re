@@ -408,3 +408,260 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
     window.bridge.dirty = False
     window.close()
     app.processEvents()
+
+
+def test_qt_webengine_displays_live_contact_sensor(tmp_path: Path) -> None:
+    pytest.importorskip("mujoco")
+    pytest.importorskip("pxr")
+    pytest.importorskip("PySide6.QtWebEngineWidgets")
+    from PySide6.QtGui import QColor
+    from PySide6.QtWidgets import QApplication
+
+    from simlab.main_window import MainWindow
+    from simlab.models.actor import Actor
+    from simlab.models.robotics import Sensor
+    from simlab.models.scene import Scene
+    from simlab.models.transform import Transform
+    from simlab.services.openusd_importer import import_openusd_asset
+    from simlab.services.project_service import save_scene
+
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    articulation = imported.robotics_model.articulations[0]
+    shoulder = articulation.joints[0]
+    forearm = articulation.links[-1]
+    collider = forearm.colliders[0]
+    sensor = Sensor(
+        id="sensor_qt_forearm_contact",
+        name="Forearm Contact",
+        sensor_type="contact",
+        collider_id=collider.id,
+        aggregation_mode="sum",
+        update_rate_hz=100.0,
+    )
+    articulation.sensors.append(sensor)
+    scene = Scene(
+        name="Qt Contact Sensor Scene",
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="External Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            ),
+            Actor(
+                id="contact_platform",
+                name="Contact Platform",
+                type="object",
+                asset_id="primitive_ground",
+                transform=Transform(position=[0.85, 0.0, 0.5]),
+                properties={
+                    "primitive": "box",
+                    "size": [0.2, 0.5, 0.1],
+                    "physics": {"dynamic": False},
+                },
+            ),
+        ],
+        robotics=imported.robotics_model,
+        simulation_config={
+            "timestep": 0.01,
+            "max_catch_up_steps": 8,
+            "control_timeout": 10.0,
+        },
+    )
+    scene_path = tmp_path / "contact-sensor-scene.json"
+    save_scene(scene_path, scene)
+
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow(project_root=tmp_path)
+    window.show()
+    loaded: list[bool] = []
+    window.web_view.loadFinished.connect(loaded.append)
+    _wait_until(app, lambda: bool(loaded) and loaded[-1])
+    _wait_until(
+        app,
+        lambda: bool(
+            _javascript(app, window.web_view.page(), "window.simlabEditorReady === true")
+        ),
+    )
+    _javascript(
+        app,
+        window.web_view.page(),
+        f"window.simlabEditor.openProjectPath({json.dumps(str(scene_path))}).then("
+        "result=>document.documentElement.dataset.contactOpen=JSON.stringify(result));true",
+    )
+    _wait_until(
+        app,
+        lambda: bool(
+            _javascript(
+                app,
+                window.web_view.page(),
+                "document.documentElement.dataset.contactOpen || ''",
+            )
+        ),
+    )
+    assert _javascript(
+        app,
+        window.web_view.page(),
+        f"window.simlabEditor.selectSensor('actor_arm',{json.dumps(sensor.id)})",
+    ) is True
+    initial_ui = json.loads(
+        _javascript(
+            app,
+            window.web_view.page(),
+            "JSON.stringify({"
+            "rows:document.querySelectorAll('[data-sensor-id]').length,"
+            "recordable:document.querySelectorAll('[data-recording-sensor]').length,"
+            "scope:document.querySelector('[data-sensor-scope]').value,"
+            "hud:document.querySelector('#selection').textContent"
+            "})",
+        )
+    )
+    assert initial_ui["rows"] == 1
+    assert initial_ui["recordable"] == 0
+    assert initial_ui["scope"] == collider.name
+    assert forearm.name in initial_ui["hud"]
+
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-command=\"run\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )["simulationStatus"]
+        == "running",
+    )
+    assert _javascript(
+        app,
+        window.web_view.page(),
+        f"window.simlabEditor.selectJoint('actor_arm',{json.dumps(shoulder.id)})",
+    ) is True
+    _javascript(
+        app,
+        window.web_view.page(),
+        "const input=document.querySelector('input[type=\"number\"][data-joint-target]');"
+        "input.value='1.57';input.dispatchEvent(new Event('change',{bubbles:true}));true",
+    )
+
+    def contact_is_active() -> bool:
+        current = json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )
+        samples = current["simulationState"]["sensors"] if current["simulationState"] else []
+        contact = next((item for item in samples if item["id"] == sensor.id), None)
+        return bool(
+            current["simulationStatus"] == "running"
+            and contact
+            and contact["contact_count"] > 0
+            and contact["normal_force"] > 0
+            and contact["points"]
+        )
+
+    _wait_until(app, contact_is_active, timeout=20.0)
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-command=\"pause\"]').click();true",
+    )
+    _wait_until(
+        app,
+        lambda: json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )["simulationStatus"]
+        == "paused",
+    )
+    assert _javascript(
+        app,
+        window.web_view.page(),
+        f"window.simlabEditor.selectSensor('actor_arm',{json.dumps(sensor.id)})",
+    ) is True
+    state = json.loads(
+        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+    )["simulationState"]
+    sample = next(item for item in state["sensors"] if item["id"] == sensor.id)
+    live_ui = json.loads(
+        _javascript(
+            app,
+            window.web_view.page(),
+            "JSON.stringify({"
+            "scope:document.querySelector('[data-sensor-scope]').value,"
+            "hud:document.querySelector('#selection').textContent,"
+            "fields:Object.fromEntries([...document.querySelectorAll('[data-sensor-field]')]"
+            ".map(input=>[input.dataset.sensorField,input.value]))"
+            "})",
+        )
+    )
+    assert live_ui["scope"] == collider.name
+    assert forearm.name in live_ui["hud"]
+    assert int(live_ui["fields"]["sequence"]) == sample["sequence"]
+    assert int(live_ui["fields"]["contact_count"]) == sample["contact_count"]
+    assert float(live_ui["fields"]["normal_force"]) == pytest.approx(
+        sample["normal_force"], abs=0.001
+    )
+    assert float(live_ui["fields"]["normal_impulse"]) == pytest.approx(
+        sample["normal_impulse"], abs=0.0001
+    )
+    assert live_ui["fields"]["tangent_force"] == ", ".join(
+        f"{value:.3f}" for value in sample["tangent_force"]
+    )
+    assert live_ui["fields"]["first_point"] == ", ".join(
+        f"{value:.3f}" for value in sample["points"][0]
+    )
+    assert live_ui["fields"]["first_normal"] == ", ".join(
+        f"{value:.3f}" for value in sample["normals"][0]
+    )
+
+    window.web_view.update()
+    paint_deadline = time.monotonic() + 0.75
+    while time.monotonic() < paint_deadline:
+        app.processEvents()
+        time.sleep(0.02)
+    screenshot = window.web_view.grab()
+    output = Path(
+        os.environ.get("SIMLAB_QT_CONTACT_SCREENSHOT", tmp_path / "contact-sensor-ui.png")
+    )
+    assert screenshot.save(str(output))
+    image = screenshot.toImage()
+    colors = {
+        QColor(image.pixel(x, y)).rgb()
+        for x in range(0, image.width(), max(image.width() // 20, 1))
+        for y in range(0, image.height(), max(image.height() // 20, 1))
+    }
+    assert len(colors) > 10
+
+    _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-command=\"reset\"]').click();true",
+    )
+
+    def contact_is_reset() -> bool:
+        current = json.loads(
+            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        )
+        samples = current["simulationState"]["sensors"] if current["simulationState"] else []
+        contact = next((item for item in samples if item["id"] == sensor.id), None)
+        return bool(
+            current["simulationStatus"] == "paused"
+            and contact
+            and contact["sequence"] == 0
+            and contact["time"] == 0.0
+            and contact["contact_count"] == 0
+        )
+
+    _wait_until(app, contact_is_reset)
+    reset_count = _javascript(
+        app,
+        window.web_view.page(),
+        "document.querySelector('[data-sensor-field=\"contact_count\"]').value",
+    )
+    assert reset_count == "0"
+
+    window.bridge.dirty = False
+    window.close()
+    app.processEvents()
