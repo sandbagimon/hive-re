@@ -195,12 +195,20 @@ export interface ControllerSimulationState {
   timeout: number | null;
 }
 
+export interface TrajectorySimulationState {
+  status: 'stopped' | 'playing' | 'paused' | 'completed';
+  time: number;
+  duration: number;
+  name: string | null;
+}
+
 export interface SimulationState {
   time: number;
   actors: ActorSimulationState[];
   links: LinkSimulationState[];
   joints: JointSimulationState[];
   actuators: ActuatorSimulationState[];
+  trajectory: TrajectorySimulationState;
   controller: ControllerSimulationState;
 }
 
@@ -267,6 +275,10 @@ export interface PythonBridgeObject {
   stepSimulation(sceneJson: string, callback: (result: string) => void): void;
   resetSimulation(callback: (result: string) => void): void;
   setJointTargets(sceneJson: string, targetsJson: string, callback: (result: string) => void): void;
+  loadTrajectory(sceneJson: string, trajectoryJson: string, callback: (result: string) => void): void;
+  playTrajectory(callback: (result: string) => void): void;
+  pauseTrajectory(callback: (result: string) => void): void;
+  stopTrajectory(callback: (result: string) => void): void;
   setEditorState(sceneJson: string, dirty: boolean, currentPath: string): void;
   simulationStateChanged: QtSignal<[string]>;
   simulationStatusChanged: QtSignal<[string]>;

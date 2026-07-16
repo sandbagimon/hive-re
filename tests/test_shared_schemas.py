@@ -24,9 +24,11 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     assert "importOpenUsdPath" in bridge["properties"]["rpc_methods"]["const"]
     assert "getVisualGeometry" in bridge["properties"]["rpc_methods"]["const"]
     assert "setJointTargets" in bridge["properties"]["rpc_methods"]["const"]
+    assert "loadTrajectory" in bridge["properties"]["rpc_methods"]["const"]
+    assert "playTrajectory" in bridge["properties"]["rpc_methods"]["const"]
     assert "simulationStateChanged" in bridge["properties"]["events"]["const"]
     simulation_state = bridge["$defs"]["simulationState"]
-    assert {"links", "joints", "actuators", "controller"}.issubset(
+    assert {"links", "joints", "actuators", "controller", "trajectory"}.issubset(
         simulation_state["required"]
     )
     assert "meshGeometry" in scene["$defs"]

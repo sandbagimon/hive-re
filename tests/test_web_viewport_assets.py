@@ -58,3 +58,6 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "window.simlabEditor" in app
     assert "simlabEditorReady" in app
     assert "simulationStatus === 'running' ? 'running' : 'paused'" in app
+    types = (root / "ts" / "types.ts").read_text(encoding="utf-8")
+    assert "loadTrajectory" in types
+    assert "TrajectorySimulationState" in types

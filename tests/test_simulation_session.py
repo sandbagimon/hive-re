@@ -2,6 +2,7 @@ import pytest
 
 from simlab.models.actor import Actor
 from simlab.models.scene import Scene
+from simlab.models.trajectory import JointTrajectory
 from simlab.models.transform import Transform
 from simlab.services.openusd_importer import import_openusd_asset
 from simlab.services.simulation_session import (
@@ -195,3 +196,103 @@ def test_robot_session_rejects_non_finite_runtime_state_with_context(tmp_path) -
         session.state()
 
     assert session._controller_status == "fault"
+
+
+def test_robot_session_plays_pauses_and_stops_joint_trajectory(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+    )
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+    shoulder, elbow = imported.robotics_model.articulations[0].joints
+    trajectory = JointTrajectory.from_dict(
+        {
+            "version": "1.0",
+            "name": "Reach",
+            "loop": False,
+            "keyframes": [
+                {
+                    "time": 0,
+                    "targets": {
+                        shoulder.id: shoulder.initial_position,
+                        elbow.id: elbow.initial_position,
+                    },
+                },
+                {"time": 0.5, "targets": {shoulder.id: 0.6, elbow.id: -1.0}},
+            ],
+        }
+    )
+
+    loaded = session.load_joint_trajectory(trajectory)
+    playing = session.play_trajectory()
+    completed = session.step(steps=50)
+
+    assert loaded.trajectory.status == "stopped"
+    assert playing.trajectory.status == "playing"
+    assert completed.trajectory.status == "completed"
+    assert completed.trajectory.time == pytest.approx(0.5)
+    assert [state.ctrl for state in completed.actuators] == pytest.approx([0.6, -1.0])
+    assert completed.joints[0].qpos > 0.1
+
+    session.load_joint_trajectory(trajectory)
+    session.play_trajectory()
+    session.step(steps=20)
+    paused = session.pause_trajectory()
+    paused_ctrl = [state.ctrl for state in paused.actuators]
+    stepped_while_paused = session.step(steps=10)
+    assert stepped_while_paused.trajectory.time == pytest.approx(paused.trajectory.time)
+    assert [state.ctrl for state in stepped_while_paused.actuators] == pytest.approx(
+        paused_ctrl
+    )
+
+    stopped = session.stop_trajectory()
+    assert stopped.trajectory.status == "stopped"
+    assert [state.ctrl for state in stopped.actuators] == pytest.approx(
+        [shoulder.initial_position, elbow.initial_position]
+    )
+
+
+def test_robot_session_rejects_trajectory_for_unknown_joint(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+    )
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+    trajectory = JointTrajectory.from_dict(
+        {
+            "version": "1.0",
+            "name": "Invalid",
+            "loop": False,
+            "keyframes": [
+                {"time": 0, "targets": {"joint_missing": 0}},
+                {"time": 1, "targets": {"joint_missing": 1}},
+            ],
+        }
+    )
+
+    with pytest.raises(ValueError, match="unknown position joint"):
+        session.load_joint_trajectory(trajectory)

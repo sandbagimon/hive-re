@@ -10,6 +10,7 @@ from PySide6.QtCore import QObject, QTimer, Signal, Slot
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 
 from simlab.models.scene import Scene
+from simlab.models.trajectory import JointTrajectory
 from simlab.services.mjcf_exporter import export_scene_to_mjcf
 from simlab.services.openusd_importer import import_openusd_asset, load_visual_geometry
 from simlab.services.physics_materials import material_for_id
@@ -230,6 +231,59 @@ class EditorBridge(QObject):
             data = {"state": session.state().to_dict()} if session is not None else None
             return self._failure(exc, data)
 
+    @Slot(str, str, result=str)
+    def loadTrajectory(self, scene_json: str, trajectory_json: str) -> str:
+        try:
+            scene = self._scene_from_json(scene_json)
+            report = run_physics_preflight(scene, asset_root=self.project_root)
+            payload = self._preflight_payload(report)
+            if not report.is_valid:
+                return self._failure("Physics preflight failed", payload)
+            data = json.loads(trajectory_json)
+            if not isinstance(data, dict):
+                raise ValueError("Trajectory payload must be a JSON object")
+            trajectory = JointTrajectory.from_dict(data)
+            self.simulation_timer.stop()
+            state = self.simulation_service.load_joint_trajectory(scene, trajectory)
+            self.simulationStateChanged.emit(json.dumps(state.to_dict()))
+            self.simulationStatusChanged.emit("paused")
+            return self._success({"state": state.to_dict(), "issues": payload["issues"]})
+        except Exception as exc:
+            return self._failure(exc)
+
+    @Slot(result=str)
+    def playTrajectory(self) -> str:
+        try:
+            state = self.simulation_service.play_trajectory()
+            self.simulation_timer.start()
+            self.simulationStateChanged.emit(json.dumps(state.to_dict()))
+            self.simulationStatusChanged.emit("running")
+            return self._success({"state": state.to_dict()})
+        except Exception as exc:
+            return self._failure(exc)
+
+    @Slot(result=str)
+    def pauseTrajectory(self) -> str:
+        try:
+            self.simulation_timer.stop()
+            state = self.simulation_service.pause_trajectory()
+            self.simulationStateChanged.emit(json.dumps(state.to_dict()))
+            self.simulationStatusChanged.emit("paused")
+            return self._success({"state": state.to_dict()})
+        except Exception as exc:
+            return self._failure(exc)
+
+    @Slot(result=str)
+    def stopTrajectory(self) -> str:
+        try:
+            self.simulation_timer.stop()
+            state = self.simulation_service.stop_trajectory()
+            self.simulationStateChanged.emit(json.dumps(state.to_dict()))
+            self.simulationStatusChanged.emit("paused")
+            return self._success({"state": state.to_dict()})
+        except Exception as exc:
+            return self._failure(exc)
+
     @Slot(str, bool, str)
     def setEditorState(self, scene_json: str, dirty: bool, current_path: str) -> None:
         scene_changed = scene_json != self.synced_scene_json
@@ -278,6 +332,9 @@ class EditorBridge(QObject):
             self.simulation_timer.stop()
             return
         self.simulationStateChanged.emit(json.dumps(state.to_dict()))
+        if state.trajectory.status == "completed":
+            self.simulation_timer.stop()
+            self.simulationStatusChanged.emit("paused")
 
     def _stop_simulation(self) -> None:
         self.simulation_timer.stop()

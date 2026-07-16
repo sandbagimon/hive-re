@@ -6,6 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from simlab.models.scene import Scene
+from simlab.models.trajectory import JointTrajectory
 from simlab.services.simulation_session import MuJoCoSimulationSession, SimulationState
 
 ConsoleCallback = Callable[[str], None]
@@ -98,7 +99,12 @@ class SimulationService:
             self._time_accumulator = max(
                 0.0, self._time_accumulator - steps * timestep
             )
-            return self.session.step(steps)
+            state = self.session.step(steps)
+            if state.trajectory.status == "completed":
+                self.running = False
+                self._last_wall_time = None
+                self._time_accumulator = 0.0
+            return state
         except Exception:
             self.running = False
             self._last_wall_time = None
@@ -113,6 +119,51 @@ class SimulationService:
             self.console(f"Loaded MuJoCo model: {self.session.xml_path}")
         state = self.session.set_joint_position_targets(targets)
         self.console(f"Updated {len(targets)} joint target(s).")
+        return state
+
+    def load_joint_trajectory(
+        self,
+        scene: Scene,
+        trajectory: JointTrajectory,
+    ) -> SimulationState:
+        if self.session is None:
+            self.session = self._create_session(scene)
+            self.console(f"Loaded MuJoCo model: {self.session.xml_path}")
+        self.running = False
+        self._last_wall_time = None
+        self._time_accumulator = 0.0
+        state = self.session.load_joint_trajectory(trajectory)
+        self.console(f"Loaded joint trajectory: {trajectory.name}")
+        return state
+
+    def play_trajectory(self) -> SimulationState:
+        if self.session is None:
+            raise RuntimeError("No simulation is loaded")
+        state = self.session.play_trajectory()
+        self.running = True
+        self._last_wall_time = self.clock()
+        self._time_accumulator = 0.0
+        self.console("Trajectory playing.")
+        return state
+
+    def pause_trajectory(self) -> SimulationState:
+        if self.session is None:
+            raise RuntimeError("No simulation is loaded")
+        state = self.session.pause_trajectory()
+        self.running = False
+        self._last_wall_time = None
+        self._time_accumulator = 0.0
+        self.console("Trajectory paused.")
+        return state
+
+    def stop_trajectory(self) -> SimulationState:
+        if self.session is None:
+            raise RuntimeError("No simulation is loaded")
+        state = self.session.stop_trajectory()
+        self.running = False
+        self._last_wall_time = None
+        self._time_accumulator = 0.0
+        self.console("Trajectory stopped.")
         return state
 
     def reset(self) -> SimulationState | None:

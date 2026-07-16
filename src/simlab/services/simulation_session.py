@@ -6,7 +6,12 @@ from pathlib import Path
 from typing import Any
 
 from simlab.models.scene import Scene
+from simlab.models.trajectory import JointTrajectory
 from simlab.services.mjcf_exporter import export_scene_to_mjcf
+from simlab.services.trajectory_player import (
+    JointTrajectoryPlayer,
+    TrajectoryPlaybackState,
+)
 
 
 class SimulationRuntimeError(RuntimeError):
@@ -78,6 +83,14 @@ class SimulationState:
     controller: ControllerSimulationState = field(
         default_factory=ControllerSimulationState
     )
+    trajectory: TrajectoryPlaybackState = field(
+        default_factory=lambda: TrajectoryPlaybackState(
+            status="stopped",
+            time=0.0,
+            duration=0.0,
+            name=None,
+        )
+    )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -87,6 +100,7 @@ class SimulationState:
             "joints": [joint.to_dict() for joint in self.joints],
             "actuators": [actuator.to_dict() for actuator in self.actuators],
             "controller": self.controller.to_dict(),
+            "trajectory": self.trajectory.to_dict(),
         }
 
 
@@ -114,6 +128,7 @@ class MuJoCoSimulationSession:
         self._body_ids = self._map_actor_bodies(scene)
         self._link_ids, self._joint_ids, self._actuator_ids = self._map_robotics(scene)
         self._joint_position_actuators = self._map_joint_position_actuators(scene)
+        self._trajectory_player = JointTrajectoryPlayer()
         self._control_timeout = self._read_control_timeout(scene)
         self._controller_status = "ready"
         self._controller_message: str | None = None
@@ -124,8 +139,10 @@ class MuJoCoSimulationSession:
 
     def step(self, steps: int = 1) -> SimulationState:
         for _ in range(max(steps, 1)):
+            self._apply_trajectory_target()
             self._apply_control_watchdog()
             self._mujoco.mj_step(self.model, self.data)
+        self._apply_trajectory_target()
         return self.state()
 
     def reset(self) -> SimulationState:
@@ -134,18 +151,45 @@ class MuJoCoSimulationSession:
         return self.state()
 
     def set_joint_position_targets(self, targets: dict[str, float]) -> SimulationState:
+        if self._trajectory_player.status == "playing":
+            self._trajectory_player.pause(float(self.data.time))
         try:
             updates = self._validate_joint_position_targets(targets)
         except (TypeError, ValueError) as exc:
             self._controller_status = "fault"
             self._controller_message = str(exc)
             raise
-        for actuator_id, value in updates:
-            self.data.ctrl[actuator_id] = value
-        if updates:
-            self._controller_status = "active"
-            self._controller_message = None
-            self._last_command_time = float(self.data.time)
+        self._apply_joint_target_updates(updates)
+        return self.state()
+
+    def load_joint_trajectory(self, trajectory: JointTrajectory) -> SimulationState:
+        self._trajectory_player.load(
+            trajectory,
+            allowed_joint_ids=set(self._joint_position_actuators),
+        )
+        targets = self._trajectory_player.sample(float(self.data.time))
+        if targets is not None:
+            self._apply_joint_target_updates(
+                self._validate_joint_position_targets(targets)
+            )
+        return self.state()
+
+    def play_trajectory(self) -> SimulationState:
+        self._trajectory_player.play(float(self.data.time))
+        self._apply_trajectory_target()
+        return self.state()
+
+    def pause_trajectory(self) -> SimulationState:
+        self._trajectory_player.pause(float(self.data.time))
+        return self.state()
+
+    def stop_trajectory(self) -> SimulationState:
+        self._trajectory_player.stop()
+        targets = self._trajectory_player.sample(float(self.data.time))
+        if targets is not None:
+            self._apply_joint_target_updates(
+                self._validate_joint_position_targets(targets)
+            )
         return self.state()
 
     def state(self) -> SimulationState:
@@ -194,6 +238,7 @@ class MuJoCoSimulationSession:
                 command_time=self._last_command_time,
                 timeout=self._control_timeout or None,
             ),
+            trajectory=self._trajectory_player.state(float(self.data.time)),
         )
         self._validate_finite_state(state)
         return state
@@ -248,6 +293,8 @@ class MuJoCoSimulationSession:
         self._controller_status = "ready"
         self._controller_message = None
         self._last_command_time = None
+        if self._trajectory_player.trajectory is not None:
+            self._trajectory_player.stop()
 
     def _validate_joint_position_targets(
         self, targets: dict[str, float]
@@ -277,6 +324,24 @@ class MuJoCoSimulationSession:
         self.data.ctrl[:] = self._home_controls
         self._controller_status = "timed_out"
         self._controller_message = "Joint command timed out; targets returned to Home."
+
+    def _apply_joint_target_updates(self, updates: list[tuple[int, float]]) -> None:
+        for actuator_id, value in updates:
+            self.data.ctrl[actuator_id] = value
+        if updates:
+            self._controller_status = "active"
+            self._controller_message = None
+            self._last_command_time = float(self.data.time)
+
+    def _apply_trajectory_target(self) -> None:
+        if self._trajectory_player.status != "playing":
+            return
+        targets = self._trajectory_player.sample(float(self.data.time))
+        if targets is None:
+            return
+        self._apply_joint_target_updates(
+            self._validate_joint_position_targets(targets)
+        )
 
     @staticmethod
     def _read_control_timeout(scene: Scene) -> float:

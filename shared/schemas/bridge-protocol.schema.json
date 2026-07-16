@@ -68,6 +68,17 @@
         },
         "joints": { "type": "array" },
         "actuators": { "type": "array" },
+        "trajectory": {
+          "type": "object",
+          "properties": {
+            "status": { "enum": ["stopped", "playing", "paused", "completed"] },
+            "time": { "type": "number", "minimum": 0 },
+            "duration": { "type": "number", "minimum": 0 },
+            "name": { "type": ["string", "null"] }
+          },
+          "required": ["status", "time", "duration", "name"],
+          "additionalProperties": false
+        },
         "controller": {
           "type": "object",
           "properties": {
@@ -80,7 +91,7 @@
           "additionalProperties": false
         }
       },
-      "required": ["time", "actors", "links", "joints", "actuators", "controller"],
+      "required": ["time", "actors", "links", "joints", "actuators", "trajectory", "controller"],
       "additionalProperties": false
     }
   },
@@ -102,6 +113,10 @@
         "stepSimulation",
         "resetSimulation",
         "setJointTargets",
+        "loadTrajectory",
+        "playTrajectory",
+        "pauseTrajectory",
+        "stopTrajectory",
         "setEditorState"
       ]
     },

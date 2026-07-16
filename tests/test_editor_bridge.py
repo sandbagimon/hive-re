@@ -256,3 +256,76 @@ def test_editor_bridge_reset_publishes_robot_home_state(tmp_path: Path) -> None:
     assert bridge.simulation_service.session is not None
     assert statuses == ["paused"]
     assert states[-1] == response["data"]["state"]
+
+
+def test_editor_bridge_runs_joint_trajectory_to_completion(tmp_path: Path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+        simulation_config={"timestep": 0.01, "max_catch_up_steps": 4},
+    )
+    shoulder, elbow = imported.robotics_model.articulations[0].joints
+    trajectory = {
+        "version": "1.0",
+        "name": "Bridge Reach",
+        "loop": False,
+        "keyframes": [
+            {
+                "time": 0,
+                "targets": {
+                    shoulder.id: shoulder.initial_position,
+                    elbow.id: elbow.initial_position,
+                },
+            },
+            {"time": 0.5, "targets": {shoulder.id: 0.6, elbow.id: -1.0}},
+        ],
+    }
+    bridge = _bridge(tmp_path)
+    wall_time = [50.0]
+    bridge.simulation_service.clock = lambda: wall_time[0]
+    statuses: list[str] = []
+    states: list[dict] = []
+    bridge.simulationStatusChanged.connect(statuses.append)
+    bridge.simulationStateChanged.connect(lambda value: states.append(json.loads(value)))
+
+    loaded = json.loads(
+        bridge.loadTrajectory(json.dumps(scene.to_dict()), json.dumps(trajectory))
+    )
+    playing = json.loads(bridge.playTrajectory())
+    for _ in range(30):
+        wall_time[0] += 0.02
+        bridge._advance_simulation()
+
+    assert loaded["ok"] is True
+    assert loaded["data"]["state"]["trajectory"]["status"] == "stopped"
+    assert playing["data"]["state"]["trajectory"]["status"] == "playing"
+    assert states[-1]["trajectory"]["status"] == "completed"
+    assert states[-1]["trajectory"]["time"] == pytest.approx(0.5)
+    assert states[-1]["actuators"][0]["ctrl"] == pytest.approx(0.6)
+    assert bridge.simulation_timer.isActive() is False
+    assert bridge.simulation_service.running is False
+    assert statuses[-1] == "paused"
+
+    replayed = json.loads(bridge.playTrajectory())
+    wall_time[0] += 0.1
+    bridge._advance_simulation()
+    paused = json.loads(bridge.pauseTrajectory())
+    stopped = json.loads(bridge.stopTrajectory())
+    assert replayed["data"]["state"]["trajectory"]["status"] == "playing"
+    assert paused["data"]["state"]["trajectory"]["status"] == "paused"
+    assert stopped["data"]["state"]["trajectory"]["status"] == "stopped"
+    assert stopped["data"]["state"]["actuators"][0]["ctrl"] == pytest.approx(
+        shoulder.initial_position
+    )
