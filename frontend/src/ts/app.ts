@@ -1168,26 +1168,17 @@ async function handleControllerCommand(command: string, actor: Actor): Promise<v
   }
   if (command !== 'load' && command !== 'reload') return;
   if (!window.confirm('Run trusted Python controller code from this project?')) return;
-  const path = command === 'reload' && loadedController?.actorId === actor.id
-    ? loadedController.path
-    : undefined;
-  await loadProjectController(actor, path);
+  await loadProjectController(command === 'reload', actor);
 }
 
 async function loadProjectController(
+  reload: boolean,
   actor: Actor,
-  path?: string,
 ): Promise<RpcResult<ControllerLoadPayload>> {
-  const result = path
-    ? await bridge.call<ControllerLoadPayload>(
-      'loadControllerPath',
-      JSON.stringify(store.current.scene),
-      path,
-    )
-    : await bridge.call<ControllerLoadPayload>(
-      'loadController',
-      JSON.stringify(store.current.scene),
-    );
+  const result = await bridge.call<ControllerLoadPayload>(
+    reload ? 'reloadController' : 'loadController',
+    JSON.stringify(store.current.scene),
+  );
   if (!result.ok || !result.data) {
     if (result.error !== 'Cancelled') showToast(result.error ?? 'Controller load failed', true);
     return result;
@@ -1314,31 +1305,6 @@ async function saveProject(saveAs = false): Promise<boolean> {
   return true;
 }
 
-async function saveProjectPath(path: string): Promise<RpcResult<SavePayload>> {
-  const result = await bridge.call<SavePayload>(
-    'saveProjectPath',
-    JSON.stringify(store.current.scene),
-    path,
-  );
-  if (result.ok && result.data) {
-    store.markSaved(result.data.path);
-    store.appendLog(`Saved scene: ${result.data.path}`);
-  }
-  return result;
-}
-
-async function openProjectPath(path: string): Promise<RpcResult<ProjectPayload>> {
-  const result = await bridge.call<ProjectPayload>('openProjectPath', path);
-  if (result.ok && result.data) {
-    trajectoryDrafts.clear();
-    recordingDrafts.clear();
-    loadedController = null;
-    store.loadScene(result.data.scene, result.data.path);
-    store.appendLog(`Opened scene: ${result.data.path}`);
-  }
-  return result;
-}
-
 function allowDiscard(): boolean {
   return !store.current.dirty || window.confirm('Discard unsaved scene changes?');
 }
@@ -1397,10 +1363,8 @@ async function handleCommand(command: string): Promise<void> {
   }
 }
 
-async function importOpenUsd(path?: string): Promise<RpcResult<OpenUsdImportPayload>> {
-  const result = path
-    ? await bridge.call<OpenUsdImportPayload>('importOpenUsdPath', path)
-    : await bridge.call<OpenUsdImportPayload>('importOpenUsd');
+async function importOpenUsd(): Promise<RpcResult<OpenUsdImportPayload>> {
+  const result = await bridge.call<OpenUsdImportPayload>('importOpenUsd');
   if (result.ok && result.data) {
     store.upsertAsset(result.data.asset);
     store.addAsset(result.data.asset, result.data.robotics);
@@ -1521,9 +1485,7 @@ async function initialize(): Promise<void> {
     store.setSimulation(status, store.current.simulationState);
   });
   bridge.onConsoleMessage((message) => store.appendLog(message));
-  const assets = await bridge.call<AssetsPayload>('getAssets');
-  if (assets.ok && assets.data) store.setAssets(assets.data.assets);
-  else store.appendLog(assets.error ?? 'Python bridge unavailable.');
+  void loadAssetsWithRetry();
   bridge.syncEditorState(
     JSON.stringify(store.current.scene),
     store.current.dirty,
@@ -1533,25 +1495,32 @@ async function initialize(): Promise<void> {
   window.simlabEditorReady = true;
 }
 
+let lastAssetConnectionError = '';
+
+async function loadAssetsWithRetry(): Promise<void> {
+  const assets = await bridge.call<AssetsPayload>('getAssets');
+  if (assets.ok && assets.data) {
+    store.setAssets(assets.data.assets);
+    if (lastAssetConnectionError) store.appendLog('Shared assets connected.');
+    lastAssetConnectionError = '';
+    bridge.syncEditorState(
+      JSON.stringify(store.current.scene),
+      store.current.dirty,
+      store.current.currentPath,
+    );
+    return;
+  }
+  const error = assets.error ?? 'SimLab API unavailable';
+  if (error !== lastAssetConnectionError) store.appendLog(`Assets: ${error}`);
+  lastAssetConnectionError = error;
+  element('asset-list').innerHTML = '<div class="empty-state">Connecting to shared assets…</div>';
+  window.setTimeout(() => { void loadAssetsWithRetry(); }, 1000);
+}
+
 window.simlabEditorReady = false;
 window.simlabEditor = {
-  importOpenUsdPath: (path) => importOpenUsd(path),
-  openProjectPath,
-  saveProjectPath,
   getRecording: () => bridge.call('getRecording'),
-  exportRecordingPath: (path, formatName) => bridge.call(
-    'exportRecording',
-    path,
-    formatName,
-  ),
   setSimulationSpeed,
-  loadControllerPath: (path) => {
-    const actor = store.current.scene.actors.find(
-      (item) => item.id === store.current.selectedActorId && item.type === 'robot',
-    );
-    if (!actor) return Promise.resolve({ ok: false, error: 'Select a robot actor first' });
-    return loadProjectController(actor, path);
-  },
   getStateJson: () => JSON.stringify(store.current),
   selectJoint: (actorId, jointId) => {
     store.selectJoint(actorId, jointId);

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-import { EditorStore } from '../src/simlab/web_viewport/generated/store.js';
+import { EditorStore } from '../frontend/generated/store.js';
 
 const store = new EditorStore();
 const box = {

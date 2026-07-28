@@ -958,15 +958,10 @@ async function handleControllerCommand(command, actor) {
         return;
     if (!window.confirm('Run trusted Python controller code from this project?'))
         return;
-    const path = command === 'reload' && loadedController?.actorId === actor.id
-        ? loadedController.path
-        : undefined;
-    await loadProjectController(actor, path);
+    await loadProjectController(command === 'reload', actor);
 }
-async function loadProjectController(actor, path) {
-    const result = path
-        ? await bridge.call('loadControllerPath', JSON.stringify(store.current.scene), path)
-        : await bridge.call('loadController', JSON.stringify(store.current.scene));
+async function loadProjectController(reload, actor) {
+    const result = await bridge.call(reload ? 'reloadController' : 'loadController', JSON.stringify(store.current.scene));
     if (!result.ok || !result.data) {
         if (result.error !== 'Cancelled')
             showToast(result.error ?? 'Controller load failed', true);
@@ -1073,25 +1068,6 @@ async function saveProject(saveAs = false) {
     store.appendLog(`Saved scene: ${result.data.path}`);
     return true;
 }
-async function saveProjectPath(path) {
-    const result = await bridge.call('saveProjectPath', JSON.stringify(store.current.scene), path);
-    if (result.ok && result.data) {
-        store.markSaved(result.data.path);
-        store.appendLog(`Saved scene: ${result.data.path}`);
-    }
-    return result;
-}
-async function openProjectPath(path) {
-    const result = await bridge.call('openProjectPath', path);
-    if (result.ok && result.data) {
-        trajectoryDrafts.clear();
-        recordingDrafts.clear();
-        loadedController = null;
-        store.loadScene(result.data.scene, result.data.path);
-        store.appendLog(`Opened scene: ${result.data.path}`);
-    }
-    return result;
-}
 function allowDiscard() {
     return !store.current.dirty || window.confirm('Discard unsaved scene changes?');
 }
@@ -1170,10 +1146,8 @@ async function handleCommand(command) {
         }
     }
 }
-async function importOpenUsd(path) {
-    const result = path
-        ? await bridge.call('importOpenUsdPath', path)
-        : await bridge.call('importOpenUsd');
+async function importOpenUsd() {
+    const result = await bridge.call('importOpenUsd');
     if (result.ok && result.data) {
         store.upsertAsset(result.data.asset);
         store.addAsset(result.data.asset, result.data.robotics);
@@ -1293,29 +1267,33 @@ async function initialize() {
         store.setSimulation(status, store.current.simulationState);
     });
     bridge.onConsoleMessage((message) => store.appendLog(message));
-    const assets = await bridge.call('getAssets');
-    if (assets.ok && assets.data)
-        store.setAssets(assets.data.assets);
-    else
-        store.appendLog(assets.error ?? 'Python bridge unavailable.');
+    void loadAssetsWithRetry();
     bridge.syncEditorState(JSON.stringify(store.current.scene), store.current.dirty, store.current.currentPath);
     store.appendLog('TypeScript editor ready.');
     window.simlabEditorReady = true;
 }
+let lastAssetConnectionError = '';
+async function loadAssetsWithRetry() {
+    const assets = await bridge.call('getAssets');
+    if (assets.ok && assets.data) {
+        store.setAssets(assets.data.assets);
+        if (lastAssetConnectionError)
+            store.appendLog('Shared assets connected.');
+        lastAssetConnectionError = '';
+        bridge.syncEditorState(JSON.stringify(store.current.scene), store.current.dirty, store.current.currentPath);
+        return;
+    }
+    const error = assets.error ?? 'SimLab API unavailable';
+    if (error !== lastAssetConnectionError)
+        store.appendLog(`Assets: ${error}`);
+    lastAssetConnectionError = error;
+    element('asset-list').innerHTML = '<div class="empty-state">Connecting to shared assets…</div>';
+    window.setTimeout(() => { void loadAssetsWithRetry(); }, 1000);
+}
 window.simlabEditorReady = false;
 window.simlabEditor = {
-    importOpenUsdPath: (path) => importOpenUsd(path),
-    openProjectPath,
-    saveProjectPath,
     getRecording: () => bridge.call('getRecording'),
-    exportRecordingPath: (path, formatName) => bridge.call('exportRecording', path, formatName),
     setSimulationSpeed,
-    loadControllerPath: (path) => {
-        const actor = store.current.scene.actors.find((item) => item.id === store.current.selectedActorId && item.type === 'robot');
-        if (!actor)
-            return Promise.resolve({ ok: false, error: 'Select a robot actor first' });
-        return loadProjectController(actor, path);
-    },
     getStateJson: () => JSON.stringify(store.current),
     selectJoint: (actorId, jointId) => {
         store.selectJoint(actorId, jointId);

@@ -1,18 +1,23 @@
 # SimLab
 
-SimLab is a simulation-first desktop robotics scene editor MVP. The editor UI is implemented in TypeScript and three.js, hosted by a thin PySide6/QWebEngine desktop shell. Python provides local project IO, MJCF export, validation, and MuJoCo simulation through a typed JSON RPC bridge. It has no cloud service, login flow, online marketplace, or third-party product branding.
+SimLab is a simulation-first robotics scene editor MVP. Its independently built TypeScript/three.js frontend runs in a standard browser and communicates with a separately deployed Python API over versioned HTTP resources and WebSocket events. An optional PySide6/QWebEngine program is only a web client for the same hosted frontend. Python provides OpenUSD import, MJCF export, validation, controllers, recording, sensors, and isolated MuJoCo simulation resources. It has no cloud service, login flow, online marketplace, or third-party product branding.
 
 ## Architecture
 
 ```text
-SimLab Desktop
-+-- PySide6/QWebEngine Host
-|   +-- Python JSON RPC Bridge
-+-- TypeScript Editor
+SimLab frontend (static deployment)
++-- Browser or optional PySide6/QWebEngine Client
++-- TypeScript Editor (`frontend/src`)
 |   +-- Editor Store + History
 |   +-- Asset Browser / Scene Tree / Inspector / Console
 |   +-- three.js Viewport
-+-- Python Services
++-- runtime `simlab-config.json`
+    |
+    +-- `/api/v1` HTTP resources + per-simulation WebSocket
+        |
+SimLab backend (independent Python deployment)
++-- Project / Simulation / Artifact Resource Manager
++-- Transport-neutral Python Application Service
     +-- Project IO / OpenUSD Import / Validation / MJCF Export
     +-- MuJoCo Session + Joint Control / Trajectory / Recording
 ```
@@ -25,24 +30,47 @@ Run these commands from the repository root.
 python -m venv .venv
 .venv\Scripts\activate
 python -m pip install --upgrade pip setuptools wheel
-python -m pip install -r requirements.txt
+python -m pip install -e .
 npm install
 npm run build
 ```
 
-On macOS or Linux, activate the virtual environment with `source .venv/bin/activate`.
+On macOS or Linux, activate the virtual environment with `source .venv/bin/activate`. Install `-r requirements.txt` instead when developing or running the complete Python/Qt test suite. Install `-e '.[desktop]'` when the optional Qt desktop host is needed.
 
 ## Run
 
+Run the API backend:
+
 ```bash
-python -m simlab.app
+simlab-api --host 127.0.0.1 --port 8765 \
+  --data-root .simlab-data \
+  --cors-origin http://127.0.0.1:4173 \
+  --cors-origin http://127.0.0.1:5173
 ```
 
-The desktop app opens a TypeScript editor with an asset browser, scene tree, three.js viewport, property inspector, and console. Primitive assets can be added to the scene, exported to `exports/scene.xml`, and simulated with Run/Pause/Step/Reset controls. The primitive asset set includes dynamic shapes plus static physics playground assets such as Ground, Table, and Ramp.
+In a separate terminal, run the frontend:
 
-The viewport is a local QtWebEngine view backed by vendored three.js files. It renders primitive actors, supports orbit camera controls, click selection, selection outline, translate/rotate/scale gizmos, frame selected, and front/right/top/isometric camera shortcuts. During simulation, MuJoCo body poses are pushed back into the viewport without modifying the authoring transforms.
+```bash
+npm run dev:frontend
+```
 
-The TypeScript Editor Store owns scene authoring state, selection, dirty tracking, and undo/redo. Python receives immutable scene snapshots only for Save, Export, Preflight, and Simulation RPC operations.
+Then open `http://127.0.0.1:5173`. For a production-like build use `npm run build` followed by `npm run preview:frontend`, which serves `frontend/dist` at `http://127.0.0.1:4173`. Deployment-specific API and WebSocket addresses are read from `simlab-config.json`, so the static bundle does not need to share a host or release cycle with Python.
+
+The optional desktop adapter remains available after installing the `desktop` extra:
+
+```bash
+SIMLAB_FRONTEND_URL=http://127.0.0.1:4173 simlab
+```
+
+The Qt program only loads that HTTP(S) URL. It does not embed the frontend, expose QWebChannel, or start/own the backend.
+
+The browser app opens a TypeScript editor with an asset browser, scene tree, three.js viewport, property inspector, and console. Primitive assets can be added to the scene, downloaded as MJCF, and simulated with Run/Pause/Step/Reset controls. Scene JSON is opened and saved through native browser file workflows; OpenUSD bundles and trusted controller files are uploaded to the backend, while MJCF and recording artifacts are downloaded by the browser. The primitive asset set includes dynamic shapes plus static physics playground assets such as Ground, Table, and Ramp.
+
+The viewport is a browser WebGL view backed by vendored three.js files. It renders primitive actors, supports orbit camera controls, click selection, selection outline, translate/rotate/scale gizmos, frame selected, and front/right/top/isometric camera shortcuts. During simulation, MuJoCo body poses arrive over WebSocket and are applied without modifying the authoring transforms.
+
+The TypeScript Editor Store owns scene authoring state, selection, dirty tracking, and undo/redo. Python receives canonical scene resources for validation, export, preflight, and simulation; browser and server filesystem paths never cross the public API.
+
+See [`docs/MODULAR_DEVELOPMENT.md`](docs/MODULAR_DEVELOPMENT.md) for module boundaries, dependency rules, the target package layout, and the incremental modularization roadmap.
 
 Use **Import USD** to add `.usd`, `.usda`, `.usdc`, or `.usdz` assets. The importer resolves stage transforms, converts stage units and Y-up coordinates to SimLab's meter/Z-up convention, merges visible `UsdGeomMesh` data into a project cache, and registers the result in the Asset Browser. Imported actors use the same Transform and Physics inspector as primitive actors.
 
@@ -76,7 +104,10 @@ Run, Step, and Export MJCF perform a physics preflight first. The preflight vali
 python -m pytest
 npm run typecheck
 npm run test:frontend
+npm run test:web
 ```
+
+`npm run test:web` starts frontend and backend on different ports and verifies the cross-origin HTTP/WebSocket workflow in headless Chromium, including multi-client isolation and reconnect replay. See [`docs/WEB_ARCHITECTURE.md`](docs/WEB_ARCHITECTURE.md) for the v1 resource contract, runtime configuration, security controls, and deployment boundary.
 
 The tests cover the scene model, project save/load behavior, scene service actor operations, scene history, geometry contracts, OpenUSD import, MJCF export, material presets, in-process MuJoCo state sync, and visual/physics fidelity. MuJoCo-specific tests are skipped automatically if MuJoCo is not installed.
 
@@ -102,9 +133,9 @@ slice is external OpenUSD robot-arm import -> robotics intermediate model -> MJC
 application. Read that document before starting the next implementation
 task; `PRODUCT_PLAN.md` remains the long-term scope document.
 
-The external OpenUSD robot import, joint-control vertical slice, general controller callback API, and first joint-state sensor runtime/Inspector are complete. The next platform gap is deterministic sensor recording/export followed by IMU and contact/force sensing.
+The external OpenUSD robot import, joint-control vertical slice, controller API, trajectory/recording workflow, joint-state/IMU/contact sensors, deterministic sensor noise runtime, and browser/backend decoupling are complete. The next focused gap is sensor authoring and noise inspection.
 
-1. **Contact sensing**: Add contact/force schema, aggregation semantics, recording fields, and UI inspection.
+1. **Sensor Noise Inspector**: Display deterministic seed, channel bias/stddev, and units with runtime/recording Reset replay E2E.
 2. **Sensor authoring**: Add Inspector controls for creating, editing, and deleting mounted sensors.
 3. **Clock hardening**: Extend soak coverage for variable host load and long recording sessions.
 4. **Authoring**: Add dedicated collision prim workflows and a consolidated validation panel.
@@ -113,5 +144,5 @@ See [`docs/PRODUCT_PLAN.md`](docs/PRODUCT_PLAN.md) for the complete milestone ma
 
 ## Third-Party Code
 
-- three.js r160 is vendored under `src/simlab/web_viewport/vendor/` and distributed under the MIT License.
+- three.js r160 is vendored under `frontend/src/vendor/` and distributed under the MIT License.
 - OpenUSD Python bindings are installed through the `usd-core` package. OpenUSD 26.05+ is distributed under the TOST license; see [third-party notices](docs/THIRD_PARTY_NOTICES.md).

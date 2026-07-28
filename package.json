@@ -4,11 +4,17 @@
   "type": "module",
   "version": "0.1.0",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json --noEmit && vite build --config frontend/vite.config.mjs",
+    "dev:frontend": "vite --config frontend/vite.config.mjs",
+    "preview:frontend": "vite preview --config frontend/vite.config.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:frontend": "node frontend-tests/store.mjs && node frontend-tests/trajectory-draft.mjs"
+    "build:modules": "tsc -p tsconfig.json",
+    "test:frontend": "npm run build:modules && node frontend-tests/store.mjs && node frontend-tests/trajectory-draft.mjs",
+    "test:web": "npm run build && PLAYWRIGHT_BROWSERS_PATH=.venv/playwright-browsers playwright test"
   },
   "devDependencies": {
-    "typescript": "^5.9.2"
+    "@playwright/test": "^1.62.0",
+    "typescript": "^5.9.2",
+    "vite": "^7.0.0"
   }
 }

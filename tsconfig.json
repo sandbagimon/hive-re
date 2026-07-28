@@ -4,13 +4,13 @@
     "module": "ES2022",
     "moduleResolution": "Bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "rootDir": "src/simlab/web_viewport/ts",
-    "outDir": "src/simlab/web_viewport/generated",
+    "rootDir": "frontend/src/ts",
+    "outDir": "frontend/generated",
     "strict": true,
     "noImplicitAny": false,
     "skipLibCheck": true,
     "noEmitOnError": true,
     "removeComments": false
   },
-  "include": ["src/simlab/web_viewport/ts/**/*.ts", "src/simlab/web_viewport/ts/**/*.d.ts"]
+  "include": ["frontend/src/ts/**/*.ts", "frontend/src/ts/**/*.d.ts"]
 }

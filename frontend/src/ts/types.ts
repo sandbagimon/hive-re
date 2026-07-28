@@ -353,65 +353,11 @@ export interface VisualGeometryPayload {
   indices: number[];
 }
 
-export interface QtSignal<T extends unknown[]> {
-  connect(callback: (...args: T) => void): void;
-}
-
-export interface PythonBridgeObject {
-  getAssets(callback: (result: string) => void): void;
-  importOpenUsd(callback: (result: string) => void): void;
-  importOpenUsdPath(path: string, callback: (result: string) => void): void;
-  getVisualGeometry(cachePath: string, callback: (result: string) => void): void;
-  openProject(callback: (result: string) => void): void;
-  openProjectPath(path: string, callback: (result: string) => void): void;
-  saveProject(sceneJson: string, saveAs: boolean, callback: (result: string) => void): void;
-  saveProjectPath(sceneJson: string, path: string, callback: (result: string) => void): void;
-  exportMjcf(sceneJson: string, callback: (result: string) => void): void;
-  preflight(sceneJson: string, callback: (result: string) => void): void;
-  runSimulation(sceneJson: string, callback: (result: string) => void): void;
-  pauseSimulation(callback: (result: string) => void): void;
-  setSimulationSpeed(factor: number, callback: (result: string) => void): void;
-  stepSimulation(sceneJson: string, callback: (result: string) => void): void;
-  resetSimulation(callback: (result: string) => void): void;
-  setJointTargets(sceneJson: string, targetsJson: string, callback: (result: string) => void): void;
-  loadController(sceneJson: string, callback: (result: string) => void): void;
-  loadControllerPath(sceneJson: string, path: string, callback: (result: string) => void): void;
-  detachController(callback: (result: string) => void): void;
-  loadTrajectory(sceneJson: string, trajectoryJson: string, callback: (result: string) => void): void;
-  playTrajectory(callback: (result: string) => void): void;
-  pauseTrajectory(callback: (result: string) => void): void;
-  stopTrajectory(callback: (result: string) => void): void;
-  startRecording(sceneJson: string, configJson: string, callback: (result: string) => void): void;
-  stopRecording(callback: (result: string) => void): void;
-  getRecording(callback: (result: string) => void): void;
-  exportRecording(path: string, formatName: string, callback: (result: string) => void): void;
-  exportRecordingDialog(formatName: string, callback: (result: string) => void): void;
-  setEditorState(sceneJson: string, dirty: boolean, currentPath: string): void;
-  simulationStateChanged: QtSignal<[string]>;
-  simulationStatusChanged: QtSignal<[string]>;
-  consoleMessage: QtSignal<[string]>;
-}
-
-export interface QWebChannelInstance {
-  objects: { simlabBridge: PythonBridgeObject };
-}
-
 export interface SimLabEditorAutomation {
-  importOpenUsdPath(path: string): Promise<RpcResult<OpenUsdImportPayload>>;
-  openProjectPath(path: string): Promise<RpcResult<ProjectPayload>>;
-  saveProjectPath(path: string): Promise<RpcResult<SavePayload>>;
   getRecording(): Promise<RpcResult<{ recording: unknown }>>;
-  exportRecordingPath(
-    path: string,
-    formatName: 'json' | 'csv',
-  ): Promise<RpcResult<{ path: string; format: string; sample_count: number }>>;
   setSimulationSpeed(factor: number): Promise<RpcResult<{
     target_rtf: number;
     state: SimulationState | null;
-  }>>;
-  loadControllerPath(path: string): Promise<RpcResult<{
-    state: SimulationState;
-    controller: { path: string; name: string };
   }>>;
   getStateJson(): string;
   selectJoint(actorId: string, jointId: string): boolean;
@@ -420,11 +366,6 @@ export interface SimLabEditorAutomation {
 
 declare global {
   interface Window {
-    qt?: { webChannelTransport: unknown };
-    QWebChannel?: new (
-      transport: unknown,
-      callback: (channel: QWebChannelInstance) => void,
-    ) => unknown;
     simlabEditor?: SimLabEditorAutomation;
     simlabEditorReady?: boolean;
   }

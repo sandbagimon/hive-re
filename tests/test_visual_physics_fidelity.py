@@ -20,7 +20,7 @@ def _javascript_colliders(scene: Scene) -> dict[str, dict[str, object]]:
     node = shutil.which("node")
     if node is None:
         pytest.skip("Node.js is required for the TypeScript geometry contract test")
-    contract_path = Path("src/simlab/web_viewport/generated/geometry-contract.js")
+    contract_path = Path("frontend/generated/geometry-contract.js")
     script = f"""
       import {{ colliderGeometry }} from {json.dumps(contract_path.resolve().as_uri())};
       import fs from 'node:fs';

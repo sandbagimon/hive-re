@@ -10,7 +10,7 @@ import {
   updateTrajectoryKeyframeTarget,
   updateTrajectoryKeyframeTime,
   validateTrajectoryDraft,
-} from '../src/simlab/web_viewport/generated/trajectory-draft.js';
+} from '../frontend/generated/trajectory-draft.js';
 
 const home = { shoulder: 0, elbow: 0.25 };
 let draft = createTrajectoryDraft('robot_001', home, 2);

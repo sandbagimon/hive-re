@@ -33,7 +33,7 @@
 
 SimLab 当前不是单体 Qt 面板应用，主要边界已经形成：
 
-- **TypeScript Editor**：[`src/simlab/web_viewport/ts/`](../src/simlab/web_viewport/ts/) 负责界面、scene store、selection、dirty、undo/redo 和 three.js viewport。
+- **TypeScript Editor**：[`frontend/src/ts/`](../frontend/src/ts/) 负责界面、scene store、selection、dirty、undo/redo 和 three.js viewport。
 - **Bridge Protocol**：[`shared/schemas/`](../shared/schemas/) 定义 scene、physics 和 RPC 数据契约；[`editor_bridge.py`](../src/simlab/editor_bridge.py) 承担 QtWebChannel RPC。
 - **Scene Core**：[`src/simlab/models/`](../src/simlab/models/) 和 scene/project services 负责 Python 数据模型、保存、加载和基础校验。
 - **Simulation Core**：[`src/simlab/services/`](../src/simlab/services/) 负责 primitive geometry contract、physics materials、preflight、MJCF export 和 MuJoCo session。

@@ -12,38 +12,37 @@ license = { file = "LICENSE" }
 authors = [{ name = "SimLab Contributors" }]
 dependencies = [
   "numpy>=1.26",
-  "PySide6>=6.7",
   "mujoco>=3.1",
   "usd-core>=25.5",
   "jsonschema>=4.23",
+  "fastapi>=0.115,<0.116",
+  "uvicorn>=0.34,<0.35",
+  "anyio>=4.4,<4.10",
+  "websockets>=14,<16",
 ]
 
 [project.optional-dependencies]
+desktop = [
+  "PySide6>=6.7",
+]
 dev = [
+  "PySide6>=6.7",
   "pytest>=8.0",
+  "httpx>=0.28",
   "ruff>=0.5",
   "mypy>=1.10",
 ]
 
 [project.scripts]
 simlab = "simlab.app:main"
+simlab-web = "simlab.web_server:main"
+simlab-api = "simlab.web_server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.data-files]
 "share/simlab/schemas" = ["shared/schemas/*.json"]
-
-[tool.setuptools.package-data]
-simlab = [
-  "web_viewport/*.html",
-  "web_viewport/*.css",
-  "web_viewport/generated/*.js",
-  "web_viewport/ts/*.ts",
-  "web_viewport/ts/*.d.ts",
-  "web_viewport/vendor/*.js",
-  "web_viewport/vendor/*.txt",
-]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -57,7 +56,6 @@ target-version = "py311"
 select = ["E", "F", "I", "UP", "B"]
 
 [tool.mypy]
-python_version = "3.11"
 packages = ["simlab"]
 ignore_missing_imports = true
 check_untyped_defs = true

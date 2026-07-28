@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import sys
 
 from simlab.main_window import MainWindow
@@ -8,8 +9,14 @@ from simlab.main_window import MainWindow
 def main() -> int:
     from PySide6.QtWidgets import QApplication
 
-    app = QApplication(sys.argv)
-    window = MainWindow()
+    parser = argparse.ArgumentParser(description="Open the SimLab web frontend in Qt")
+    parser.add_argument(
+        "--frontend-url",
+        help="independently served frontend URL (default: SIMLAB_FRONTEND_URL or localhost:4173)",
+    )
+    args, qt_args = parser.parse_known_args()
+    app = QApplication([sys.argv[0], *qt_args])
+    window = MainWindow(frontend_url=args.frontend_url)
     window.show()
     return app.exec()
 

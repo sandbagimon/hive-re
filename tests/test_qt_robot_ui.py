@@ -9,9 +9,8 @@ from typing import Any
 
 import pytest
 
-pytestmark = pytest.mark.skipif(
-    os.environ.get("SIMLAB_QT_WEBENGINE_E2E") != "1",
-    reason="Set SIMLAB_QT_WEBENGINE_E2E=1 to run the QtWebEngine visual smoke test.",
+pytestmark = pytest.mark.skip(
+    reason="Retired QWebChannel E2E; the independent browser workflow is covered by Playwright.",
 )
 
 

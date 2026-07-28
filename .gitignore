@@ -11,6 +11,11 @@ env/
 build/
 dist/
 node_modules/
+test-results/
+playwright-report/
+assets/uploads/
+.simlab-data/
+frontend/dist/
 *.egg-info/
 exports/*.xml
 !exports/.gitkeep

@@ -17,4 +17,4 @@ This file records third-party components directly used or distributed by SimLab.
 - Source: <https://github.com/mrdoob/three.js>
 - Vendored version: r160.
 - Purpose: local editor viewport and transform controls.
-- License: MIT; the vendored license is at `src/simlab/web_viewport/vendor/THREE_LICENSE.txt`.
+- License: MIT; the vendored license is at `frontend/src/vendor/THREE_LICENSE.txt`.

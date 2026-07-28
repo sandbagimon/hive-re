@@ -1043,8 +1043,23 @@ impulse 从 noisy force 与 timestep 重算，几何接触集合不变。Session
 
 实现证据见 `docs/iterations/2026-07-16-sensor-noise-runtime.md`。
 
-## 77. 当前下一项具体任务
+## 77. Sensor Noise Inspector（待办）
 
 > 增加 Sensor Noise Inspector：选中 sensor 时显示 deterministic seed、channel、bias/stddev 和单位；无 noise 时明确
 > 显示 Exact。扩展 Qt E2E 给 shoulder state 配置 zero-stddev bias、给 IMU 配置 orientation/vector bias，验证 UI
 > config、runtime noisy value、recording JSON/CSV 和 Reset replay 一致。
+
+## 78. Browser Frontend and Backend Decoupling（已完成 2026-07-28）
+
+> 将 TypeScript/three.js editor 物理迁至独立 `frontend/` 产品，以运行时配置连接 `/api/v1` resource API 和
+> per-simulation ordered WebSocket；Python backend 不再托管静态资源、通用 RPC 或服务器路径操作，Qt 仅加载
+> HTTP(S) 前端 URL。
+
+浏览器使用 native file workflow 上传/下载内容，网络只传 `prj_`/`sim_`/`art_` opaque ID。多 project/session
+隔离、CORS、token、controller deny-by-default、WebSocket cursor replay 已落地。真实跨端口 Chromium E2E 验证
+完整机器人工作流、双客户端隔离以及断线增量恢复。实现证据见
+`docs/iterations/2026-07-28-web-frontend-decoupling.md` 和 `docs/WEB_ARCHITECTURE.md`。
+
+## 79. 当前下一项具体任务
+
+> 完成第 77 项 Sensor Noise Inspector，并将原 Qt E2E 验收同步扩展为普通 Chromium Web E2E。
