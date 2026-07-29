@@ -58,12 +58,21 @@ transformControls.addEventListener('dragging-changed', (event) => {
 transformControls.addEventListener('mouseUp', () => {
   const object = transformControls.object;
   if (!object?.userData.actorId) return;
+  const actorId = String(object.userData.actorId);
   const transform: Transform = {
     position: [object.position.x, object.position.y, object.position.z],
     rotation: [object.rotation.x, object.rotation.y, object.rotation.z],
     scale: [object.scale.x, object.scale.y, object.scale.z],
   };
-  actorTransformCallback(object.userData.actorId, transform);
+  // TransformControls dispatches mouseUp before it clears its dragging/axis state. Updating the
+  // store synchronously rebuilds the scene and detaches the control in the middle of that event.
+  // Commit immediately after TransformControls has finished its pointer-up lifecycle instead.
+  queueMicrotask(() => {
+    actorTransformCallback(actorId, transform);
+    // Moving an actor is also an explicit selection action. Re-select it after the scene update
+    // so the rebuilt mesh, outline, transform gizmo, and editor store all point to the same actor.
+    selectViewportActor(actorId, true);
+  });
 });
 
 const grid = new THREE.GridHelper(20, 20, 0x4a5568, 0x2d3748);
@@ -185,6 +194,16 @@ function geometryForActor(actor: Actor): any {
 function geometryFromPayload(payload: VisualGeometryPayload): any {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(payload.positions, 3));
+  if (payload.colors?.length === (payload.positions.length / 3) * 4) {
+    const rgb: number[] = [];
+    for (let index = 0; index < payload.colors.length; index += 4) {
+      rgb.push(payload.colors[index], payload.colors[index + 1], payload.colors[index + 2]);
+    }
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(rgb, 3));
+  }
+  if (payload.uvs?.length === (payload.positions.length / 3) * 2) {
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(payload.uvs, 2));
+  }
   geometry.setIndex(payload.indices);
   geometry.computeVertexNormals();
   geometry.computeBoundingBox();
@@ -301,6 +320,7 @@ function rebuildColliderDebug(mesh: any, actor: Actor): void {
 function disposeObject(object: any): void {
   object.traverse((child) => {
     child.geometry?.dispose();
+    child.material?.map?.dispose();
     child.material?.dispose();
   });
 }
@@ -347,9 +367,34 @@ export function setViewportScene(sceneData: Scene): void {
     const cachePath = actor.properties.geometry?.visual_cache;
     if (cachePath) {
       void visualGeometryResolver(cachePath).then((payload) => {
-        if (!payload || revision !== sceneRevision || actorMeshes.get(actor.id) !== mesh) return;
+        if (!payload) return;
+        if (revision !== sceneRevision || actorMeshes.get(actor.id) !== mesh) {
+          if (payload.base_color_texture_url) URL.revokeObjectURL(payload.base_color_texture_url);
+          return;
+        }
         mesh.geometry.dispose();
         mesh.geometry = geometryFromPayload(payload);
+        mesh.material.vertexColors = Boolean(payload.colors?.length);
+        mesh.material.needsUpdate = true;
+        if (payload.base_color_texture_url) {
+          const textureUrl = payload.base_color_texture_url;
+          new THREE.TextureLoader().load(
+            textureUrl,
+            (texture) => {
+              URL.revokeObjectURL(textureUrl);
+              if (revision !== sceneRevision || actorMeshes.get(actor.id) !== mesh) {
+                texture.dispose();
+                return;
+              }
+              texture.colorSpace = THREE.SRGBColorSpace;
+              mesh.material.map?.dispose();
+              mesh.material.map = texture;
+              mesh.material.needsUpdate = true;
+            },
+            undefined,
+            () => URL.revokeObjectURL(textureUrl),
+          );
+        }
         rebuildColliderDebug(mesh, actor);
         updateSelectionOutline();
       });
@@ -359,6 +404,31 @@ export function setViewportScene(sceneData: Scene): void {
   selectViewportLink(retainedLinkId);
   if (simulationState) applySimulationState(simulationState);
   updateHud();
+}
+
+export function updateViewportTransforms(sceneData: Scene): boolean {
+  const renderableActors = sceneData.actors.filter(
+    (actor) => actor.type === 'object' || actor.type === 'robot',
+  );
+  if (
+    renderableActors.length !== actorMeshes.size
+    || renderableActors.some((actor) => !actorMeshes.has(actor.id))
+  ) {
+    return false;
+  }
+  currentScene = sceneData;
+  for (const actor of renderableActors) {
+    const object = actorMeshes.get(actor.id);
+    object.position.set(...actor.transform.position);
+    object.rotation.set(...actor.transform.rotation);
+    object.scale.set(...actor.transform.scale);
+    object.name = actor.name;
+    object.userData.actor = actor;
+  }
+  updateColliderDebugMarkers();
+  updateSelectionOutline();
+  updateHud();
+  return true;
 }
 
 export function selectViewportActor(actorId: string | null, notify = false): void {
@@ -521,14 +591,27 @@ function setCameraView(viewName: CameraView): void {
   frameObject(getFocusObject(), direction);
 }
 
+function actorIdForObject(object: any): string | null {
+  let current = object;
+  while (current && current !== actorGroup) {
+    if (current.userData?.actorId) return String(current.userData.actorId);
+    current = current.parent;
+  }
+  return null;
+}
+
 renderer.domElement.addEventListener('pointerdown', (event: PointerEvent) => {
-  if (transformControls.dragging) return;
+  // A gizmo press is not a click on empty scene space. Clearing selection here detaches the
+  // TransformControls object and makes the actor lose its highlight after a move.
+  if (transformControls.dragging || transformControls.axis !== null) return;
   const rect = renderer.domElement.getBoundingClientRect();
   pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
   const hits = raycaster.intersectObjects([...actorMeshes.values()], true);
-  selectViewportActor(hits[0]?.object?.userData.actorId ?? null, true);
+  const actorId = hits.map((hit) => actorIdForObject(hit.object))
+    .find((id) => id !== null) ?? null;
+  selectViewportActor(actorId, true);
 });
 
 toolbar.addEventListener('click', (event) => {

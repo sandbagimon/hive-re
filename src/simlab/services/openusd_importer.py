@@ -9,7 +9,12 @@ from typing import Any, cast
 
 from simlab.models.robotics import RoboticsModel
 from simlab.services.openusd import ImportReport, OpenUsdStageError, load_openusd_stage
-from simlab.services.openusd.asset_cache import openusd_asset_id, upsert_asset_metadata
+from simlab.services.openusd.asset_cache import (
+    copy_openusd_dependencies,
+    openusd_asset_id,
+    upsert_asset_metadata,
+)
+from simlab.services.openusd.mesh_extractor import extract_stage_meshes
 from simlab.services.openusd.robot_asset_importer import import_openusd_robot_asset
 
 
@@ -62,38 +67,84 @@ def import_openusd_asset(source: str | Path, project_root: str | Path) -> OpenUs
             robotics_model=robot.model,
         )
 
-    try:
-        from pxr import Gf, UsdGeom
-    except ImportError as exc:
-        raise OpenUsdImportError(
-            "OpenUSD Python bindings are unavailable. Install the 'usd-core' package."
-        ) from exc
-
     stage = stage_result.stage
 
     asset_id = openusd_asset_id(source_path)
     cache_dir = root / "assets" / "imported" / asset_id
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    copied_source = cache_dir / source_path.name
-    if source_path != copied_source:
-        shutil.copy2(source_path, copied_source)
 
     warnings = [
         issue.message for issue in stage_result.report.issues if issue.severity == "warning"
     ]
-    positions, indices, display_color = _extract_stage_mesh(stage, Gf, UsdGeom, warnings)
+    extracted = extract_stage_meshes(stage, warnings)
+    positions = extracted.visual.positions
+    indices = extracted.visual.indices
     if not positions or not indices:
-        raise OpenUsdImportError("The OpenUSD stage contains no triangulatable UsdGeomMesh data.")
+        stage_result.report.add(
+            "error",
+            "usd.no_supported_geometry",
+            "The OpenUSD stage contains no supported renderable geometry.",
+            field="stage",
+        )
+        raise OpenUsdImportError(
+            "The OpenUSD stage contains no supported renderable geometry.",
+            report=stage_result.report,
+        )
     _validate_mesh_data(positions, indices)
+    _validate_mesh_data(extracted.collision.positions, extracted.collision.indices)
+
+    cache_existed = cache_dir.exists()
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    source_dir = cache_dir / "source"
+    source_dir.mkdir(parents=True, exist_ok=True)
+    copied_source = source_dir / source_path.name
+    if source_path != copied_source:
+        shutil.copy2(source_path, copied_source)
+    copied_dependencies = copy_openusd_dependencies(
+        source_path,
+        source_dir,
+        stage_result.report,
+    )
+    if stage_result.report.has_errors:
+        if not cache_existed:
+            shutil.rmtree(cache_dir, ignore_errors=True)
+        issue = next(
+            item for item in stage_result.report.issues if item.severity == "error"
+        )
+        raise OpenUsdImportError(issue.message, report=stage_result.report)
+    relative_texture: str | None = None
+    if extracted.base_color_texture:
+        texture_source = Path(extracted.base_color_texture)
+        if not texture_source.is_absolute():
+            texture_source = (source_path.parent / texture_source).resolve()
+        copied_texture = copied_dependencies.get(str(texture_source.resolve()))
+        if copied_texture is not None:
+            relative_texture = copied_texture.relative_to(root).as_posix()
+        else:
+            warnings.append(
+                "The authored base-color texture could not be preserved; "
+                "the viewport will use the material color."
+            )
 
     visual_path = cache_dir / "visual.json"
     collision_path = cache_dir / "collision.obj"
     manifest_path = cache_dir / "manifest.json"
     visual_path.write_text(
-        json.dumps({"positions": positions, "indices": indices}, separators=(",", ":")),
+        json.dumps(
+            {
+                "positions": positions,
+                "indices": indices,
+                "colors": extracted.visual.colors,
+                "uvs": extracted.visual.uvs,
+                "base_color_texture": relative_texture,
+            },
+            separators=(",", ":"),
+        ),
         encoding="utf-8",
     )
-    collision_path.write_text(_mesh_to_obj(positions, indices), encoding="utf-8")
+    collision_path.write_text(
+        _mesh_to_obj(extracted.collision.positions, extracted.collision.indices),
+        encoding="utf-8",
+    )
 
     physics, physics_warnings = _extract_physics(stage)
     warnings.extend(physics_warnings)
@@ -101,23 +152,34 @@ def import_openusd_asset(source: str | Path, project_root: str | Path) -> OpenUs
     relative_visual = visual_path.relative_to(root).as_posix()
     relative_collision = collision_path.relative_to(root).as_posix()
     bounds = _bounds(positions)
-    mesh_count = sum(1 for prim in stage.Traverse() if prim.IsA(UsdGeom.Mesh))
+    mesh_count = len(extracted.visual.source_prim_paths)
     manifest = {
         "version": 1,
         "format": "openusd",
         "source": relative_source,
         "source_name": source_path.name,
+        "dependencies": [
+            path.relative_to(root).as_posix() for path in copied_dependencies.values()
+        ],
         "visual_cache": relative_visual,
         "collision_mesh": relative_collision,
         "mesh_count": mesh_count,
         "vertex_count": len(positions) // 3,
         "triangle_count": len(indices) // 3,
+        "collision_vertex_count": extracted.collision.vertex_count,
+        "collision_triangle_count": extracted.collision.triangle_count,
+        "dedicated_collision": extracted.used_dedicated_collision,
+        "point_instance_count": extracted.point_instance_count,
+        "native_primitive_count": extracted.native_primitive_count,
+        "source_prim_paths": extracted.visual.source_prim_paths,
+        "collision_prim_paths": extracted.collision.source_prim_paths,
+        "base_color_texture": relative_texture,
         "bounds": bounds,
         "warnings": warnings,
     }
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
-    rgba = [*display_color, 1.0]
+    rgba = extracted.visual.colors[:4] or [0.55, 0.62, 0.7, 1.0]
     asset = {
         "id": asset_id,
         "name": source_path.stem,
@@ -159,10 +221,37 @@ def load_visual_geometry(cache_path: str, project_root: str | Path) -> dict[str,
     payload = json.loads(path.read_text(encoding="utf-8"))
     positions = payload.get("positions")
     indices = payload.get("indices")
+    colors = payload.get("colors")
+    uvs = payload.get("uvs")
+    base_color_texture = payload.get("base_color_texture")
     if not isinstance(positions, list) or not isinstance(indices, list):
         raise OpenUsdImportError(f"Visual cache is invalid: {cache_path}")
     _validate_mesh_data(positions, indices)
-    return {"positions": positions, "indices": indices}
+    if colors is not None:
+        valid_colors = (
+            isinstance(colors, list)
+            and len(colors) == (len(positions) // 3) * 4
+            and all(_finite_number(value) for value in colors)
+        )
+        if not valid_colors:
+            raise OpenUsdImportError(f"Visual cache colors are invalid: {cache_path}")
+    if uvs is not None:
+        valid_uvs = (
+            isinstance(uvs, list)
+            and (not uvs or len(uvs) == (len(positions) // 3) * 2)
+            and all(_finite_number(value) for value in uvs)
+        )
+        if not valid_uvs:
+            raise OpenUsdImportError(f"Visual cache UVs are invalid: {cache_path}")
+    if base_color_texture is not None and not isinstance(base_color_texture, str):
+        raise OpenUsdImportError(f"Visual cache texture is invalid: {cache_path}")
+    return {
+        "positions": positions,
+        "indices": indices,
+        "colors": colors,
+        "uvs": uvs,
+        "base_color_texture": base_color_texture,
+    }
 
 
 def resolve_imported_asset_path(path_value: str, project_root: str | Path) -> Path:
@@ -174,67 +263,6 @@ def resolve_imported_asset_path(path_value: str, project_root: str | Path) -> Pa
     except ValueError as exc:
         raise OpenUsdImportError("Imported asset path must be inside assets/imported.") from exc
     return path
-
-
-def _extract_stage_mesh(
-    stage: Any,
-    gf: Any,
-    usd_geom: Any,
-    warnings: list[str],
-) -> tuple[list[float], list[int], list[float]]:
-    meters_per_unit = float(usd_geom.GetStageMetersPerUnit(stage) or 1.0)
-    up_axis = str(usd_geom.GetStageUpAxis(stage)).upper()
-    xform_cache = usd_geom.XformCache()
-    positions: list[float] = []
-    indices: list[int] = []
-    display_color = [0.55, 0.62, 0.7]
-    color_found = False
-    rigid_body_count = 0
-
-    for prim in stage.Traverse():
-        if "PhysicsRigidBodyAPI" in prim.GetAppliedSchemas():
-            rigid_body_count += 1
-        if not prim.IsA(usd_geom.Mesh):
-            continue
-        mesh = usd_geom.Mesh(prim)
-        points = mesh.GetPointsAttr().Get() or []
-        counts = mesh.GetFaceVertexCountsAttr().Get() or []
-        face_indices = mesh.GetFaceVertexIndicesAttr().Get() or []
-        if not points or not counts or not face_indices:
-            warnings.append(f"Skipped empty mesh: {prim.GetPath()}")
-            continue
-        matrix = xform_cache.GetLocalToWorldTransform(prim)
-        base = len(positions) // 3
-        for point in points:
-            source_point = gf.Vec3d(float(point[0]), float(point[1]), float(point[2]))
-            transformed = matrix.Transform(source_point)
-            converted = _to_z_up(transformed, up_axis, meters_per_unit)
-            positions.extend(converted)
-
-        cursor = 0
-        for count_value in counts:
-            count = int(count_value)
-            face = [int(value) + base for value in face_indices[cursor : cursor + count]]
-            cursor += count
-            if count < 3:
-                continue
-            for index in range(1, count - 1):
-                indices.extend([face[0], face[index], face[index + 1]])
-
-        if not color_found:
-            colors = mesh.GetDisplayColorAttr().Get() or []
-            if colors:
-                display_color = [_clamp(float(value), 0.0, 1.0) for value in colors[0]]
-                color_found = True
-
-    if up_axis not in {"Y", "Z"}:
-        warnings.append(f"Unsupported stage up axis '{up_axis}' was treated as Z-up.")
-    if rigid_body_count > 1:
-        warnings.append(
-            f"The stage contains {rigid_body_count} rigid bodies; "
-            "this version imports them as one actor."
-        )
-    return positions, indices, display_color
 
 
 def _extract_physics(stage: Any) -> tuple[dict[str, Any], list[str]]:
@@ -288,17 +316,7 @@ def _extract_physics(stage: Any) -> tuple[dict[str, Any], list[str]]:
         )
     if not rigid_body_prims:
         warnings.append("No UsdPhysics rigid body was found; imported actor defaults to Static.")
-    warnings.append(
-        "Collision uses the merged visual mesh; author a dedicated collider for production use."
-    )
     return physics, warnings
-
-
-def _to_z_up(point: Any, up_axis: str, scale: float) -> list[float]:
-    x, y, z = (float(point[0]) * scale, float(point[1]) * scale, float(point[2]) * scale)
-    if up_axis == "Y":
-        return [x, -z, y]
-    return [x, y, z]
 
 
 def _mesh_to_obj(positions: list[float], indices: list[int]) -> str:

@@ -86,3 +86,58 @@ def test_stage_loader_rejects_unsupported_extension(tmp_path: Path) -> None:
         load_openusd_stage(source)
 
     assert exc_info.value.report.issues[0].code == "usd.unsupported_extension"
+
+
+def test_missing_material_texture_is_warning_but_missing_usd_is_blocking(
+    tmp_path: Path,
+) -> None:
+    material_only = tmp_path / "material-only.usda"
+    material_only.write_text(
+        '''#usda 1.0
+def Xform "Asset"
+{
+    def Mesh "Triangle"
+    {
+        int[] faceVertexCounts = [3]
+        int[] faceVertexIndices = [0, 1, 2]
+        point3f[] points = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
+    }
+}
+def Shader "Texture"
+{
+    uniform token info:id = "UsdUVTexture"
+    asset inputs:file = @missing.png@
+}
+''',
+        encoding="utf-8",
+    )
+    missing_layer = tmp_path / "missing-layer.usda"
+    missing_layer.write_text(
+        '''#usda 1.0
+(
+    subLayers = [@missing.usda@]
+)
+''',
+        encoding="utf-8",
+    )
+
+    material_result = load_openusd_stage(material_only)
+    layer_result = load_openusd_stage(missing_layer)
+
+    texture_issue = next(
+        issue
+        for issue in material_result.report.issues
+        if issue.code == "usd.missing_dependency"
+    )
+    layer_issue = next(
+        issue
+        for issue in layer_result.report.issues
+        if issue.code == "usd.missing_dependency"
+    )
+    assert texture_issue.severity == "warning"
+    assert texture_issue.field == "inputs:file"
+    assert texture_issue.fallback is not None
+    assert material_result.report.has_errors is False
+    assert layer_issue.severity == "error"
+    assert layer_issue.field == "sublayers"
+    assert layer_result.report.has_errors is True

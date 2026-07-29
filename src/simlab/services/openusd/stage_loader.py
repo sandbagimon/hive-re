@@ -5,9 +5,25 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from simlab.services.openusd.import_report import ImportReport
+from simlab.services.openusd.import_report import ImportReport, ImportSeverity
 
 SUPPORTED_USD_EXTENSIONS = {".usd", ".usda", ".usdc", ".usdz"}
+NON_BLOCKING_LOOK_EXTENSIONS = {
+    ".bmp",
+    ".exr",
+    ".gif",
+    ".hdr",
+    ".jpeg",
+    ".jpg",
+    ".mdl",
+    ".mtlx",
+    ".png",
+    ".tga",
+    ".tif",
+    ".tiff",
+    ".tx",
+    ".webp",
+}
 
 
 class OpenUsdStageError(RuntimeError):
@@ -59,6 +75,13 @@ def _asset_path(value: Any) -> str | None:
 
 def _dependency_locations(stage: Any) -> dict[str, tuple[str, str]]:
     locations: dict[str, tuple[str, str]] = {}
+    for layer in stage.GetLayerStack():
+        layer_path = Path(str(layer.realPath or layer.identifier))
+        for sublayer in layer.subLayerPaths:
+            locations[str(sublayer)] = ("/", "sublayers")
+            if layer_path.is_absolute():
+                resolved = (layer_path.parent / str(sublayer)).resolve()
+                locations[str(resolved)] = ("/", "sublayers")
     for prim in stage.TraverseAll():
         prim_path = str(prim.GetPath())
         for metadata_name in ("references", "payload"):
@@ -88,18 +111,36 @@ def _diagnostic_dependency_location(
     dependency: str, diagnostic_messages: list[str]
 ) -> tuple[str | None, str] | None:
     dependency_name = Path(dependency).name
-    for message in diagnostic_messages:
-        if dependency not in message and dependency_name not in message:
-            continue
-        lowered = message.lower()
-        if "payload" in lowered:
-            field = "payload"
-        elif "reference" in lowered:
-            field = "references"
-        else:
-            field = "asset_path"
-        return _diagnostic_prim_path(message), field
+    matches = [
+        message
+        for message in diagnostic_messages
+        if dependency in message or dependency_name in message
+    ]
+    for marker, field in (
+        ("payload", "payload"),
+        ("sublayer", "sublayers"),
+        ("reference", "references"),
+    ):
+        match = next((message for message in matches if marker in message.lower()), None)
+        if match is not None:
+            return _diagnostic_prim_path(match), field
+    if matches:
+        return _diagnostic_prim_path(matches[0]), "asset_path"
     return None
+
+
+def _missing_dependency_policy(
+    dependency: str, field: str
+) -> tuple[ImportSeverity, str | None]:
+    field_lower = field.lower()
+    suffix = Path(dependency).suffix.lower()
+    material_input = field_lower.startswith("inputs:") or "mdl" in field_lower
+    if material_input or suffix in NON_BLOCKING_LOOK_EXTENSIONS:
+        return (
+            "warning",
+            "Geometry will import with its authored display color or the default material.",
+        )
+    return "error", None
 
 
 def load_openusd_stage(source: str | Path) -> StageLoadResult:
@@ -185,12 +226,14 @@ def load_openusd_stage(source: str | Path) -> StageLoadResult:
             dependency, diagnostic_messages
         )
         prim_path, field = location or (None, "asset_path")
+        severity, fallback = _missing_dependency_policy(dependency, field)
         report.add(
-            "error",
+            severity,
             "usd.missing_dependency",
             f"OpenUSD dependency could not be resolved: {dependency}",
             prim_path=prim_path,
             field=field,
+            fallback=fallback,
         )
 
     if not stage.GetDefaultPrim().IsValid():

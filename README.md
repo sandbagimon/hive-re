@@ -72,9 +72,9 @@ The TypeScript Editor Store owns scene authoring state, selection, dirty trackin
 
 See [`docs/MODULAR_DEVELOPMENT.md`](docs/MODULAR_DEVELOPMENT.md) for module boundaries, dependency rules, the target package layout, and the incremental modularization roadmap.
 
-Use **Import USD** to add `.usd`, `.usda`, `.usdc`, or `.usdz` assets. The importer resolves stage transforms, converts stage units and Y-up coordinates to SimLab's meter/Z-up convention, merges visible `UsdGeomMesh` data into a project cache, and registers the result in the Asset Browser. Imported actors use the same Transform and Physics inspector as primitive actors.
+Use **Import USD** for a self-contained `.usd`, `.usda`, `.usdc`, `.usdz`, or safe ZIP package. Use **Import USD Folder** for a composed asset with sublayers, payloads, references, or textures; relative directory paths are preserved through multipart upload. The importer resolves stage transforms, converts stage units and Y-up coordinates to SimLab's meter/Z-up convention, triangulates meshes and native geometric primitives, expands PointInstancer instances at the default time, and registers a relocatable project cache. See [`docs/OPENUSD_IMPORT.md`](docs/OPENUSD_IMPORT.md) for the supported subset and package rules.
 
-OpenUSD physics values are imported when authored, including rigid-body state, mass/density, and basic friction. The generated project cache contains viewport geometry plus an OBJ collision mesh. Export and simulation convert that asset to a MuJoCo mesh geom, so the default runtime does not require MuJoCo's experimental native USD decoder.
+OpenUSD physics values are imported when authored, including rigid-body state, mass/density, and basic friction. Dedicated `PhysicsCollisionAPI` geometry is preferred; otherwise import emits a warning and falls back to the visual mesh. Display colors, a bound `UsdPreviewSurface` base color/opacity, UVs, and the first base-color texture are carried into the Three.js viewport. The generated project cache contains viewport geometry plus an OBJ collision mesh. Export and simulation convert that asset to a MuJoCo mesh geom, so the default runtime does not require MuJoCo's experimental native USD decoder.
 
 OpenUSD articulations are imported as robot actors with independent links, colliders, inertial properties, revolute joints, and position drives. The Scene Tree and viewport preserve the robot hierarchy; joint targets, jog controls, and editable keyframe trajectories drive the generated MuJoCo articulation while live link poses and joint feedback remain separate from authoring transforms.
 
@@ -83,6 +83,8 @@ Robot trajectories can be saved in the scene, reopened, edited, and replayed. Th
 The command bar provides 0.25x, 0.5x, 1x, and 2x simulation-speed controls plus measured real-time-factor feedback. Speed changes scale fixed-step scheduling without changing the authored MuJoCo timestep or trajectory/recording timestamps.
 
 Python controllers can attach to a MuJoCo session through an immutable per-step observation/action API. Controller exceptions and deadline overruns are isolated as runtime faults without stopping physics; manual targets, trajectory playback, and Python controllers are explicit mutually exclusive control sources. See [`docs/CONTROLLER_API.md`](docs/CONTROLLER_API.md).
+
+Training algorithms use a separate Gymnasium data plane. `SimLabEnv` composes an engine-neutral backend contract, a robot adapter, and a task, and can switch between an in-process `MujocoBackend` and an atomic gRPC backend without changing task or algorithm code. Install `.[algorithm]` for local training or `.[algorithm,remote]` for gRPC. See [`docs/ALGORITHM_BACKEND_DECOUPLING.md`](docs/ALGORITHM_BACKEND_DECOUPLING.md).
 
 The robot Inspector Controller section explicitly loads trusted project-local Python files, supports reload and detach, and displays callback status, step count, and execution duration. Controller code is never executed by opening a scene.
 
@@ -114,13 +116,13 @@ The tests cover the scene model, project save/load behavior, scene service actor
 ## Current Limitations
 
 - OpenUSD articulation import currently supports the documented fixed/revolute/position-drive subset; advanced joints, sensors, animation, and arbitrary USD physics extensions are reported as unsupported.
-- Imported collision currently uses the merged visual mesh. Dedicated collision prim selection, convex decomposition, complex `UsdPreviewSurface` materials, textures, and animation are not yet supported.
+- OpenUSD import supports dedicated collision prims, native geometric primitives, default-time PointInstancer expansion, and a basic `UsdPreviewSurface` color/texture path. Multiple material groups, complex shader graphs, convex decomposition, skeletal animation, and editable variants are not yet supported.
 - The viewport supports primitive and imported mesh editing with live MuJoCo pose playback, but it is not a full MuJoCo-native renderer.
 - Trajectory playback, fixed-step recording, and real-time-factor controls are available; recording decimation and streaming output are not yet supported.
 - Viewport editing tools do not yet include snapping or advanced transform constraints.
 - MJCF export supports primitive and imported OpenUSD mesh actors with basic static/dynamic physics properties.
 - Plane collision is infinite by MuJoCo definition; the built-in finite Ground uses a thin Box.
-- The gym-style environment is a stub for a later integration.
+- A single-process Gymnasium environment and gRPC remote sessions are available; vectorized/MJX execution and a production TLS endpoint are not yet implemented.
 
 ## Next Milestone
 

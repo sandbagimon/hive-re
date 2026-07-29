@@ -1,11 +1,11 @@
 import type { RpcResult, SimulationState, SimulationStatus } from './types.js';
 
 type BridgeMethod =
-  | 'getAssets' | 'importOpenUsd' | 'getVisualGeometry'
+  | 'getAssets' | 'importOpenUsd' | 'importOpenUsdFolder' | 'getVisualGeometry'
   | 'openProject' | 'saveProject'
   | 'validateProjectContent' | 'exportMjcf' | 'preflight'
   | 'runSimulation' | 'pauseSimulation' | 'setSimulationSpeed'
-  | 'stepSimulation' | 'resetSimulation' | 'setJointTargets'
+  | 'stepSimulation' | 'resetSimulation' | 'discardSimulation' | 'setJointTargets'
   | 'loadController' | 'reloadController' | 'detachController'
   | 'loadTrajectory' | 'playTrajectory' | 'pauseTrajectory' | 'stopTrajectory'
   | 'startRecording' | 'stopRecording' | 'getRecording'
@@ -46,6 +46,7 @@ export class EditorBridgeClient {
   private readonly consoleCallbacks: Array<(message: string) => void> = [];
   private projectId: string | null = null;
   private simulationId: string | null = null;
+  private simulationSceneJson: string | null = null;
   private lastSequence = 0;
   private lastState: SimulationState | null = null;
   private lastStatus: SimulationStatus = 'stopped';
@@ -196,6 +197,7 @@ export class EditorBridgeClient {
     if (this.reconnectTimer !== null) window.clearTimeout(this.reconnectTimer);
     this.reconnectTimer = null;
     this.simulationId = null;
+    this.simulationSceneJson = null;
     this.lastSequence = 0;
     this.lastState = null;
     this.emitStatus('stopped');
@@ -220,11 +222,11 @@ export class EditorBridgeClient {
         return this.success<T>({ scene: project.scene });
       }
       case 'importOpenUsd':
-        return this.importOpenUsd<T>();
+        return this.importOpenUsd<T>('file');
+      case 'importOpenUsdFolder':
+        return this.importOpenUsd<T>('folder');
       case 'getVisualGeometry':
-        return this.success<T>(await this.request(this.projectPath(
-          `/geometry/${encodeURIComponent(String(args[0]))}`,
-        )));
+        return this.getVisualGeometry<T>(String(args[0]));
       case 'preflight':
         await this.synchronizeSceneArgument(args[0]);
         return this.success<T>(await this.request(this.projectPath('/preflight'), { method: 'POST' }));
@@ -239,6 +241,9 @@ export class EditorBridgeClient {
         return this.simulationCommand<T>('/step', args[0]);
       case 'resetSimulation':
         return this.simulationCommand<T>('/reset');
+      case 'discardSimulation':
+        await this.discardSimulation();
+        return this.success<T>({});
       case 'setSimulationSpeed':
         return this.simulationRequest<T>('/speed', {
           method: 'PUT', body: JSON.stringify({ factor: Number(args[0]) }),
@@ -299,19 +304,62 @@ export class EditorBridgeClient {
     return this.success<T>({ path: filename });
   }
 
-  private async importOpenUsd<T>(): Promise<RpcResult<T>> {
-    const files = await this.chooseFiles('.usd,.usda,.usdc,.usdz', true);
+  private async importOpenUsd<T>(mode: 'file' | 'folder'): Promise<RpcResult<T>> {
+    const files = mode === 'folder'
+      ? await this.chooseDirectory()
+      : await this.chooseFiles('.usd,.usda,.usdc,.usdz,.zip');
     if (!files?.length) return { ok: false, error: 'Cancelled' };
-    const entries = await Promise.all(files.map(async (file) => ({
-      name: file.webkitRelativePath || file.name,
-      content: await this.fileBase64(file),
-    })));
-    const entry = entries.find(({ name }) => /\.(usd|usda|usdc|usdz)$/i.test(name));
+    const entries = files.map((file) => ({
+      file,
+      name: (file.webkitRelativePath || file.name).replace(/\\/g, '/'),
+    }));
+    const entry = this.selectOpenUsdEntry(entries.map(({ name }) => name));
+    if (entry === null) return { ok: false, error: 'Cancelled' };
     if (!entry) return { ok: false, error: 'No OpenUSD entry file selected' };
+    const body = new FormData();
+    body.set('entry', entry);
+    for (const item of entries) body.append('files', item.file, item.name);
     const payload = await this.request(this.projectPath('/assets/openusd'), {
-      method: 'POST', body: JSON.stringify({ files: entries, entry: entry.name }),
+      method: 'POST', body,
     });
     return this.success<T>(payload);
+  }
+
+  private async getVisualGeometry<T>(artifactId: string): Promise<RpcResult<T>> {
+    const payload = await this.request<Record<string, unknown>>(this.projectPath(
+      `/geometry/${encodeURIComponent(artifactId)}`,
+    ));
+    const textureArtifact = payload.base_color_texture;
+    if (typeof textureArtifact === 'string' && textureArtifact.startsWith('art_')) {
+      const response = await this.requestResponse(
+        `/api/v1/artifacts/${encodeURIComponent(textureArtifact)}`,
+      );
+      payload.base_color_texture_url = URL.createObjectURL(await response.blob());
+    }
+    return this.success<T>(payload);
+  }
+
+  private selectOpenUsdEntry(paths: string[]): string | null | undefined {
+    const candidates = paths
+      .filter((path) => /\.(usd|usda|usdc|usdz|zip)$/i.test(path))
+      .sort((left, right) => {
+        const depth = left.split('/').length - right.split('/').length;
+        return depth || left.localeCompare(right);
+      });
+    if (candidates.length <= 1) return candidates[0];
+    const shallowestDepth = candidates[0].split('/').length;
+    const shallowest = candidates.filter((path) => path.split('/').length === shallowestDepth);
+    if (shallowest.length === 1) return shallowest[0];
+    const selected = window.prompt(
+      `Select the OpenUSD entry file:\n${shallowest.join('\n')}`,
+      shallowest[0],
+    );
+    if (selected === null) return null;
+    const normalized = selected.replace(/\\/g, '/');
+    if (!shallowest.includes(normalized)) {
+      throw new Error(`Selected OpenUSD entry is not in the upload: ${normalized}`);
+    }
+    return normalized;
   }
 
   private async exportMjcf<T>(): Promise<RpcResult<T>> {
@@ -360,20 +408,39 @@ export class EditorBridgeClient {
 
   private async simulationCommand<T>(path: string, sceneJson?: unknown): Promise<RpcResult<T>> {
     await this.synchronizeSceneArgument(sceneJson);
-    return this.simulationRequest<T>(path, { method: 'POST' });
+    return this.simulationRequest<T>(path, { method: 'POST' }, typeof sceneJson === 'string');
   }
 
-  private async simulationRequest<T>(path: string, init: RequestInit = {}): Promise<RpcResult<T>> {
-    return await this.simulationApi<RpcResult<T> & { version: string }>(path, init);
+  private async simulationRequest<T>(
+    path: string,
+    init: RequestInit = {},
+    requireCurrentScene = false,
+  ): Promise<RpcResult<T>> {
+    return await this.simulationApi<RpcResult<T> & { version: string }>(
+      path,
+      init,
+      requireCurrentScene,
+    );
   }
 
-  private async simulationApi<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const simulationId = await this.ensureSimulation();
+  private async simulationApi<T>(
+    path: string,
+    init: RequestInit = {},
+    requireCurrentScene = false,
+  ): Promise<T> {
+    const simulationId = await this.ensureSimulation(requireCurrentScene);
     return this.request<T>(`/api/v1/simulations/${encodeURIComponent(simulationId)}${path}`, init);
   }
 
-  private async ensureSimulation(): Promise<string> {
+  private async ensureSimulation(requireCurrentScene = false): Promise<string> {
     await this.sceneSync;
+    if (
+      this.simulationId
+      && requireCurrentScene
+      && this.simulationSceneJson !== this.lastSceneJson
+    ) {
+      await this.discardSimulation();
+    }
     if (this.simulationId) return this.simulationId;
     const payload = await this.request<{
       id: string;
@@ -382,9 +449,28 @@ export class EditorBridgeClient {
       method: 'POST', body: JSON.stringify({ project_id: this.requireProjectId() }),
     });
     this.simulationId = payload.id;
+    this.simulationSceneJson = this.lastSceneJson;
     this.applySnapshot(payload.snapshot);
     this.connectWebSocket(payload.id);
     return payload.id;
+  }
+
+  private async discardSimulation(): Promise<void> {
+    const simulationId = this.simulationId;
+    if (!simulationId) return;
+    const socket = this.socket;
+    this.socket = null;
+    socket?.close();
+    if (this.reconnectTimer !== null) window.clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
+    this.simulationId = null;
+    this.simulationSceneJson = null;
+    this.lastSequence = 0;
+    this.lastState = null;
+    await this.request(`/api/v1/simulations/${encodeURIComponent(simulationId)}`, {
+      method: 'DELETE',
+    });
+    this.emitStatus('stopped');
   }
 
   private async synchronizeSceneArgument(value: unknown): Promise<void> {
@@ -470,7 +556,9 @@ export class EditorBridgeClient {
   private async request<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
     if (!this.config) throw new Error('Runtime configuration unavailable');
     const headers = new Headers(init.headers);
-    if (init.body !== undefined) headers.set('Content-Type', 'application/json');
+    if (init.body !== undefined && !(init.body instanceof FormData)) {
+      headers.set('Content-Type', 'application/json');
+    }
     if (this.config.accessToken) headers.set('Authorization', `Bearer ${this.config.accessToken}`);
     const response = await fetch(`${this.config.apiBaseUrl}${path}`, { ...init, headers });
     if (!response.ok) {
@@ -533,15 +621,16 @@ export class EditorBridgeClient {
     });
   }
 
-  private fileBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.addEventListener('load', () => {
-        const value = String(reader.result ?? '');
-        resolve(value.slice(value.indexOf(',') + 1));
+  private chooseDirectory(): Promise<File[] | null> {
+    return new Promise((resolve) => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.multiple = true;
+      input.setAttribute('webkitdirectory', '');
+      input.addEventListener('change', () => {
+        resolve(input.files ? Array.from(input.files) : null);
       }, { once: true });
-      reader.addEventListener('error', () => reject(reader.error), { once: true });
-      reader.readAsDataURL(file);
+      input.click();
     });
   }
 

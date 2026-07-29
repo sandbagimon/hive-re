@@ -13,12 +13,17 @@ fastapi>=0.115,<0.116
 uvicorn>=0.34,<0.35
 anyio>=4.4,<4.10
 websockets>=14,<16
+python-multipart>=0.0.32,<0.1
+gymnasium>=1.0,<2
+grpcio>=1.81.1,<2
+protobuf>=6.33.5,<7
 
 # Development and verification
 pytest>=8.0
 httpx>=0.28
 ruff>=0.5
 mypy>=1.10
+grpcio-tools>=1.81.1,<2
 
 # Install SimLab itself from this checkout.
 -e .

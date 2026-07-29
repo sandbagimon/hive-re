@@ -48,9 +48,9 @@ SimLab 当前不是单体 Qt 面板应用，主要边界已经形成：
 | A3 Scene Schema 与版本迁移 | **部分**。共享 JSON Schema 和 `scene.version` 已有，迁移器未实现。 | 宣称以 OpenUSD 构建数据集；编辑场景内部 schema 未公开。 | OpenUSD 原生，具备 composition、references、variants、layers 和 schema 生态。 | 建立 schema migration、向后兼容测试、未知字段策略和 stable IDs；短期不迁移到 USD。 | P1 |
 | A4 层级与变换系统 | **部分**。actor 为平面列表，primitive transform 可编辑。 | 支持复杂机器人和行业场景；层级实现未知。 | USD scene graph、xform hierarchy、articulation hierarchy 完整。 | 增加 parent/child、local/world transform、reparent、cycle validation 和层级序列化。 | P0 |
 | A5 编辑工作流 | **部分**。选择、增删、属性编辑、dirty、undo/redo 已有。 | 公开资料展示场景构建工作流，编辑细节未知。 | Stage、Property、Content Browser、transform、复制、批量编辑等成熟。 | 完成 duplicate、multi-select、inline rename、typed inspector、search/filter、context menu、autosave recovery。 | P1 |
-| A6 项目与资产引用 | **部分**。本地 metadata、primitive assets、scene save/open 和 OpenUSD mesh import/cache 已有。 | 宣称 SimReady 资产库和行业场景资产。 | Nucleus/本地 USD 资产、Content Browser、资产转换器与依赖体系。 | 定义 project manifest、完整 USD/texture 依赖复制、缩略图、许可证字段和 missing asset 修复。 | P0 |
+| A6 项目与资产引用 | **部分**。本地 metadata、primitive assets、scene save/open、multipart OpenUSD 目录/USDZ/安全 ZIP 导入、依赖复制和项目缓存已有。 | 宣称 SimReady 资产库和行业场景资产。 | Nucleus/本地 USD 资产、Content Browser、资产转换器与依赖体系。 | 增加缩略图、许可证字段、依赖修复 UI 和大型资产异步任务。 | P0 |
 | A7 可视化 Viewport | **部分**。three.js primitive/imported mesh、orbit、选择轮廓、translate/rotate/scale、相机快捷键已实现。 | 宣称高保真实时渲染；渲染后端和可调参数未知。 | RTX 实时/路径追踪、材质、灯光、相机和大型场景渲染。 | 补 PBR/texture、灯光、阴影、性能统计、snap 和 viewport 集成测试；不以追平 RTX 为短期目标。 | P1 |
-| A8 几何与碰撞编辑 | **部分**。primitive contract、OpenUSD merged mesh collider、scale 烘焙、collider overlay 已有。 | 高精度物理为官网主张；碰撞 authoring 细节未知。 | primitive/mesh/convex/SDF colliders、collision approximation 和调试工具。 | 增加 dedicated collision prim、convex decomposition、collision layer/mask、compound collider、contact 可视化。 | P0 |
+| A8 几何与碰撞编辑 | **部分**。primitive contract、OpenUSD dedicated collision prim/fallback mesh、scale 烘焙和 collider overlay 已有。 | 高精度物理为官网主张；碰撞 authoring 细节未知。 | primitive/mesh/convex/SDF colliders、collision approximation 和调试工具。 | 增加 convex decomposition、collision layer/mask、compound collider 和 contact 可视化。 | P0 |
 | A9 诊断与验证 | **部分**。Run/Step/Export preflight、MJCF compile、actor/field issue 已有。 | 宣称覆盖开发、验证和部署流程；诊断能力未知。 | Physics Debug、日志、Profiler、资产与 USD 检查工具较完整。 | 独立 Validation Panel、quick fix、依赖检查、运行时 warning 聚合、性能预算和 crash-safe log。 | P1 |
 
 ## B. 物理与机器人运行时
@@ -75,7 +75,7 @@ SimLab 当前不是单体 Qt 面板应用，主要边界已经形成：
 | C3 中间件与 ROS 2 | **缺失**。无 ROS topic/service/clock/tf bridge。 | 宣称标准化 API 和生态兼容；ROS 版本与覆盖范围未明确。 | 官方 ROS 2 bridge、simulation control、sensor 和 TF 教程齐全。 | 建立 transport-neutral adapter，再实现 ROS 2 clock、TF、joint states、commands 和 selected sensors。 | P2 |
 | C4 数据记录与标注 | **缺失**。无图像、标注或同步传感器数据集导出。 | 宣称 OpenUSD 数据集与数据采集工作流。 | Replicator、RGB/bbox/semantic/instance 等 annotators，支持常见数据格式工作流。 | 定义 episode manifest、同步时钟、state/sensor writers、2D/3D 标注 schema、COCO/KITTI adapter。 | P2 |
 | C5 Domain Randomization / Sim2Real | **缺失**。没有参数分布、随机化阶段或审计记录。 | 官网强调仿真到部署的完整流程；具体随机化 API 未公开。 | Replicator randomization、Isaac Lab events/randomization 和 sim-to-real 工作流。 | 增加可复现 randomization graph：pose、physics、material、light、sensor noise，并记录每 episode 参数。 | P2 |
-| C6 Task / Environment API | **桩**。`SimLabEnv.reset/step/close` 只返回占位数据。 | 宣称兼容主流强化学习平台。 | Isaac Lab 提供 manager-based/direct workflows、环境、任务和 wrappers。 | 定义 Env contract、observation/action specs、reward、termination、reset、seed、vectorization 边界并实现一个可训练任务。 | P0 |
+| C6 Task / Environment API | **基础闭环**。`SimLabEnv` 已有 Gymnasium spaces、seed/reset、reward、termination/truncation、Robot/Task 分层，以及本地 MuJoCo/原子 gRPC 后端切换；尚无 vectorized/MJX runtime。 | 宣称兼容主流强化学习平台。 | Isaac Lab 提供 manager-based/direct workflows、环境、任务和 wrappers。 | 增加 task registry、domain randomization、vector env、训练 runner 与 benchmark。 | P1 |
 | C7 强化学习与模仿学习 | **缺失**。无训练 runner、算法 adapter、demo buffer。 | 官网宣称强化学习训练及多机并发。 | Isaac Lab 集成 RL、imitation、motion planning 工作流和示例任务。 | 仿真平台只提供稳定 env API 与 adapters；先接一个外部 RL 库，避免自研算法框架。 | P2 |
 | C8 运动规划与导航 | **缺失**。无 IK、规划器、地图或导航接口。 | 公开概述覆盖具身智能研发，具体 planner 未确认。 | Isaac 生态含运动规划、操控和导航相关工具链。 | 在 robot/control/sensor 稳定后接外部 IK/规划库；先定义 state/command/collision-query API。 | P3 |
 
@@ -101,7 +101,7 @@ SimLab 已经越过“只有 UI 原型”的阶段：primitive scene authoring�
 
 - **对 OrcaLab**：SimLab 的本地、透明、可测试架构是差异化基础，但缺少其公开宣称的机器人资产、传感器、训练工作流、并发规模和标准化 API。
 - **对 Isaac Sim**：SimLab 在体量和目标上不应直接追平 RTX/OpenUSD/Omniverse 全栈；应先把 MuJoCo 的轻量、可复现、易调试优势做实。差距最大的是 articulation/import、sensor、ROS 2、SDG 和规模化运行。
-- **对 Isaac Lab**：当前 `SimLabEnv` 还是 stub，离 observation/action/reward/termination、可复现 reset 和 vectorized training 还有完整的一层平台工程。
+- **对 Isaac Lab**：SimLab 已完成单环境 Gymnasium 和远程 backend 边界；主要差距转为 task library、domain randomization、vectorized/MJX training 与分布式吞吐。
 
 ## 建议执行顺序
 

@@ -11,7 +11,11 @@ from simlab.services.openusd.articulation_importer import (
     OpenUsdArticulationError,
     import_openusd_articulations,
 )
-from simlab.services.openusd.asset_cache import openusd_asset_id, upsert_asset_metadata
+from simlab.services.openusd.asset_cache import (
+    copy_openusd_dependencies,
+    openusd_asset_id,
+    upsert_asset_metadata,
+)
 from simlab.services.openusd.import_report import ImportReport
 
 
@@ -21,36 +25,6 @@ class RobotAssetImportResult:
     model: RoboticsModel
     report: ImportReport
     cache_directory: Path
-
-
-def _copy_dependencies(
-    source_path: Path,
-    cache_source_dir: Path,
-    report: ImportReport,
-) -> list[str]:
-    copied: list[str] = []
-    for dependency_value in report.resolved_dependencies:
-        dependency = Path(dependency_value)
-        if not dependency.is_absolute():
-            dependency = (source_path.parent / dependency).resolve()
-        if dependency == source_path or not dependency.is_file():
-            continue
-        try:
-            relative = dependency.relative_to(source_path.parent)
-        except ValueError:
-            report.add(
-                "error",
-                "usd.dependency_outside_source_root",
-                f"Dependency is outside the imported asset directory: {dependency}",
-                field="asset_path",
-                fallback="Move the dependency under the USD asset directory and import again.",
-            )
-            continue
-        destination = cache_source_dir / relative
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(dependency, destination)
-        copied.append(destination.as_posix())
-    return copied
 
 
 def _rewrite_source_uris(model: RoboticsModel, source_uri: str) -> None:
@@ -76,13 +50,16 @@ def import_openusd_robot_asset(
     report = imported.report
     asset_id = openusd_asset_id(source_path)
     cache_dir = root / "assets" / "imported" / asset_id
+    cache_existed = cache_dir.exists()
     source_dir = cache_dir / "source"
     source_dir.mkdir(parents=True, exist_ok=True)
     copied_source = source_dir / source_path.name
     if source_path != copied_source:
         shutil.copy2(source_path, copied_source)
-    copied_dependencies = _copy_dependencies(source_path, source_dir, report)
+    copied_dependencies = copy_openusd_dependencies(source_path, source_dir, report)
     if report.has_errors:
+        if not cache_existed:
+            shutil.rmtree(cache_dir, ignore_errors=True)
         raise OpenUsdArticulationError(report)
 
     relative_source = copied_source.relative_to(root).as_posix()
@@ -107,7 +84,7 @@ def import_openusd_robot_asset(
         "robotics_model": relative_robotics,
         "import_report": relative_report,
         "dependencies": [
-            Path(path).relative_to(root).as_posix() for path in copied_dependencies
+            path.relative_to(root).as_posix() for path in copied_dependencies.values()
         ],
         "articulation_ids": [item.id for item in imported.model.articulations],
     }

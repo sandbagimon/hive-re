@@ -34,6 +34,7 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert 'id="console-output"' in html
     assert 'data-command="save"' in html
     assert 'data-command="import-openusd"' in html
+    assert 'data-command="import-openusd-folder"' in html
     assert 'data-command="run"' in html
     assert 'data-simulation-speed="0.25"' in html
     assert 'id="rtf-readout"' in html
@@ -41,6 +42,9 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "store.undo()" in app
     assert "store.selectActor" in app
     assert "importOpenUsd" in app
+    assert "importOpenUsdFolder" in bridge
+    assert "new FormData()" in bridge
+    assert "webkitdirectory" in bridge
     assert "/api/v1/projects" in bridge
     assert "/api/v1/simulations" in bridge
     assert "simlab-config.json" in bridge

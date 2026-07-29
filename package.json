@@ -9,7 +9,7 @@
     "preview:frontend": "vite preview --config frontend/vite.config.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build:modules": "tsc -p tsconfig.json",
-    "test:frontend": "npm run build:modules && node frontend-tests/store.mjs && node frontend-tests/trajectory-draft.mjs",
+    "test:frontend": "npm run build:modules && node frontend-tests/store.mjs && node frontend-tests/simulation-store.mjs && node frontend-tests/trajectory-draft.mjs",
     "test:web": "npm run build && PLAYWRIGHT_BROWSERS_PATH=.venv/playwright-browsers playwright test"
   },
   "devDependencies": {

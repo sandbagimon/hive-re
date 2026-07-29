@@ -3,16 +3,21 @@ from __future__ import annotations
 import base64
 import copy
 import json
+import shutil
 import threading
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
 from simlab.models.scene import Scene
 from simlab.models.trajectory import JointTrajectory
 from simlab.services.mjcf_exporter import export_scene_to_mjcf
+from simlab.services.openusd.upload_bundle import (
+    stage_openusd_bytes,
+    stage_openusd_streams,
+)
 from simlab.services.openusd_importer import import_openusd_asset, load_visual_geometry
 from simlab.services.physics_materials import material_for_id
 from simlab.services.physics_validation import PhysicsPreflightReport, run_physics_preflight
@@ -91,7 +96,13 @@ class WebApplication:
                 result = handler(*args)
             return result if isinstance(result, dict) else self.success(result)
         except Exception as exc:
-            return self.failure(exc)
+            report = getattr(exc, "report", None)
+            data = (
+                report.to_dict()
+                if report is not None and hasattr(report, "to_dict")
+                else None
+            )
+            return self.failure(exc, data)
 
     def get_assets(self) -> dict[str, Any]:
         metadata_path = self.project_root / "assets" / "metadata.json"
@@ -111,32 +122,52 @@ class WebApplication:
         robotics = result.robotics_model.to_dict() if result.robotics_model else None
         return self.success({"asset": asset, "warnings": result.warnings, "robotics": robotics})
 
-    def import_openusd_bundle(self, bundle_json: str, entry_name: str) -> dict[str, Any]:
+    def import_openusd_bundle(
+        self,
+        bundle_json: str,
+        entry_name: str,
+        package_entry: str | None = None,
+    ) -> dict[str, Any]:
         bundle = json.loads(bundle_json)
         if not isinstance(bundle, list) or not bundle:
             raise ValueError("OpenUSD upload bundle must contain at least one file")
-        upload_root = self.project_root / "assets" / "uploads" / uuid.uuid4().hex
-        total_bytes = 0
-        entry_path: Path | None = None
+        decoded: list[tuple[str, bytes]] = []
         for item in bundle:
             if not isinstance(item, dict):
                 raise ValueError("OpenUSD upload entry must be an object")
-            relative = self._safe_relative_path(str(item.get("name", "")))
+            name = str(item.get("name", ""))
             encoded = item.get("content")
             if not isinstance(encoded, str):
-                raise ValueError(f"OpenUSD upload content is missing: {relative}")
+                raise ValueError(f"OpenUSD upload content is missing: {name}")
             content = base64.b64decode(encoded, validate=True)
-            total_bytes += len(content)
-            if total_bytes > 256 * 1024 * 1024:
-                raise ValueError("OpenUSD upload bundle exceeds 256 MiB")
-            output = upload_root / relative
-            output.parent.mkdir(parents=True, exist_ok=True)
-            output.write_bytes(content)
-            if relative.as_posix() == entry_name:
-                entry_path = output
-        if entry_path is None:
-            raise ValueError(f"OpenUSD entry file is not present in upload: {entry_name}")
-        return self.import_openusd_path(str(entry_path))
+            decoded.append((name, content))
+        staged = stage_openusd_bytes(
+            self.project_root,
+            decoded,
+            entry_name,
+            package_entry=package_entry,
+        )
+        try:
+            return self.import_openusd_path(str(staged.entry_path))
+        finally:
+            shutil.rmtree(staged.root, ignore_errors=True)
+
+    def import_openusd_streams(
+        self,
+        files: Iterable[tuple[str, BinaryIO]],
+        entry_name: str,
+        package_entry: str | None = None,
+    ) -> dict[str, Any]:
+        staged = stage_openusd_streams(
+            self.project_root,
+            files,
+            entry_name,
+            package_entry=package_entry,
+        )
+        try:
+            return self.import_openusd_path(str(staged.entry_path))
+        finally:
+            shutil.rmtree(staged.root, ignore_errors=True)
 
     def get_visual_geometry(self, cache_path: str) -> dict[str, Any]:
         return self.success(load_visual_geometry(cache_path, self.project_root))

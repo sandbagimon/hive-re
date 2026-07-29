@@ -5,11 +5,12 @@ import json
 import time
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, WebSocket
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, WebSocket
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from simlab.resources import ResourceManager
+from simlab.services.openusd.upload_bundle import MAX_UPLOAD_BYTES, MAX_UPLOAD_FILES
 
 
 class ProjectCreate(BaseModel):
@@ -47,6 +48,31 @@ class ControllerUpload(BaseModel):
 class OpenUsdUpload(BaseModel):
     files: list[dict[str, str]] = Field(min_length=1)
     entry: str
+    package_entry: str | None = None
+
+
+OPENUSD_REQUEST_BODY = {
+    "requestBody": {
+        "required": True,
+        "content": {
+            "multipart/form-data": {
+                "schema": {
+                    "type": "object",
+                    "required": ["entry", "files"],
+                    "properties": {
+                        "entry": {"type": "string"},
+                        "package_entry": {"type": "string", "nullable": True},
+                        "files": {
+                            "type": "array",
+                            "items": {"type": "string", "format": "binary"},
+                        },
+                    },
+                }
+            },
+            "application/json": {"schema": OpenUsdUpload.model_json_schema()},
+        },
+    }
+}
 
 
 def create_v1_router(manager: ResourceManager, access_token: str | None) -> APIRouter:
@@ -83,14 +109,60 @@ def create_v1_router(manager: ResourceManager, access_token: str | None) -> APIR
         return {"version": "v1", "assets": manager.assets(project_id)}
 
     @router.post(
-        "/projects/{project_id}/assets/openusd", dependencies=[auth], status_code=201
+        "/projects/{project_id}/assets/openusd",
+        dependencies=[auth],
+        status_code=201,
+        openapi_extra=OPENUSD_REQUEST_BODY,
     )
     async def import_openusd(
-        project_id: str, request: OpenUsdUpload
+        project_id: str, request: Request
     ) -> dict[str, Any]:
-        data = manager.import_openusd(
-            project_id, json.dumps(request.files), request.entry
-        )
+        content_type = request.headers.get("content-type", "").lower()
+        if content_type.startswith("multipart/form-data"):
+            async with request.form(
+                max_files=MAX_UPLOAD_FILES,
+                max_fields=32,
+                max_part_size=MAX_UPLOAD_BYTES,
+            ) as form:
+                entry = form.get("entry")
+                package_entry = form.get("package_entry")
+                if not isinstance(entry, str) or not entry:
+                    raise HTTPException(status_code=422, detail="OpenUSD entry is required")
+                if package_entry is not None and not isinstance(package_entry, str):
+                    raise HTTPException(
+                        status_code=422,
+                        detail="OpenUSD package_entry must be a string",
+                    )
+                uploads = [
+                    item
+                    for item in form.getlist("files")
+                    if hasattr(item, "filename") and hasattr(item, "file")
+                ]
+                if not uploads:
+                    raise HTTPException(status_code=422, detail="OpenUSD files are required")
+                streams = [
+                    (str(item.filename or ""), item.file)
+                    for item in uploads
+                ]
+                data = manager.import_openusd_streams(
+                    project_id,
+                    streams,
+                    entry,
+                    package_entry,
+                )
+        elif content_type.startswith("application/json"):
+            upload = OpenUsdUpload.model_validate(await request.json())
+            data = manager.import_openusd(
+                project_id,
+                json.dumps(upload.files),
+                upload.entry,
+                upload.package_entry,
+            )
+        else:
+            raise HTTPException(
+                status_code=415,
+                detail="OpenUSD upload must use multipart/form-data or application/json",
+            )
         return {"version": "v1", **data}
 
     @router.get(
@@ -229,7 +301,15 @@ def create_v1_router(manager: ResourceManager, access_token: str | None) -> APIR
     async def download_artifact(artifact_id: str) -> Response:
         artifact = manager.get_artifact(artifact_id)
         if artifact.content is None:
-            raise HTTPException(status_code=400, detail="Artifact is not downloadable")
+            path = manager.artifact_path(artifact_id)
+            return Response(
+                content=path.read_bytes(),
+                media_type=artifact.media_type,
+                headers={
+                    "Content-Disposition": f'attachment; filename="{artifact.filename}"',
+                    "X-SimLab-Artifact-Id": artifact.id,
+                },
+            )
         return Response(
             content=artifact.content,
             media_type=artifact.media_type,

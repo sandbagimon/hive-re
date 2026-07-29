@@ -3,12 +3,14 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import mimetypes
 import shutil
 import threading
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, BinaryIO
 
 from simlab.models.scene import Scene
 from simlab.services.project_service import validate_scene
@@ -21,6 +23,7 @@ REFERENCE_FIELDS = {
     "robotics_cache",
     "import_report",
     "manifest",
+    "base_color_texture",
 }
 
 
@@ -110,12 +113,6 @@ class ResourceManager:
             project.scene = self.externalize(project, canonical)
             project.name = model.name
             project.revision += 1
-            scene_json = json.dumps(project.scene, sort_keys=True)
-            for simulation in self.simulations.values():
-                if simulation.project_id != project_id or simulation.scene_json == scene_json:
-                    continue
-                simulation.application.stop_simulation()
-                simulation.scene_json = scene_json
             return project
 
     def assets(self, project_id: str) -> list[dict[str, Any]]:
@@ -130,12 +127,41 @@ class ResourceManager:
         return [self.externalize(project, item) for item in result["data"]["assets"]]
 
     def import_openusd(
-        self, project_id: str, bundle_json: str, entry_name: str
+        self,
+        project_id: str,
+        bundle_json: str,
+        entry_name: str,
+        package_entry: str | None = None,
     ) -> dict[str, Any]:
         project = self.get_project(project_id)
         app = WebApplication(project.root, background_simulation=False)
         try:
-            result = app.dispatch("importOpenUsdBundle", [bundle_json, entry_name])
+            result = app.dispatch(
+                "importOpenUsdBundle",
+                [bundle_json, entry_name, package_entry],
+            )
+        finally:
+            app.close()
+        if not result.get("ok"):
+            raise ResourceValidationError(
+                str(result.get("error")), result.get("data")
+            )
+        return self.externalize(project, result["data"])
+
+    def import_openusd_streams(
+        self,
+        project_id: str,
+        files: Iterable[tuple[str, BinaryIO]],
+        entry_name: str,
+        package_entry: str | None = None,
+    ) -> dict[str, Any]:
+        project = self.get_project(project_id)
+        app = WebApplication(project.root, background_simulation=False)
+        try:
+            result = app.import_openusd_streams(files, entry_name, package_entry)
+        except Exception as exc:
+            data = getattr(getattr(exc, "report", None), "to_dict", lambda: None)()
+            raise ResourceValidationError(str(exc), data) from exc
         finally:
             app.close()
         if not result.get("ok"):
@@ -156,7 +182,7 @@ class ResourceManager:
             app.close()
         if not result.get("ok"):
             raise ValueError(str(result.get("error")))
-        return result["data"]
+        return self.externalize(project, result["data"])
 
     def export_mjcf(self, project_id: str) -> tuple[dict[str, Any], ArtifactResource]:
         project = self.get_project(project_id)
@@ -230,7 +256,8 @@ class ResourceManager:
     def simulation_scene_json(self, simulation_id: str) -> str:
         simulation = self.get_simulation(simulation_id)
         project = self.get_project(simulation.project_id)
-        return json.dumps(self.hydrate(project, project.scene))
+        snapshot = json.loads(simulation.scene_json)
+        return json.dumps(self.hydrate(project, snapshot))
 
     def snapshot(self, simulation_id: str) -> dict[str, Any]:
         simulation = self.get_simulation(simulation_id)
@@ -332,6 +359,16 @@ class ResourceManager:
             raise PermissionError("Artifact does not belong to this project")
         return artifact
 
+    def artifact_path(self, artifact_id: str) -> Path:
+        artifact = self.get_artifact(artifact_id)
+        if artifact.reference is None:
+            raise ValueError("Artifact is not file-backed")
+        project = self.get_project(artifact.project_id)
+        path = (project.root / artifact.reference).resolve()
+        if not path.is_relative_to(project.root) or not path.is_file():
+            raise ValueError("Artifact file is unavailable")
+        return path
+
     def externalize(self, project: ProjectResource, value: Any) -> Any:
         if isinstance(value, list):
             return [self.externalize(project, item) for item in value]
@@ -345,7 +382,7 @@ class ResourceManager:
                     artifact = self.create_artifact(
                         project.id,
                         path.name,
-                        "application/octet-stream",
+                        mimetypes.guess_type(path.name)[0] or "application/octet-stream",
                         reference=item,
                     )
                     output[key] = artifact.id

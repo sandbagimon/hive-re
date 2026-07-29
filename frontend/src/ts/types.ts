@@ -351,6 +351,10 @@ export interface OpenUsdImportPayload {
 export interface VisualGeometryPayload {
   positions: number[];
   indices: number[];
+  colors?: number[] | null;
+  uvs?: number[] | null;
+  base_color_texture?: string | null;
+  base_color_texture_url?: string | null;
 }
 
 export interface SimLabEditorAutomation {

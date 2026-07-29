@@ -1,5 +1,6 @@
 import { EditorBridgeClient } from './bridge.js';
-import { EditorStore } from './store.js';
+import { SimulationStore } from './simulation-store.js';
+import { EditorStore, type EditorState } from './store.js';
 import {
   captureTrajectoryKeyframe,
   createTrajectoryDraft,
@@ -40,6 +41,7 @@ import {
   selectViewportActor,
   selectViewportLink,
   setViewportScene,
+  updateViewportTransforms,
 } from './viewport.js';
 
 interface AssetsPayload {
@@ -82,6 +84,7 @@ const materialPresets: Record<string, Partial<PhysicsProperties>> = {
 };
 
 const store = new EditorStore();
+const simulationStore = new SimulationStore();
 interface TrajectoryDraftState {
   draft: TrajectoryDraft;
   homeSignature: string;
@@ -100,6 +103,7 @@ interface RecordingDraftState {
 const recordingDrafts = new Map<string, RecordingDraftState>();
 let bridge = new EditorBridgeClient(null);
 let previousSceneJson = '';
+let previousViewportStructure = '';
 let previousSelectedActorId: string | null = null;
 let previousSelectedJointId: string | null = null;
 let previousSelectedSensorId: string | null = null;
@@ -512,12 +516,12 @@ async function sendJointTargets(targets: Record<string, number>): Promise<void> 
     JSON.stringify(targets),
   );
   if (!result.ok || !result.data) {
-    if (result.data?.state) store.setSimulation('paused', result.data.state);
+    if (result.data?.state) simulationStore.setSimulation('paused', result.data.state);
     showToast(result.error ?? 'Joint control failed', true);
     return;
   }
-  const status = store.current.simulationStatus === 'running' ? 'running' : 'paused';
-  store.setSimulation(status, result.data.state);
+  const status = simulationStore.current.simulationStatus === 'running' ? 'running' : 'paused';
+  simulationStore.setSimulation(status, result.data.state);
 }
 
 function updateProperty(actorId: string, input: HTMLInputElement | HTMLSelectElement): void {
@@ -637,7 +641,7 @@ function renderTrajectoryPanel(
         scene,
         (event.currentTarget as HTMLSelectElement).value || null,
       );
-      renderTrajectoryPanel(actor, scene, store.current.simulationState);
+      renderTrajectoryPanel(actor, scene, simulationStore.current.simulationState);
     },
   );
   controls.querySelector<HTMLButtonElement>('[data-trajectory-save]')?.addEventListener(
@@ -655,7 +659,7 @@ function renderTrajectoryPanel(
         draftState.sourceSignature = JSON.stringify([clipId, trajectory]);
         draftState.targetsTouched = true;
         showToast('Trajectory clip saved');
-        renderTrajectoryPanel(actor, store.current.scene, store.current.simulationState);
+        renderTrajectoryPanel(actor, store.current.scene, simulationStore.current.simulationState);
       } catch (error) {
         showToast(error instanceof Error ? error.message : String(error), true);
       }
@@ -689,7 +693,7 @@ function renderTrajectoryPanel(
           draftState.draft,
           Number((event.currentTarget as HTMLInputElement).value),
         );
-        renderTrajectoryPanel(actor, scene, store.current.simulationState);
+        renderTrajectoryPanel(actor, scene, simulationStore.current.simulationState);
       } catch (error) {
         showToast(error instanceof Error ? error.message : String(error), true);
       }
@@ -714,7 +718,7 @@ function renderTrajectoryPanel(
         currentRobotTargets(actor, scene),
       );
       draftState.targetsTouched = true;
-      renderTrajectoryPanel(actor, scene, store.current.simulationState);
+      renderTrajectoryPanel(actor, scene, simulationStore.current.simulationState);
     },
   );
   for (const row of controls.querySelectorAll<HTMLElement>('[data-keyframe-id]')) {
@@ -728,7 +732,7 @@ function renderTrajectoryPanel(
           Number((event.currentTarget as HTMLInputElement).value),
         );
         draftState.targetsTouched = true;
-        renderTrajectoryPanel(actor, scene, store.current.simulationState);
+        renderTrajectoryPanel(actor, scene, simulationStore.current.simulationState);
       },
     );
     for (const input of row.querySelectorAll<HTMLInputElement>('[data-keyframe-target]')) {
@@ -748,7 +752,7 @@ function renderTrajectoryPanel(
         try {
           draftState.draft = removeTrajectoryKeyframe(draftState.draft, keyframeId);
           draftState.targetsTouched = true;
-          renderTrajectoryPanel(actor, scene, store.current.simulationState);
+          renderTrajectoryPanel(actor, scene, simulationStore.current.simulationState);
         } catch (error) {
           showToast(error instanceof Error ? error.message : String(error), true);
         }
@@ -789,7 +793,7 @@ function robotSensors(actor: Actor, scene: Scene): RobotSensor[] {
 
 function currentRobotTargets(actor: Actor, scene: Scene): Record<string, number> {
   const actuatorStates = new Map(
-    (store.current.simulationState?.actuators ?? []).map((item) => [item.id, item.ctrl]),
+    (simulationStore.current.simulationState?.actuators ?? []).map((item) => [item.id, item.ctrl]),
   );
   return Object.fromEntries(positionJointBindings(actor, scene).map(({ joint, actuator }) => [
     joint.id,
@@ -899,7 +903,7 @@ async function handleTrajectoryCommand(
       JSON.stringify(scene),
       JSON.stringify(trajectory),
     );
-    store.setValidationIssues(result.data?.issues ?? []);
+    simulationStore.setValidationIssues(result.data?.issues ?? []);
   } else if (command === 'play') result = await bridge.call<RunPayload>('playTrajectory');
   else if (command === 'pause') result = await bridge.call<RunPayload>('pauseTrajectory');
   else if (command === 'stop') result = await bridge.call<RunPayload>('stopTrajectory');
@@ -909,7 +913,7 @@ async function handleTrajectoryCommand(
     return;
   }
   const status = command === 'play' ? 'running' : 'paused';
-  store.setSimulation(status, result.data.state);
+  simulationStore.setSimulation(status, result.data.state);
 }
 
 function updateTrajectoryRuntime(simulationState: SimulationState | null): void {
@@ -1076,8 +1080,8 @@ async function handleRecordingCommand(
     showToast(result.error ?? `Recording ${command} failed`, true);
     return;
   }
-  const status = store.current.simulationStatus === 'running' ? 'running' : 'paused';
-  store.setSimulation(status, result.data.state);
+  const status = simulationStore.current.simulationStatus === 'running' ? 'running' : 'paused';
+  simulationStore.setSimulation(status, result.data.state);
 }
 
 async function exportRecording(formatName: string): Promise<void> {
@@ -1161,7 +1165,7 @@ async function handleControllerCommand(command: string, actor: Actor): Promise<v
       return;
     }
     loadedController = null;
-    store.setSimulation('paused', result.data.state);
+    simulationStore.setSimulation('paused', result.data.state);
     renderControllerPanel(actor, result.data.state);
     store.appendLog('Detached Python controller.');
     return;
@@ -1188,7 +1192,7 @@ async function loadProjectController(
     path: result.data.controller.path,
     name: result.data.controller.name,
   };
-  store.setSimulation('paused', result.data.state);
+  simulationStore.setSimulation('paused', result.data.state);
   renderControllerPanel(actor, result.data.state);
   store.appendLog(`Loaded Python controller: ${result.data.controller.name}`);
   return result;
@@ -1242,24 +1246,26 @@ async function setSimulationSpeed(factor: number): Promise<RpcResult<SimulationS
   const result = await bridge.call<SimulationSpeedPayload>('setSimulationSpeed', factor);
   if (result.ok && result.data) {
     targetRealtimeFactor = result.data.target_rtf;
-    if (result.data.state) store.setSimulationState(result.data.state);
+    if (result.data.state) simulationStore.setSimulationState(result.data.state);
     else updateSimulationClock(null);
     return result;
   }
   targetRealtimeFactor = previous;
-  updateSimulationClock(store.current.simulationState);
+  updateSimulationClock(simulationStore.current.simulationState);
   showToast(result.error ?? 'Simulation speed update failed', true);
   return result;
 }
 
 function render(): void {
   const state = store.current;
+  const simulation = simulationStore.current;
   element('project-label').textContent = `${state.dirty ? '* ' : ''}${state.scene.name}`;
   document.title = `${state.dirty ? '* ' : ''}SimLab - ${state.scene.name}`;
   const badge = element('simulation-badge');
-  badge.textContent = state.simulationStatus[0].toUpperCase() + state.simulationStatus.slice(1);
-  badge.dataset.status = state.simulationStatus;
-  updateSimulationClock(state.simulationState);
+  badge.textContent = simulation.simulationStatus[0].toUpperCase()
+    + simulation.simulationStatus.slice(1);
+  badge.dataset.status = simulation.simulationStatus;
+  updateSimulationClock(simulation.simulationState);
   (element('undo-button') as HTMLButtonElement).disabled = !state.canUndo;
   (element('redo-button') as HTMLButtonElement).disabled = !state.canRedo;
   renderAssets(state.assets);
@@ -1272,25 +1278,25 @@ function render(): void {
   renderInspector(
     state.scene.actors.find((actor) => actor.id === state.selectedActorId),
     state.scene,
-    state.simulationState,
+    simulation.simulationState,
     state.selectedJointId,
     state.selectedSensorId,
   );
   renderTrajectoryPanel(
     state.scene.actors.find((actor) => actor.id === state.selectedActorId),
     state.scene,
-    state.simulationState,
+    simulation.simulationState,
   );
   renderRecordingPanel(
     state.scene.actors.find((actor) => actor.id === state.selectedActorId),
     state.scene,
-    state.simulationState,
+    simulation.simulationState,
   );
   renderControllerPanel(
     state.scene.actors.find((actor) => actor.id === state.selectedActorId),
-    state.simulationState,
+    simulation.simulationState,
   );
-  renderValidation(state.validationIssues);
+  renderValidation(simulation.validationIssues);
   renderConsole(state.logs);
 }
 
@@ -1314,7 +1320,9 @@ async function handleCommand(command: string): Promise<void> {
     trajectoryDrafts.clear();
     recordingDrafts.clear();
     loadedController = null;
+    await bridge.call('discardSimulation');
     store.newScene();
+    simulationStore.reset();
   }
   else if (command === 'open' && allowDiscard()) {
     const result = await bridge.call<ProjectPayload>('openProject');
@@ -1322,55 +1330,79 @@ async function handleCommand(command: string): Promise<void> {
       trajectoryDrafts.clear();
       recordingDrafts.clear();
       loadedController = null;
+      await bridge.call('discardSimulation');
       store.loadScene(result.data.scene, result.data.path);
+      simulationStore.reset();
       store.appendLog(`Opened scene: ${result.data.path}`);
     } else if (result.error !== 'Cancelled') showToast(result.error ?? 'Open failed', true);
   } else if (command === 'save') await saveProject(false);
   else if (command === 'save-as') await saveProject(true);
-  else if (command === 'import-openusd') await importOpenUsd();
+  else if (command === 'import-openusd') await importOpenUsd('file');
+  else if (command === 'import-openusd-folder') await importOpenUsd('folder');
   else if (command === 'undo') store.undo();
   else if (command === 'redo') store.redo();
   else if (command === 'clear-console') store.clearLogs();
   else if (command === 'export') {
     const result = await bridge.call<ExportPayload>('exportMjcf', JSON.stringify(store.current.scene));
-    store.setValidationIssues(result.data?.issues ?? []);
+    simulationStore.setValidationIssues(result.data?.issues ?? []);
     if (result.ok && result.data) {
       store.appendLog(`Exported MJCF: ${result.data.path}`);
       showToast('MJCF exported');
     } else showToast(result.error ?? 'Export failed', true);
   } else if (command === 'run') {
     const result = await bridge.call<RunPayload>('runSimulation', JSON.stringify(store.current.scene));
-    store.setValidationIssues(result.data?.issues ?? []);
-    if (result.ok && result.data) store.setSimulation('running', result.data.state);
+    simulationStore.setValidationIssues(result.data?.issues ?? []);
+    if (result.ok && result.data) {
+      simulationStore.setSimulation('running', result.data.state);
+    }
     else showToast(result.error ?? 'Simulation failed', true);
   } else if (command === 'pause') {
     const result = await bridge.call('pauseSimulation');
-    if (result.ok) store.setSimulation('paused', store.current.simulationState);
+    if (result.ok) {
+      simulationStore.setSimulation('paused', simulationStore.current.simulationState);
+    }
+  } else if (command === 'stop') {
+    const result = await bridge.call('discardSimulation');
+    if (result.ok) {
+      loadedController = null;
+      simulationStore.reset();
+    } else showToast(result.error ?? 'Simulation stop failed', true);
   } else if (command === 'step') {
     const result = await bridge.call<RunPayload>('stepSimulation', JSON.stringify(store.current.scene));
-    store.setValidationIssues(result.data?.issues ?? []);
-    if (result.ok && result.data) store.setSimulation('paused', result.data.state);
+    simulationStore.setValidationIssues(result.data?.issues ?? []);
+    if (result.ok && result.data) simulationStore.setSimulation('paused', result.data.state);
     else showToast(result.error ?? 'Simulation step failed', true);
   } else if (command === 'reset') {
     const result = await bridge.call<RunPayload>('resetSimulation');
     if (result.ok && result.data?.state) {
-      store.setSimulation('paused', result.data.state);
+      simulationStore.setSimulation('paused', result.data.state);
     } else if (result.ok) {
-      store.setSimulation('stopped', null);
+      simulationStore.setSimulation('stopped', null);
     } else {
       showToast(result.error ?? 'Simulation reset failed', true);
     }
   }
 }
 
-async function importOpenUsd(): Promise<RpcResult<OpenUsdImportPayload>> {
-  const result = await bridge.call<OpenUsdImportPayload>('importOpenUsd');
+async function importOpenUsd(mode: 'file' | 'folder'): Promise<RpcResult<OpenUsdImportPayload>> {
+  const method = mode === 'folder' ? 'importOpenUsdFolder' : 'importOpenUsd';
+  showToast(mode === 'folder' ? 'Uploading OpenUSD folder…' : 'Uploading OpenUSD asset…');
+  const result = await bridge.call<OpenUsdImportPayload>(method);
   if (result.ok && result.data) {
     store.upsertAsset(result.data.asset);
     store.addAsset(result.data.asset, result.data.robotics);
     for (const warning of result.data.warnings) store.appendLog(`USD: ${warning}`);
     showToast(`Imported ${result.data.asset.name}`);
   } else if (result.error !== 'Cancelled') {
+    const report = result.data as unknown as {
+      issues?: Array<{ severity?: string; message?: string; field?: string }>;
+    } | undefined;
+    for (const issue of report?.issues ?? []) {
+      const field = issue.field ? ` (${issue.field})` : '';
+      store.appendLog(
+        `USD ${issue.severity ?? 'error'}: ${issue.message ?? result.error}${field}`,
+      );
+    }
     showToast(result.error ?? 'OpenUSD import failed', true);
   }
   return result;
@@ -1397,8 +1429,33 @@ configureViewport({
   },
 });
 
+function syncViewportSelection(state: EditorState): void {
+  selectViewportActor(state.selectedActorId);
+  const articulations = state.scene.robotics?.articulations ?? [];
+  const selectedSensor = articulations.flatMap((item) => item.sensors)
+    .find((item) => item.id === state.selectedSensorId);
+  const relatedJointId = state.selectedJointId ?? selectedSensor?.joint_id ?? null;
+  const jointLinkId = articulations.flatMap((item) => item.joints)
+    .find((item) => item.id === relatedJointId)?.child_link_id;
+  const colliderLinkId = selectedSensor?.collider_id
+    ? articulations.flatMap((item) => item.links)
+      .find((link) => link.colliders.some(
+        (collider) => collider.id === selectedSensor.collider_id,
+      ))?.id
+    : undefined;
+  selectViewportLink(jointLinkId ?? selectedSensor?.link_id ?? colliderLinkId ?? null);
+}
+
+function viewportStructureSnapshot(scene: Scene): string {
+  return JSON.stringify({
+    ...scene,
+    actors: scene.actors.map((actor) => ({ ...actor, transform: null })),
+  });
+}
+
 store.subscribe((state) => {
   const sceneJson = JSON.stringify(state.scene);
+  const nextViewportStructure = viewportStructureSnapshot(state.scene);
   const nextRenderSnapshot = JSON.stringify({
     sceneJson,
     assets: state.assets,
@@ -1409,8 +1466,6 @@ store.subscribe((state) => {
     canUndo: state.canUndo,
     canRedo: state.canRedo,
     currentPath: state.currentPath,
-    simulationStatus: state.simulationStatus,
-    validationIssues: state.validationIssues,
     logs: state.logs,
   });
   if (nextRenderSnapshot !== renderSnapshot) {
@@ -1418,10 +1473,18 @@ store.subscribe((state) => {
     renderSnapshot = nextRenderSnapshot;
   }
   if (sceneJson !== previousSceneJson) {
-    setViewportScene(state.scene);
+    const updatedInPlace = previousViewportStructure === nextViewportStructure
+      && updateViewportTransforms(state.scene);
+    if (!updatedInPlace) setViewportScene(state.scene);
+    // Keep the viewport selection synchronized after either an in-place transform update or a
+    // full scene rebuild, even when the selected ids themselves did not change.
+    syncViewportSelection(state);
     previousSceneJson = sceneJson;
-  }
-  if (state.selectedActorId !== previousSelectedActorId) {
+    previousViewportStructure = nextViewportStructure;
+    previousSelectedActorId = state.selectedActorId;
+    previousSelectedJointId = state.selectedJointId;
+    previousSelectedSensorId = state.selectedSensorId;
+  } else if (state.selectedActorId !== previousSelectedActorId) {
     selectViewportActor(state.selectedActorId);
     previousSelectedActorId = state.selectedActorId;
   }
@@ -1429,21 +1492,27 @@ store.subscribe((state) => {
     state.selectedJointId !== previousSelectedJointId
     || state.selectedSensorId !== previousSelectedSensorId
   ) {
-    const articulations = state.scene.robotics?.articulations ?? [];
-    const selectedSensor = articulations.flatMap((item) => item.sensors)
-      .find((item) => item.id === state.selectedSensorId);
-    const relatedJointId = state.selectedJointId ?? selectedSensor?.joint_id ?? null;
-    const jointLinkId = articulations.flatMap((item) => item.joints)
-      .find((item) => item.id === relatedJointId)?.child_link_id;
-    const colliderLinkId = selectedSensor?.collider_id
-      ? articulations.flatMap((item) => item.links)
-        .find((link) => link.colliders.some(
-          (collider) => collider.id === selectedSensor.collider_id,
-        ))?.id
-      : undefined;
-    selectViewportLink(jointLinkId ?? selectedSensor?.link_id ?? colliderLinkId ?? null);
+    syncViewportSelection(state);
+    previousSelectedActorId = state.selectedActorId;
     previousSelectedJointId = state.selectedJointId;
     previousSelectedSensorId = state.selectedSensorId;
+  }
+  const nextSync = `${sceneJson}:${state.dirty}`;
+  if (nextSync !== syncSnapshot) {
+    bridge.syncEditorState(sceneJson, state.dirty, state.currentPath);
+    syncSnapshot = nextSync;
+  }
+});
+
+let simulationRenderSnapshot = '';
+simulationStore.subscribe((state) => {
+  const nextRenderSnapshot = JSON.stringify({
+    simulationStatus: state.simulationStatus,
+    validationIssues: state.validationIssues,
+  });
+  if (nextRenderSnapshot !== simulationRenderSnapshot) {
+    render();
+    simulationRenderSnapshot = nextRenderSnapshot;
   }
   if (state.simulationState !== previousSimulationState) {
     applySimulationState(state.simulationState);
@@ -1453,11 +1522,6 @@ store.subscribe((state) => {
     updateControllerRuntime(state.simulationState);
     updateSimulationClock(state.simulationState);
     previousSimulationState = state.simulationState;
-  }
-  const nextSync = `${sceneJson}:${state.dirty}`;
-  if (nextSync !== syncSnapshot) {
-    bridge.syncEditorState(sceneJson, state.dirty, state.currentPath);
-    syncSnapshot = nextSync;
   }
 });
 
@@ -1479,10 +1543,10 @@ window.addEventListener('keydown', (event) => {
 
 async function initialize(): Promise<void> {
   bridge = await EditorBridgeClient.connect();
-  bridge.onSimulationState((state) => store.setSimulationState(state));
+  bridge.onSimulationState((state) => simulationStore.setSimulationState(state));
   bridge.onSimulationStatus((status) => {
     if (status === 'stopped') loadedController = null;
-    store.setSimulation(status, store.current.simulationState);
+    simulationStore.setSimulation(status, simulationStore.current.simulationState);
   });
   bridge.onConsoleMessage((message) => store.appendLog(message));
   void loadAssetsWithRetry();
@@ -1521,7 +1585,8 @@ window.simlabEditorReady = false;
 window.simlabEditor = {
   getRecording: () => bridge.call('getRecording'),
   setSimulationSpeed,
-  getStateJson: () => JSON.stringify(store.current),
+  // Keep the legacy flattened automation payload while the application uses separate stores.
+  getStateJson: () => JSON.stringify({ ...store.current, ...simulationStore.current }),
   selectJoint: (actorId, jointId) => {
     store.selectJoint(actorId, jointId);
     return store.current.selectedActorId === actorId

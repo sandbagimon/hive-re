@@ -18,9 +18,6 @@ export class EditorStore {
         canUndo: false,
         canRedo: false,
         currentPath: null,
-        simulationStatus: 'stopped',
-        simulationState: null,
-        validationIssues: [],
         logs: [],
     };
     listeners = new Set();
@@ -56,9 +53,6 @@ export class EditorStore {
             dirty: false,
             canUndo: false,
             canRedo: false,
-            simulationStatus: 'stopped',
-            simulationState: null,
-            validationIssues: [],
         });
     }
     newScene() {
@@ -208,15 +202,6 @@ export class EditorStore {
         this.undoStack.push(cloneScene(this.state.scene));
         this.restoreHistory(next, 'Redo.');
     }
-    setSimulation(status, state = null) {
-        this.patch({ simulationStatus: status, simulationState: state });
-    }
-    setSimulationState(state) {
-        this.patch({ simulationState: state });
-    }
-    setValidationIssues(validationIssues) {
-        this.patch({ validationIssues });
-    }
     appendLog(message) {
         this.patch({ logs: [...this.state.logs.slice(-199), message] });
     }
@@ -246,9 +231,6 @@ export class EditorStore {
             dirty: sceneSnapshot(scene) !== this.savedSnapshot,
             canUndo: true,
             canRedo: false,
-            simulationStatus: 'stopped',
-            simulationState: null,
-            validationIssues: [],
         });
     }
     restoreHistory(scene, message) {
@@ -267,8 +249,6 @@ export class EditorStore {
             dirty: sceneSnapshot(scene) !== this.savedSnapshot,
             canUndo: this.undoStack.length > 0,
             canRedo: this.redoStack.length > 0,
-            simulationStatus: 'stopped',
-            simulationState: null,
         });
         this.appendLog(message);
     }

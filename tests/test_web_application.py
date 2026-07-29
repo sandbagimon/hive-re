@@ -1,9 +1,11 @@
 import asyncio
 import base64
+import io
 import json
 from pathlib import Path
 
 import httpx
+import pytest
 
 from simlab.models.actor import Actor
 from simlab.models.robotics import RoboticsModel, Sensor
@@ -109,6 +111,124 @@ def test_web_application_imports_uploaded_openusd_bundle(tmp_path: Path) -> None
     assert state_events[-1]["payload"]["sensors"][0]["id"] == "web_joint_sensor"
 
 
+def test_api_imports_multipart_openusd_directory_with_relative_dependencies(
+    tmp_path: Path,
+) -> None:
+    fixture = Path("tests/fixtures/openusd/composite")
+    app = create_app(tmp_path, seed_assets=Path.cwd() / "assets")
+    try:
+        project_id = create_api_project(app)
+        response = request(
+            app,
+            "POST",
+            f"/api/v1/projects/{project_id}/assets/openusd",
+            data={"entry": "composite/root.usda"},
+            files=[
+                (
+                    "files",
+                    (
+                        "composite/root.usda",
+                        io.BytesIO((fixture / "root.usda").read_bytes()),
+                        "application/octet-stream",
+                    ),
+                ),
+                (
+                    "files",
+                    (
+                        "composite/parts/geometry.usda",
+                        io.BytesIO((fixture / "parts" / "geometry.usda").read_bytes()),
+                        "application/octet-stream",
+                    ),
+                ),
+            ],
+        )
+    finally:
+        app.state.resources.close()
+
+    assert response.status_code == 201, response.text
+    payload = response.json()
+    assert payload["asset"]["name"] == "root"
+    assert payload["asset"]["type"] == "object"
+    assert payload["asset"]["default_properties"]["geometry"]["visual_cache"].startswith(
+        "art_"
+    )
+    upload_root = tmp_path / "projects" / project_id / "assets" / "uploads"
+    assert not upload_root.exists() or not any(upload_root.iterdir())
+
+
+def test_api_serves_imported_openusd_texture_as_authenticated_artifact(
+    tmp_path: Path,
+) -> None:
+    source = b'''#usda 1.0
+(defaultPrim = "Asset")
+def Xform "Asset"
+{
+    def Mesh "Triangle"
+    {
+        int[] faceVertexCounts = [3]
+        int[] faceVertexIndices = [0, 1, 2]
+        point3f[] points = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (0, 1)] (
+            interpolation = "vertex"
+        )
+        rel material:binding = </Looks/Textured>
+    }
+}
+def Scope "Looks"
+{
+    def Material "Textured"
+    {
+        token outputs:surface.connect = </Looks/Textured/Preview.outputs:surface>
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor.connect = </Looks/Textured/Texture.outputs:rgb>
+            token outputs:surface
+        }
+        def Shader "Texture"
+        {
+            uniform token info:id = "UsdUVTexture"
+            asset inputs:file = @albedo.png@
+            float3 outputs:rgb
+        }
+    }
+}
+'''
+    texture = b"simlab-png-test"
+    app = create_app(tmp_path, seed_assets=Path.cwd() / "assets")
+    try:
+        project_id = create_api_project(app)
+        imported = request(
+            app,
+            "POST",
+            f"/api/v1/projects/{project_id}/assets/openusd",
+            data={"entry": "textured.usda"},
+            files=[
+                ("files", ("textured.usda", source, "application/octet-stream")),
+                ("files", ("albedo.png", texture, "image/png")),
+            ],
+        )
+        visual_artifact = imported.json()["asset"]["default_properties"]["geometry"][
+            "visual_cache"
+        ]
+        geometry = request(
+            app,
+            "GET",
+            f"/api/v1/projects/{project_id}/geometry/{visual_artifact}",
+        )
+        texture_artifact = geometry.json()["base_color_texture"]
+        downloaded = request(app, "GET", f"/api/v1/artifacts/{texture_artifact}")
+    finally:
+        app.state.resources.close()
+
+    assert imported.status_code == 201, imported.text
+    assert geometry.status_code == 200, geometry.text
+    assert geometry.json()["uvs"] == pytest.approx([0, 0, 1, 0, 0, 1])
+    assert texture_artifact.startswith("art_")
+    assert downloaded.headers["content-type"] == "image/png"
+    assert downloaded.content == texture
+
+
 def request(app: object, method: str, path: str, **kwargs: object) -> httpx.Response:
     async def run() -> httpx.Response:
         transport = httpx.ASGITransport(app=app)  # type: ignore[arg-type]
@@ -131,6 +251,7 @@ def test_web_server_exposes_only_versioned_backend_resources(tmp_path: Path) -> 
     route_paths = {route.path for route in app.routes}
     try:
         health = request(app, "GET", "/api/v1/health")
+        openapi = request(app, "GET", "/api/v1/openapi.json")
         frontend = request(app, "GET", "/")
         legacy_rpc = request(app, "POST", "/api/rpc/getAssets", json={"args": []})
         project_id = create_api_project(app)
@@ -140,6 +261,10 @@ def test_web_server_exposes_only_versioned_backend_resources(tmp_path: Path) -> 
 
     assert health.status_code == 200
     assert health.json() == {"version": "v1", "status": "ok"}
+    upload_content = openapi.json()["paths"][
+        "/api/v1/projects/{project_id}/assets/openusd"
+    ]["post"]["requestBody"]["content"]
+    assert set(upload_content) == {"multipart/form-data", "application/json"}
     assert all(path.startswith("/api/") for path in route_paths)
     assert "/redoc" not in route_paths
     assert frontend.status_code == 404
@@ -195,6 +320,62 @@ def test_versioned_api_runs_isolated_simulation_resources(tmp_path: Path) -> Non
     assert pause["ok"] is True
     assert reset["ok"] is True
     assert reset["data"]["state"]["time"] == 0
+
+
+def test_project_edits_do_not_mutate_or_stop_simulation_snapshot(tmp_path: Path) -> None:
+    scene = load_scene("examples/demo_project/scene.json")
+    scene.name = "Simulation Snapshot"
+    app = create_app(tmp_path, seed_assets=Path.cwd() / "assets")
+    try:
+        project_id = create_api_project(app)
+        request(
+            app,
+            "PUT",
+            f"/api/v1/projects/{project_id}/scene",
+            json=scene.to_dict(),
+        )
+        simulation_id = request(
+            app,
+            "POST",
+            "/api/v1/simulations",
+            json={"project_id": project_id},
+        ).json()["id"]
+        run = request(app, "POST", f"/api/v1/simulations/{simulation_id}/run")
+        assert run.json()["ok"] is True
+
+        edited = scene.to_dict()
+        edited["name"] = "Edited While Running"
+        edited["actors"][0]["transform"]["position"][0] = 4.0
+        updated = request(
+            app,
+            "PUT",
+            f"/api/v1/projects/{project_id}/scene",
+            json=edited,
+        )
+        original_snapshot = json.loads(
+            app.state.resources.simulation_scene_json(simulation_id)
+        )
+        runtime = request(
+            app, "GET", f"/api/v1/simulations/{simulation_id}/snapshot"
+        ).json()
+        next_simulation_id = request(
+            app,
+            "POST",
+            "/api/v1/simulations",
+            json={"project_id": project_id},
+        ).json()["id"]
+        next_snapshot = json.loads(
+            app.state.resources.simulation_scene_json(next_simulation_id)
+        )
+    finally:
+        app.state.resources.close()
+
+    assert updated.status_code == 200
+    assert runtime["status"] == "running"
+    assert original_snapshot["name"] == "Simulation Snapshot"
+    assert original_snapshot["actors"][0]["transform"]["position"][0] == 0.0
+    assert next_snapshot["name"] == "Edited While Running"
+    assert next_snapshot["actors"][0]["transform"]["position"][0] == 4.0
 
 
 def test_api_exports_downloadable_artifacts_without_server_paths(tmp_path: Path) -> None:

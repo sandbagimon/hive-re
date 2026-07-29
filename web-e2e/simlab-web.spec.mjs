@@ -61,6 +61,154 @@ test('frontend recovers shared assets when the API starts after the page', async
   await expect(page.locator('#console-output')).toContainText('Shared assets connected.');
 });
 
+test('editing actor properties keeps the actor selected', async ({ page }) => {
+  await configureApi(page);
+  await page.goto('/');
+  await expect(page.locator('#asset-list')).toContainText('Box', { timeout: 10_000 });
+
+  await page.locator('[data-asset-id="primitive_box"]').click();
+  const selectedActor = page.locator('[data-actor-row].selected');
+  await expect(selectedActor).toContainText('Box');
+  await expect(page.locator('#selection')).toContainText('Selected: Box');
+
+  const friction = page.locator('#property-inspector [data-field="friction"]');
+  await friction.fill('1.25');
+  await friction.press('Enter');
+
+  await expect(selectedActor).toContainText('Box');
+  await expect(page.locator('#property-inspector')).toContainText('Actor');
+  await expect(page.locator('#selection')).toContainText('Selected: Box');
+  const state = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
+  expect(state.selectedActorId).toBe('actor_001');
+  expect(state.scene.actors[0].properties.physics.friction[0]).toBe(1.25);
+});
+
+test('clicking and moving an actor in the viewport keeps it selected', async ({ page }) => {
+  await configureApi(page);
+  await page.goto('/');
+  await expect(page.locator('#asset-list')).toContainText('Box', { timeout: 10_000 });
+  await page.locator('[data-asset-id="primitive_box"]').click();
+
+  const viewport = page.locator('#viewport');
+  const bounds = await viewport.boundingBox();
+  expect(bounds).not.toBeNull();
+  await viewport.click({ position: { x: 12, y: 12 } });
+  await expect(page.locator('#selection')).toHaveText('Selected: None');
+
+  await viewport.click({
+    position: { x: bounds.width / 2, y: bounds.height / 2 },
+  });
+  await expect(page.locator('[data-actor-row].selected')).toContainText('Box');
+  await expect(page.locator('#selection')).toContainText('Selected: Box');
+
+  const gizmoCenter = {
+    x: bounds.x + bounds.width / 2,
+    y: bounds.y + bounds.height / 2 + 18,
+  };
+  await page.mouse.move(gizmoCenter.x, gizmoCenter.y);
+  await page.mouse.down();
+  await page.mouse.move(gizmoCenter.x + 80, gizmoCenter.y, { steps: 8 });
+  await page.mouse.up();
+
+  await expect(page.locator('[data-actor-row].selected')).toContainText('Box');
+  await expect(page.locator('#selection')).toContainText('Selected: Box');
+  await expect.poll(async () => {
+    const state = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
+    return state.scene.actors[0].transform.position;
+  }).not.toEqual([0, 0, 0]);
+});
+
+test('moving a cached OpenUSD actor does not reload its visual geometry', async ({ page }) => {
+  await configureApi(page);
+  let geometryRequests = 0;
+  page.on('request', (request) => {
+    if (request.method() === 'GET' && request.url().includes('/geometry/')) {
+      geometryRequests += 1;
+    }
+  });
+  await page.goto('/');
+  await expect(page.locator('#asset-list')).toContainText('Vehicle_Hanger_Adjust', {
+    timeout: 10_000,
+  });
+
+  const initialGeometry = page.waitForResponse((response) => (
+    response.request().method() === 'GET' && response.url().includes('/geometry/')
+  ));
+  await page.locator('[data-asset-id="openusd_vehicle_hanger_adjust_454a0d18a9"]').click();
+  expect((await initialGeometry).ok()).toBe(true);
+  await expect.poll(() => geometryRequests).toBe(1);
+
+  const positionX = page.locator(
+    '#property-inspector [data-vector="position"][data-index="0"]',
+  );
+  await positionX.fill('1');
+  await positionX.press('Enter');
+
+  await expect(page.locator('[data-actor-row].selected')).toContainText('Vehicle_Hanger_Adjust');
+  await expect.poll(async () => {
+    const state = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
+    return state.scene.actors[0].transform.position[0];
+  }).toBe(1);
+  await page.waitForTimeout(500);
+  expect(geometryRequests).toBe(1);
+});
+
+test('scene editing stays independent from a running simulation', async ({ page }) => {
+  await configureApi(page);
+  const simulationIds = [];
+  page.on('response', async (response) => {
+    if (
+      response.request().method() === 'POST'
+      && response.url() === `${apiBaseUrl}/api/v1/simulations`
+      && response.ok()
+    ) {
+      simulationIds.push((await response.json()).id);
+    }
+  });
+  await page.goto('/');
+  await expect(page.locator('#asset-list')).toContainText('Box', { timeout: 10_000 });
+  await page.locator('[data-asset-id="primitive_box"]').click();
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(page.locator('#simulation-badge')).toHaveText('Running');
+  await expect.poll(() => simulationIds.length).toBe(1);
+
+  const sceneUpdate = page.waitForResponse((response) => (
+    response.request().method() === 'PUT'
+      && response.url().includes('/projects/')
+      && response.url().endsWith('/scene')
+  ));
+  const friction = page.locator('#property-inspector [data-field="friction"]');
+  await friction.fill('1.4');
+  await friction.press('Enter');
+  expect((await sceneUpdate).ok()).toBe(true);
+  await page.waitForTimeout(500);
+  await expect(page.locator('#simulation-badge')).toHaveText('Running');
+
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect.poll(() => simulationIds.length).toBe(2);
+  expect(simulationIds[1]).not.toBe(simulationIds[0]);
+  await expect(page.locator('#simulation-badge')).toHaveText('Running');
+});
+
+test('stop releases the simulation without changing the editor scene', async ({ page }) => {
+  await configureApi(page);
+  await page.goto('/');
+  await expect(page.locator('#asset-list')).toContainText('Box', { timeout: 10_000 });
+  await page.locator('[data-asset-id="primitive_box"]').click();
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(page.locator('#simulation-badge')).toHaveText('Running');
+
+  const deleted = page.waitForResponse((response) => (
+    response.request().method() === 'DELETE'
+      && /\/api\/v1\/simulations\/sim_[^/]+$/.test(response.url())
+  ));
+  await page.getByRole('button', { name: 'Stop', exact: true }).click();
+  expect((await deleted).status()).toBe(204);
+  await expect(page.locator('#simulation-badge')).toHaveText('Stopped');
+  await expect(page.locator('#scene-tree')).toContainText('Box');
+  await expect(page.locator('[data-actor-row].selected')).toContainText('Box');
+});
+
 test('browser uploads an external OpenUSD robot through the web API', async ({ page }) => {
   await configureApi(page);
   await page.goto('/');
@@ -104,6 +252,27 @@ test('browser uploads an external OpenUSD robot through the web API', async ({ p
   const recordingDownload = page.waitForEvent('download');
   await page.locator('[data-recording-export="json"]').click();
   expect((await recordingDownload).suggestedFilename()).toBe('joint-recording.json');
+});
+
+test('browser imports an OpenUSD folder with relative composition dependencies', async ({ page }) => {
+  await configureApi(page);
+  await page.goto('/');
+  await expect(page.locator('#asset-list')).toContainText('Box', { timeout: 10_000 });
+  const uploadResponse = page.waitForResponse((response) => (
+    response.url().endsWith('/assets/openusd')
+      && response.request().method() === 'POST'
+  ));
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Import USD Folder', exact: true }).click();
+  await (await chooser).setFiles('tests/fixtures/openusd/composite');
+
+  const response = await uploadResponse;
+  expect(response.status()).toBe(201);
+  expect(response.request().headers()['content-type']).toContain('multipart/form-data');
+  await expect(page.locator('#scene-tree')).toContainText('root');
+  await expect(page.locator('#console-output')).toContainText(
+    'No UsdPhysics collision geometry was found',
+  );
 });
 
 test('independent browser clients keep projects and simulations isolated', async ({ browser }) => {

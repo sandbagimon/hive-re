@@ -13,6 +13,7 @@ export class EditorBridgeClient {
     consoleCallbacks = [];
     projectId = null;
     simulationId = null;
+    simulationSceneJson = null;
     lastSequence = 0;
     lastState = null;
     lastStatus = 'stopped';
@@ -168,6 +169,7 @@ export class EditorBridgeClient {
             window.clearTimeout(this.reconnectTimer);
         this.reconnectTimer = null;
         this.simulationId = null;
+        this.simulationSceneJson = null;
         this.lastSequence = 0;
         this.lastState = null;
         this.emitStatus('stopped');
@@ -192,9 +194,11 @@ export class EditorBridgeClient {
                 return this.success({ scene: project.scene });
             }
             case 'importOpenUsd':
-                return this.importOpenUsd();
+                return this.importOpenUsd('file');
+            case 'importOpenUsdFolder':
+                return this.importOpenUsd('folder');
             case 'getVisualGeometry':
-                return this.success(await this.request(this.projectPath(`/geometry/${encodeURIComponent(String(args[0]))}`)));
+                return this.getVisualGeometry(String(args[0]));
             case 'preflight':
                 await this.synchronizeSceneArgument(args[0]);
                 return this.success(await this.request(this.projectPath('/preflight'), { method: 'POST' }));
@@ -209,6 +213,9 @@ export class EditorBridgeClient {
                 return this.simulationCommand('/step', args[0]);
             case 'resetSimulation':
                 return this.simulationCommand('/reset');
+            case 'discardSimulation':
+                await this.discardSimulation();
+                return this.success({});
             case 'setSimulationSpeed':
                 return this.simulationRequest('/speed', {
                     method: 'PUT', body: JSON.stringify({ factor: Number(args[0]) }),
@@ -267,21 +274,60 @@ export class EditorBridgeClient {
         this.download(filename, `${JSON.stringify(scene, null, 2)}\n`, 'application/json');
         return this.success({ path: filename });
     }
-    async importOpenUsd() {
-        const files = await this.chooseFiles('.usd,.usda,.usdc,.usdz', true);
+    async importOpenUsd(mode) {
+        const files = mode === 'folder'
+            ? await this.chooseDirectory()
+            : await this.chooseFiles('.usd,.usda,.usdc,.usdz,.zip');
         if (!files?.length)
             return { ok: false, error: 'Cancelled' };
-        const entries = await Promise.all(files.map(async (file) => ({
-            name: file.webkitRelativePath || file.name,
-            content: await this.fileBase64(file),
-        })));
-        const entry = entries.find(({ name }) => /\.(usd|usda|usdc|usdz)$/i.test(name));
+        const entries = files.map((file) => ({
+            file,
+            name: (file.webkitRelativePath || file.name).replace(/\\/g, '/'),
+        }));
+        const entry = this.selectOpenUsdEntry(entries.map(({ name }) => name));
+        if (entry === null)
+            return { ok: false, error: 'Cancelled' };
         if (!entry)
             return { ok: false, error: 'No OpenUSD entry file selected' };
+        const body = new FormData();
+        body.set('entry', entry);
+        for (const item of entries)
+            body.append('files', item.file, item.name);
         const payload = await this.request(this.projectPath('/assets/openusd'), {
-            method: 'POST', body: JSON.stringify({ files: entries, entry: entry.name }),
+            method: 'POST', body,
         });
         return this.success(payload);
+    }
+    async getVisualGeometry(artifactId) {
+        const payload = await this.request(this.projectPath(`/geometry/${encodeURIComponent(artifactId)}`));
+        const textureArtifact = payload.base_color_texture;
+        if (typeof textureArtifact === 'string' && textureArtifact.startsWith('art_')) {
+            const response = await this.requestResponse(`/api/v1/artifacts/${encodeURIComponent(textureArtifact)}`);
+            payload.base_color_texture_url = URL.createObjectURL(await response.blob());
+        }
+        return this.success(payload);
+    }
+    selectOpenUsdEntry(paths) {
+        const candidates = paths
+            .filter((path) => /\.(usd|usda|usdc|usdz|zip)$/i.test(path))
+            .sort((left, right) => {
+            const depth = left.split('/').length - right.split('/').length;
+            return depth || left.localeCompare(right);
+        });
+        if (candidates.length <= 1)
+            return candidates[0];
+        const shallowestDepth = candidates[0].split('/').length;
+        const shallowest = candidates.filter((path) => path.split('/').length === shallowestDepth);
+        if (shallowest.length === 1)
+            return shallowest[0];
+        const selected = window.prompt(`Select the OpenUSD entry file:\n${shallowest.join('\n')}`, shallowest[0]);
+        if (selected === null)
+            return null;
+        const normalized = selected.replace(/\\/g, '/');
+        if (!shallowest.includes(normalized)) {
+            throw new Error(`Selected OpenUSD entry is not in the upload: ${normalized}`);
+        }
+        return normalized;
     }
     async exportMjcf() {
         const payload = await this.request(this.projectPath('/exports/mjcf'), { method: 'POST' });
@@ -320,26 +366,51 @@ export class EditorBridgeClient {
     }
     async simulationCommand(path, sceneJson) {
         await this.synchronizeSceneArgument(sceneJson);
-        return this.simulationRequest(path, { method: 'POST' });
+        return this.simulationRequest(path, { method: 'POST' }, typeof sceneJson === 'string');
     }
-    async simulationRequest(path, init = {}) {
-        return await this.simulationApi(path, init);
+    async simulationRequest(path, init = {}, requireCurrentScene = false) {
+        return await this.simulationApi(path, init, requireCurrentScene);
     }
-    async simulationApi(path, init = {}) {
-        const simulationId = await this.ensureSimulation();
+    async simulationApi(path, init = {}, requireCurrentScene = false) {
+        const simulationId = await this.ensureSimulation(requireCurrentScene);
         return this.request(`/api/v1/simulations/${encodeURIComponent(simulationId)}${path}`, init);
     }
-    async ensureSimulation() {
+    async ensureSimulation(requireCurrentScene = false) {
         await this.sceneSync;
+        if (this.simulationId
+            && requireCurrentScene
+            && this.simulationSceneJson !== this.lastSceneJson) {
+            await this.discardSimulation();
+        }
         if (this.simulationId)
             return this.simulationId;
         const payload = await this.request('/api/v1/simulations', {
             method: 'POST', body: JSON.stringify({ project_id: this.requireProjectId() }),
         });
         this.simulationId = payload.id;
+        this.simulationSceneJson = this.lastSceneJson;
         this.applySnapshot(payload.snapshot);
         this.connectWebSocket(payload.id);
         return payload.id;
+    }
+    async discardSimulation() {
+        const simulationId = this.simulationId;
+        if (!simulationId)
+            return;
+        const socket = this.socket;
+        this.socket = null;
+        socket?.close();
+        if (this.reconnectTimer !== null)
+            window.clearTimeout(this.reconnectTimer);
+        this.reconnectTimer = null;
+        this.simulationId = null;
+        this.simulationSceneJson = null;
+        this.lastSequence = 0;
+        this.lastState = null;
+        await this.request(`/api/v1/simulations/${encodeURIComponent(simulationId)}`, {
+            method: 'DELETE',
+        });
+        this.emitStatus('stopped');
     }
     async synchronizeSceneArgument(value) {
         if (typeof value === 'string' && value !== this.lastSceneJson) {
@@ -421,8 +492,9 @@ export class EditorBridgeClient {
         if (!this.config)
             throw new Error('Runtime configuration unavailable');
         const headers = new Headers(init.headers);
-        if (init.body !== undefined)
+        if (init.body !== undefined && !(init.body instanceof FormData)) {
             headers.set('Content-Type', 'application/json');
+        }
         if (this.config.accessToken)
             headers.set('Authorization', `Bearer ${this.config.accessToken}`);
         const response = await fetch(`${this.config.apiBaseUrl}${path}`, { ...init, headers });
@@ -481,15 +553,16 @@ export class EditorBridgeClient {
             input.click();
         });
     }
-    fileBase64(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.addEventListener('load', () => {
-                const value = String(reader.result ?? '');
-                resolve(value.slice(value.indexOf(',') + 1));
+    chooseDirectory() {
+        return new Promise((resolve) => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.multiple = true;
+            input.setAttribute('webkitdirectory', '');
+            input.addEventListener('change', () => {
+                resolve(input.files ? Array.from(input.files) : null);
             }, { once: true });
-            reader.addEventListener('error', () => reject(reader.error), { once: true });
-            reader.readAsDataURL(file);
+            input.click();
         });
     }
     download(filename, content, mediaType) {
@@ -501,6 +574,8 @@ export class EditorBridgeClient {
         window.setTimeout(() => URL.revokeObjectURL(link.href), 0);
     }
     static normalizeHttpBase(value) {
+        if (value === 'same-origin')
+            return window.location.origin;
         const url = new URL(value ?? window.location.origin, window.location.href);
         if (url.protocol !== 'http:' && url.protocol !== 'https:') {
             throw new Error('apiBaseUrl must use HTTP or HTTPS');
@@ -508,6 +583,9 @@ export class EditorBridgeClient {
         return url.toString().replace(/\/$/, '');
     }
     static normalizeWebSocketBase(value, httpValue) {
+        if (value === 'same-origin') {
+            return `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+        }
         const http = new URL(httpValue ?? window.location.origin, window.location.href);
         const fallback = `${http.protocol === 'https:' ? 'wss:' : 'ws:'}//${http.host}`;
         const url = new URL(value ?? fallback, window.location.href);

@@ -1,0 +1,15 @@
+#usda 1.0
+(
+    defaultPrim = "Composite"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "Composite"
+{
+    def Xform "ReferencedModel" (
+        prepend references = @./parts/geometry.usda@
+    )
+    {
+    }
+}

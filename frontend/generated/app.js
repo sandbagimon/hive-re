@@ -1,7 +1,8 @@
 import { EditorBridgeClient } from './bridge.js';
+import { SimulationStore } from './simulation-store.js';
 import { EditorStore } from './store.js';
 import { captureTrajectoryKeyframe, createTrajectoryDraft, removeTrajectoryKeyframe, setTrajectoryDuration, trajectoryDraftFromTrajectory, trajectoryDuration, trajectoryFromDraft, updateTrajectoryKeyframeTarget, updateTrajectoryKeyframeTime, } from './trajectory-draft.js';
-import { applySimulationState, configureViewport, selectViewportActor, selectViewportLink, setViewportScene, } from './viewport.js';
+import { applySimulationState, configureViewport, selectViewportActor, selectViewportLink, setViewportScene, updateViewportTransforms, } from './viewport.js';
 const materialPresets = {
     default: { density: 1000, friction: [0.8, 0.005, 0.0001], solref: [0.02, 1], solimp: [0.9, 0.95, 0.001, 0.5, 2], roughness: 0.55, metalness: 0.04 },
     rubber: { density: 1100, friction: [1.2, 0.01, 0.0002], solref: [0.03, 1], solimp: [0.88, 0.96, 0.002, 0.5, 2], roughness: 0.86, metalness: 0 },
@@ -10,10 +11,12 @@ const materialPresets = {
     ice: { density: 917, friction: [0.03, 0.001, 0.00005], solref: [0.01, 1], solimp: [0.92, 0.98, 0.0005, 0.5, 2], roughness: 0.12, metalness: 0.08 },
 };
 const store = new EditorStore();
+const simulationStore = new SimulationStore();
 const trajectoryDrafts = new Map();
 const recordingDrafts = new Map();
 let bridge = new EditorBridgeClient(null);
 let previousSceneJson = '';
+let previousViewportStructure = '';
 let previousSelectedActorId = null;
 let previousSelectedJointId = null;
 let previousSelectedSensorId = null;
@@ -405,12 +408,12 @@ async function sendJointTargets(targets) {
     const result = await bridge.call('setJointTargets', JSON.stringify(store.current.scene), JSON.stringify(targets));
     if (!result.ok || !result.data) {
         if (result.data?.state)
-            store.setSimulation('paused', result.data.state);
+            simulationStore.setSimulation('paused', result.data.state);
         showToast(result.error ?? 'Joint control failed', true);
         return;
     }
-    const status = store.current.simulationStatus === 'running' ? 'running' : 'paused';
-    store.setSimulation(status, result.data.state);
+    const status = simulationStore.current.simulationStatus === 'running' ? 'running' : 'paused';
+    simulationStore.setSimulation(status, result.data.state);
 }
 function updateProperty(actorId, input) {
     const actor = store.current.scene.actors.find((item) => item.id === actorId);
@@ -524,7 +527,7 @@ function renderTrajectoryPanel(actor, scene, simulationState) {
     </div>`;
     controls.querySelector('[data-trajectory-clip]')?.addEventListener('change', (event) => {
         setTrajectoryDraftClip(actor, scene, event.currentTarget.value || null);
-        renderTrajectoryPanel(actor, scene, store.current.simulationState);
+        renderTrajectoryPanel(actor, scene, simulationStore.current.simulationState);
     });
     controls.querySelector('[data-trajectory-save]')?.addEventListener('click', () => {
         try {
@@ -536,7 +539,7 @@ function renderTrajectoryPanel(actor, scene, simulationState) {
             draftState.sourceSignature = JSON.stringify([clipId, trajectory]);
             draftState.targetsTouched = true;
             showToast('Trajectory clip saved');
-            renderTrajectoryPanel(actor, store.current.scene, store.current.simulationState);
+            renderTrajectoryPanel(actor, store.current.scene, simulationStore.current.simulationState);
         }
         catch (error) {
             showToast(error instanceof Error ? error.message : String(error), true);
@@ -560,7 +563,7 @@ function renderTrajectoryPanel(actor, scene, simulationState) {
     controls.querySelector('[data-trajectory-duration]')?.addEventListener('change', (event) => {
         try {
             draftState.draft = setTrajectoryDuration(draftState.draft, Number(event.currentTarget.value));
-            renderTrajectoryPanel(actor, scene, store.current.simulationState);
+            renderTrajectoryPanel(actor, scene, simulationStore.current.simulationState);
         }
         catch (error) {
             showToast(error instanceof Error ? error.message : String(error), true);
@@ -575,14 +578,14 @@ function renderTrajectoryPanel(actor, scene, simulationState) {
     controls.querySelector('[data-keyframe-add]')?.addEventListener('click', () => {
         draftState.draft = captureTrajectoryKeyframe(draftState.draft, `keyframe-${draftState.nextKeyframeId++}`, trajectoryDuration(draftState.draft) + 0.5, currentRobotTargets(actor, scene));
         draftState.targetsTouched = true;
-        renderTrajectoryPanel(actor, scene, store.current.simulationState);
+        renderTrajectoryPanel(actor, scene, simulationStore.current.simulationState);
     });
     for (const row of controls.querySelectorAll('[data-keyframe-id]')) {
         const keyframeId = row.dataset.keyframeId ?? '';
         row.querySelector('[data-keyframe-time]')?.addEventListener('change', (event) => {
             draftState.draft = updateTrajectoryKeyframeTime(draftState.draft, keyframeId, Number(event.currentTarget.value));
             draftState.targetsTouched = true;
-            renderTrajectoryPanel(actor, scene, store.current.simulationState);
+            renderTrajectoryPanel(actor, scene, simulationStore.current.simulationState);
         });
         for (const input of row.querySelectorAll('[data-keyframe-target]')) {
             input.addEventListener('change', () => {
@@ -594,7 +597,7 @@ function renderTrajectoryPanel(actor, scene, simulationState) {
             try {
                 draftState.draft = removeTrajectoryKeyframe(draftState.draft, keyframeId);
                 draftState.targetsTouched = true;
-                renderTrajectoryPanel(actor, scene, store.current.simulationState);
+                renderTrajectoryPanel(actor, scene, simulationStore.current.simulationState);
             }
             catch (error) {
                 showToast(error instanceof Error ? error.message : String(error), true);
@@ -626,7 +629,7 @@ function robotSensors(actor, scene) {
         .flatMap((item) => item.sensors) ?? [];
 }
 function currentRobotTargets(actor, scene) {
-    const actuatorStates = new Map((store.current.simulationState?.actuators ?? []).map((item) => [item.id, item.ctrl]));
+    const actuatorStates = new Map((simulationStore.current.simulationState?.actuators ?? []).map((item) => [item.id, item.ctrl]));
     return Object.fromEntries(positionJointBindings(actor, scene).map(({ joint, actuator }) => [
         joint.id,
         actuatorStates.get(actuator.id) ?? joint.initial_position,
@@ -710,7 +713,7 @@ async function handleTrajectoryCommand(command, actor, scene) {
             return;
         }
         result = await bridge.call('loadTrajectory', JSON.stringify(scene), JSON.stringify(trajectory));
-        store.setValidationIssues(result.data?.issues ?? []);
+        simulationStore.setValidationIssues(result.data?.issues ?? []);
     }
     else if (command === 'play')
         result = await bridge.call('playTrajectory');
@@ -725,7 +728,7 @@ async function handleTrajectoryCommand(command, actor, scene) {
         return;
     }
     const status = command === 'play' ? 'running' : 'paused';
-    store.setSimulation(status, result.data.state);
+    simulationStore.setSimulation(status, result.data.state);
 }
 function updateTrajectoryRuntime(simulationState) {
     const panel = element('trajectory-panel');
@@ -870,8 +873,8 @@ async function handleRecordingCommand(command, actor, scene, draft) {
         showToast(result.error ?? `Recording ${command} failed`, true);
         return;
     }
-    const status = store.current.simulationStatus === 'running' ? 'running' : 'paused';
-    store.setSimulation(status, result.data.state);
+    const status = simulationStore.current.simulationStatus === 'running' ? 'running' : 'paused';
+    simulationStore.setSimulation(status, result.data.state);
 }
 async function exportRecording(formatName) {
     const result = await bridge.call('exportRecordingDialog', formatName);
@@ -949,7 +952,7 @@ async function handleControllerCommand(command, actor) {
             return;
         }
         loadedController = null;
-        store.setSimulation('paused', result.data.state);
+        simulationStore.setSimulation('paused', result.data.state);
         renderControllerPanel(actor, result.data.state);
         store.appendLog('Detached Python controller.');
         return;
@@ -972,7 +975,7 @@ async function loadProjectController(reload, actor) {
         path: result.data.controller.path,
         name: result.data.controller.name,
     };
-    store.setSimulation('paused', result.data.state);
+    simulationStore.setSimulation('paused', result.data.state);
     renderControllerPanel(actor, result.data.state);
     store.appendLog(`Loaded Python controller: ${result.data.controller.name}`);
     return result;
@@ -1028,33 +1031,35 @@ async function setSimulationSpeed(factor) {
     if (result.ok && result.data) {
         targetRealtimeFactor = result.data.target_rtf;
         if (result.data.state)
-            store.setSimulationState(result.data.state);
+            simulationStore.setSimulationState(result.data.state);
         else
             updateSimulationClock(null);
         return result;
     }
     targetRealtimeFactor = previous;
-    updateSimulationClock(store.current.simulationState);
+    updateSimulationClock(simulationStore.current.simulationState);
     showToast(result.error ?? 'Simulation speed update failed', true);
     return result;
 }
 function render() {
     const state = store.current;
+    const simulation = simulationStore.current;
     element('project-label').textContent = `${state.dirty ? '* ' : ''}${state.scene.name}`;
     document.title = `${state.dirty ? '* ' : ''}SimLab - ${state.scene.name}`;
     const badge = element('simulation-badge');
-    badge.textContent = state.simulationStatus[0].toUpperCase() + state.simulationStatus.slice(1);
-    badge.dataset.status = state.simulationStatus;
-    updateSimulationClock(state.simulationState);
+    badge.textContent = simulation.simulationStatus[0].toUpperCase()
+        + simulation.simulationStatus.slice(1);
+    badge.dataset.status = simulation.simulationStatus;
+    updateSimulationClock(simulation.simulationState);
     element('undo-button').disabled = !state.canUndo;
     element('redo-button').disabled = !state.canRedo;
     renderAssets(state.assets);
     renderSceneTree(state.scene, state.selectedActorId, state.selectedJointId, state.selectedSensorId);
-    renderInspector(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.scene, state.simulationState, state.selectedJointId, state.selectedSensorId);
-    renderTrajectoryPanel(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.scene, state.simulationState);
-    renderRecordingPanel(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.scene, state.simulationState);
-    renderControllerPanel(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.simulationState);
-    renderValidation(state.validationIssues);
+    renderInspector(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.scene, simulation.simulationState, state.selectedJointId, state.selectedSensorId);
+    renderTrajectoryPanel(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.scene, simulation.simulationState);
+    renderRecordingPanel(state.scene.actors.find((actor) => actor.id === state.selectedActorId), state.scene, simulation.simulationState);
+    renderControllerPanel(state.scene.actors.find((actor) => actor.id === state.selectedActorId), simulation.simulationState);
+    renderValidation(simulation.validationIssues);
     renderConsole(state.logs);
 }
 async function saveProject(saveAs = false) {
@@ -1076,7 +1081,9 @@ async function handleCommand(command) {
         trajectoryDrafts.clear();
         recordingDrafts.clear();
         loadedController = null;
+        await bridge.call('discardSimulation');
         store.newScene();
+        simulationStore.reset();
     }
     else if (command === 'open' && allowDiscard()) {
         const result = await bridge.call('openProject');
@@ -1084,7 +1091,9 @@ async function handleCommand(command) {
             trajectoryDrafts.clear();
             recordingDrafts.clear();
             loadedController = null;
+            await bridge.call('discardSimulation');
             store.loadScene(result.data.scene, result.data.path);
+            simulationStore.reset();
             store.appendLog(`Opened scene: ${result.data.path}`);
         }
         else if (result.error !== 'Cancelled')
@@ -1095,7 +1104,9 @@ async function handleCommand(command) {
     else if (command === 'save-as')
         await saveProject(true);
     else if (command === 'import-openusd')
-        await importOpenUsd();
+        await importOpenUsd('file');
+    else if (command === 'import-openusd-folder')
+        await importOpenUsd('folder');
     else if (command === 'undo')
         store.undo();
     else if (command === 'redo')
@@ -1104,7 +1115,7 @@ async function handleCommand(command) {
         store.clearLogs();
     else if (command === 'export') {
         const result = await bridge.call('exportMjcf', JSON.stringify(store.current.scene));
-        store.setValidationIssues(result.data?.issues ?? []);
+        simulationStore.setValidationIssues(result.data?.issues ?? []);
         if (result.ok && result.data) {
             store.appendLog(`Exported MJCF: ${result.data.path}`);
             showToast('MJCF exported');
@@ -1114,40 +1125,53 @@ async function handleCommand(command) {
     }
     else if (command === 'run') {
         const result = await bridge.call('runSimulation', JSON.stringify(store.current.scene));
-        store.setValidationIssues(result.data?.issues ?? []);
-        if (result.ok && result.data)
-            store.setSimulation('running', result.data.state);
+        simulationStore.setValidationIssues(result.data?.issues ?? []);
+        if (result.ok && result.data) {
+            simulationStore.setSimulation('running', result.data.state);
+        }
         else
             showToast(result.error ?? 'Simulation failed', true);
     }
     else if (command === 'pause') {
         const result = await bridge.call('pauseSimulation');
-        if (result.ok)
-            store.setSimulation('paused', store.current.simulationState);
+        if (result.ok) {
+            simulationStore.setSimulation('paused', simulationStore.current.simulationState);
+        }
+    }
+    else if (command === 'stop') {
+        const result = await bridge.call('discardSimulation');
+        if (result.ok) {
+            loadedController = null;
+            simulationStore.reset();
+        }
+        else
+            showToast(result.error ?? 'Simulation stop failed', true);
     }
     else if (command === 'step') {
         const result = await bridge.call('stepSimulation', JSON.stringify(store.current.scene));
-        store.setValidationIssues(result.data?.issues ?? []);
+        simulationStore.setValidationIssues(result.data?.issues ?? []);
         if (result.ok && result.data)
-            store.setSimulation('paused', result.data.state);
+            simulationStore.setSimulation('paused', result.data.state);
         else
             showToast(result.error ?? 'Simulation step failed', true);
     }
     else if (command === 'reset') {
         const result = await bridge.call('resetSimulation');
         if (result.ok && result.data?.state) {
-            store.setSimulation('paused', result.data.state);
+            simulationStore.setSimulation('paused', result.data.state);
         }
         else if (result.ok) {
-            store.setSimulation('stopped', null);
+            simulationStore.setSimulation('stopped', null);
         }
         else {
             showToast(result.error ?? 'Simulation reset failed', true);
         }
     }
 }
-async function importOpenUsd() {
-    const result = await bridge.call('importOpenUsd');
+async function importOpenUsd(mode) {
+    const method = mode === 'folder' ? 'importOpenUsdFolder' : 'importOpenUsd';
+    showToast(mode === 'folder' ? 'Uploading OpenUSD folder…' : 'Uploading OpenUSD asset…');
+    const result = await bridge.call(method);
     if (result.ok && result.data) {
         store.upsertAsset(result.data.asset);
         store.addAsset(result.data.asset, result.data.robotics);
@@ -1156,6 +1180,11 @@ async function importOpenUsd() {
         showToast(`Imported ${result.data.asset.name}`);
     }
     else if (result.error !== 'Cancelled') {
+        const report = result.data;
+        for (const issue of report?.issues ?? []) {
+            const field = issue.field ? ` (${issue.field})` : '';
+            store.appendLog(`USD ${issue.severity ?? 'error'}: ${issue.message ?? result.error}${field}`);
+        }
         showToast(result.error ?? 'OpenUSD import failed', true);
     }
     return result;
@@ -1179,8 +1208,29 @@ configureViewport({
         return null;
     },
 });
+function syncViewportSelection(state) {
+    selectViewportActor(state.selectedActorId);
+    const articulations = state.scene.robotics?.articulations ?? [];
+    const selectedSensor = articulations.flatMap((item) => item.sensors)
+        .find((item) => item.id === state.selectedSensorId);
+    const relatedJointId = state.selectedJointId ?? selectedSensor?.joint_id ?? null;
+    const jointLinkId = articulations.flatMap((item) => item.joints)
+        .find((item) => item.id === relatedJointId)?.child_link_id;
+    const colliderLinkId = selectedSensor?.collider_id
+        ? articulations.flatMap((item) => item.links)
+            .find((link) => link.colliders.some((collider) => collider.id === selectedSensor.collider_id))?.id
+        : undefined;
+    selectViewportLink(jointLinkId ?? selectedSensor?.link_id ?? colliderLinkId ?? null);
+}
+function viewportStructureSnapshot(scene) {
+    return JSON.stringify({
+        ...scene,
+        actors: scene.actors.map((actor) => ({ ...actor, transform: null })),
+    });
+}
 store.subscribe((state) => {
     const sceneJson = JSON.stringify(state.scene);
+    const nextViewportStructure = viewportStructureSnapshot(state.scene);
     const nextRenderSnapshot = JSON.stringify({
         sceneJson,
         assets: state.assets,
@@ -1191,8 +1241,6 @@ store.subscribe((state) => {
         canUndo: state.canUndo,
         canRedo: state.canRedo,
         currentPath: state.currentPath,
-        simulationStatus: state.simulationStatus,
-        validationIssues: state.validationIssues,
         logs: state.logs,
     });
     if (nextRenderSnapshot !== renderSnapshot) {
@@ -1200,28 +1248,45 @@ store.subscribe((state) => {
         renderSnapshot = nextRenderSnapshot;
     }
     if (sceneJson !== previousSceneJson) {
-        setViewportScene(state.scene);
+        const updatedInPlace = previousViewportStructure === nextViewportStructure
+            && updateViewportTransforms(state.scene);
+        if (!updatedInPlace)
+            setViewportScene(state.scene);
+        // Keep the viewport selection synchronized after either an in-place transform update or a
+        // full scene rebuild, even when the selected ids themselves did not change.
+        syncViewportSelection(state);
         previousSceneJson = sceneJson;
+        previousViewportStructure = nextViewportStructure;
+        previousSelectedActorId = state.selectedActorId;
+        previousSelectedJointId = state.selectedJointId;
+        previousSelectedSensorId = state.selectedSensorId;
     }
-    if (state.selectedActorId !== previousSelectedActorId) {
+    else if (state.selectedActorId !== previousSelectedActorId) {
         selectViewportActor(state.selectedActorId);
         previousSelectedActorId = state.selectedActorId;
     }
     if (state.selectedJointId !== previousSelectedJointId
         || state.selectedSensorId !== previousSelectedSensorId) {
-        const articulations = state.scene.robotics?.articulations ?? [];
-        const selectedSensor = articulations.flatMap((item) => item.sensors)
-            .find((item) => item.id === state.selectedSensorId);
-        const relatedJointId = state.selectedJointId ?? selectedSensor?.joint_id ?? null;
-        const jointLinkId = articulations.flatMap((item) => item.joints)
-            .find((item) => item.id === relatedJointId)?.child_link_id;
-        const colliderLinkId = selectedSensor?.collider_id
-            ? articulations.flatMap((item) => item.links)
-                .find((link) => link.colliders.some((collider) => collider.id === selectedSensor.collider_id))?.id
-            : undefined;
-        selectViewportLink(jointLinkId ?? selectedSensor?.link_id ?? colliderLinkId ?? null);
+        syncViewportSelection(state);
+        previousSelectedActorId = state.selectedActorId;
         previousSelectedJointId = state.selectedJointId;
         previousSelectedSensorId = state.selectedSensorId;
+    }
+    const nextSync = `${sceneJson}:${state.dirty}`;
+    if (nextSync !== syncSnapshot) {
+        bridge.syncEditorState(sceneJson, state.dirty, state.currentPath);
+        syncSnapshot = nextSync;
+    }
+});
+let simulationRenderSnapshot = '';
+simulationStore.subscribe((state) => {
+    const nextRenderSnapshot = JSON.stringify({
+        simulationStatus: state.simulationStatus,
+        validationIssues: state.validationIssues,
+    });
+    if (nextRenderSnapshot !== simulationRenderSnapshot) {
+        render();
+        simulationRenderSnapshot = nextRenderSnapshot;
     }
     if (state.simulationState !== previousSimulationState) {
         applySimulationState(state.simulationState);
@@ -1231,11 +1296,6 @@ store.subscribe((state) => {
         updateControllerRuntime(state.simulationState);
         updateSimulationClock(state.simulationState);
         previousSimulationState = state.simulationState;
-    }
-    const nextSync = `${sceneJson}:${state.dirty}`;
-    if (nextSync !== syncSnapshot) {
-        bridge.syncEditorState(sceneJson, state.dirty, state.currentPath);
-        syncSnapshot = nextSync;
     }
 });
 window.addEventListener('keydown', (event) => {
@@ -1260,11 +1320,11 @@ window.addEventListener('keydown', (event) => {
 });
 async function initialize() {
     bridge = await EditorBridgeClient.connect();
-    bridge.onSimulationState((state) => store.setSimulationState(state));
+    bridge.onSimulationState((state) => simulationStore.setSimulationState(state));
     bridge.onSimulationStatus((status) => {
         if (status === 'stopped')
             loadedController = null;
-        store.setSimulation(status, store.current.simulationState);
+        simulationStore.setSimulation(status, simulationStore.current.simulationState);
     });
     bridge.onConsoleMessage((message) => store.appendLog(message));
     void loadAssetsWithRetry();
@@ -1294,7 +1354,8 @@ window.simlabEditorReady = false;
 window.simlabEditor = {
     getRecording: () => bridge.call('getRecording'),
     setSimulationSpeed,
-    getStateJson: () => JSON.stringify(store.current),
+    // Keep the legacy flattened automation payload while the application uses separate stores.
+    getStateJson: () => JSON.stringify({ ...store.current, ...simulationStore.current }),
     selectJoint: (actorId, jointId) => {
         store.selectJoint(actorId, jointId);
         return store.current.selectedActorId === actorId

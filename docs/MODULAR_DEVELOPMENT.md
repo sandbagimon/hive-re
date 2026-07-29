@@ -25,6 +25,15 @@ TypeScript editor --> FastAPI v1 API --> ResourceManager
                                              |
                                              v
                                    MuJoCoSimulationSession
+
+Algorithm process
+       |
+       | Gymnasium
+       v
+SimLabEnv --> Task --> RobotAdapter --> SimulationBackendSession
+                                      |                 |
+                                      v                 v
+                              local MuJoCo       atomic gRPC backend
 ```
 
 运行边界如下：
@@ -34,6 +43,7 @@ TypeScript editor --> FastAPI v1 API --> ResourceManager
 - HTTP API 负责资源管理和控制命令，WebSocket 负责实时仿真事件。
 - 前后端只通过版本化网络契约通信，不共享进程、内存或文件路径。
 - Qt 程序只是可选网页容器，不承担业务逻辑。
+- 训练算法使用独立 Gymnasium/gRPC 数据面，不经过编辑器 REST/WebSocket 热路径。
 
 ## 3. 模块化原则
 
@@ -63,9 +73,12 @@ Infrastructure Adapters
 ### 3.3 明确状态所有权
 
 - 前端 `EditorStore` 拥有场景创作状态、选择状态、Dirty 状态和 Undo/Redo 历史。
+- 前端 `SimulationStore` 独立拥有运行状态、实时仿真帧和 Preflight/运行校验结果；场景编辑不得直接修改这些状态。
 - Project Resource 拥有后端规范化场景、项目资产和 revision。
 - Simulation Resource 拥有一次隔离的仿真运行时。
 - MuJoCo Session 拥有物理状态、仿真时间和运行时控制状态。
+- 每个算法 Environment 独占一个 Backend Session 和 episode RNG；Task 拥有 reward、
+  termination 与 randomization，Backend 不拥有任务语义。
 - Artifact Resource 拥有可下载输出的元数据和内容。
 
 仿真位姿不应直接写回创作 Transform；需要持久化仿真结果时，应通过显式的“烘焙”或“应用运行状态”用例完成。
@@ -83,7 +96,7 @@ Infrastructure Adapters
 - 场景打开、编辑和保存；
 - 资产列表与 OpenUSD 导入；
 - Preflight 和 MJCF 导出；
-- Run、Pause、Step、Reset；
+- Run、Pause、Stop、Step、Reset；
 - WebSocket 状态同步和断线恢复；
 - 轨迹、控制器、传感器和录制功能。
 
@@ -115,6 +128,17 @@ App Shell 不实现具体面板 HTML，也不直接拼装 REST 请求。
 - 编辑命令和派生选择器。
 
 核心代码来源：`frontend/src/ts/store.ts`。
+
+#### Simulation State
+
+职责：
+
+- Run/Pause/Stop/Step/Reset 状态；
+- WebSocket 发布的实时仿真帧；
+- Preflight 和运行校验结果；
+- 仿真状态订阅与运行时 UI 更新。
+
+核心代码来源：`frontend/src/ts/simulation-store.ts`。`EditorStore` 不得持有或重置仿真状态；新建或打开项目等跨模块生命周期操作由 App Shell 显式协调两个 Store。
 
 #### Viewport
 
@@ -155,7 +179,7 @@ Viewport 不负责保存项目、创建仿真实例或显示业务 Toast。
 | `recording` | 信号选择、录制状态和产物下载 |
 | `controller` | 控制器上传、重载、卸载和运行状态 |
 | `console` | 结构化消息和运行日志 |
-| `simulation-toolbar` | Run/Pause/Step/Reset、速度和 RTF |
+| `simulation-toolbar` | Run/Pause/Stop/Step/Reset、速度和 RTF |
 
 每个面板应通过显式输入和回调访问 Store 或 Application Controller，避免直接引用其他面板的 DOM。
 
@@ -208,7 +232,7 @@ AttachController
 - Project、Simulation 和 Artifact 资源生命周期；
 - ID 生成和资源隔离；
 - Project 与 Simulation 归属关系；
-- 项目更新后的相关仿真失效；
+- Project revision 与 Simulation 场景快照的显式绑定和替换；
 - 资源关闭和后台线程清理。
 
 当前实现来源：`src/simlab/resources.py`。
@@ -285,7 +309,7 @@ AttachController
 
 - Session 创建与销毁；
 - 后台固定时钟调度；
-- Run/Pause/Step/Reset；
+- Run/Pause/Stop/Step/Reset；
 - Target RTF 与 Actual RTF；
 - 运行时异常隔离；
 - 状态和日志事件发布。
@@ -463,8 +487,13 @@ EditorStore
   -> PUT /projects/{id}/scene
   -> validate and canonicalize
   -> increment project revision
-  -> invalidate stale simulation state
+
+SimulationStore
+  -> continues consuming its existing Simulation snapshot
+  -> explicit Run/Step after an edit creates a new Simulation from the latest revision
 ```
+
+Project 更新不得隐式停止、清空或改写现有 Simulation。创作状态和运行时状态只在用户发出明确的仿真命令时通过场景快照建立关联。
 
 前端不得假设提交的数据未经后端规范化。服务端返回的 canonical scene 是最终网络表示。
 
@@ -636,7 +665,7 @@ npm run test:web
 - 页面启动与资产恢复；
 - Open/Save；
 - 编辑、导入、导出；
-- Run/Pause/Step/Reset；
+- Run/Pause/Stop/Step/Reset；
 - 轨迹、控制器和录制；
 - 前后端不同端口；
 - WebSocket 断开重连；

@@ -43,13 +43,13 @@ OpenAPI is published at `/api/v1/openapi.json`; interactive documentation is at 
 
 The v1 API uses explicit resources rather than method-name RPC:
 
-- `projects`: create a project, update its canonical scene, list assets, import an OpenUSD upload bundle, run preflight, and create MJCF artifacts.
+- `projects`: create a project, update its canonical scene, list assets, import an OpenUSD multipart directory/USDZ/safe ZIP bundle, run preflight, and create MJCF artifacts.
 - `simulations`: create an isolated runtime for one project, control run/pause/step/reset/speed, targets, trajectories, recording, and an optional trusted controller.
 - `artifacts`: opaque `art_...` references for imported cache data and downloadable MJCF/recording output.
 
 IDs (`prj_...`, `sim_...`, `art_...`) cross the network. Absolute or project-relative server filesystem paths do not. Browser Open/Save and controller/OpenUSD input use upload content; output uses authenticated artifact downloads. The old `/api/rpc/{method}`, `/api/health`, and server path operations are not exposed by the backend.
 
-Each simulation owns its own `WebApplication` and MuJoCo session. Updating one project stops only simulations belonging to that project. Creating a second browser client creates separate project and simulation IDs, so runtime state cannot overwrite another client.
+Each simulation owns its own `WebApplication`, MuJoCo session, and immutable scene snapshot. Updating a project does not mutate or stop an existing simulation. A later explicit Run/Step against an edited scene replaces the client simulation with a new resource created from the latest project revision. Creating a second browser client creates separate project and simulation IDs, so editor or runtime state cannot overwrite another client.
 
 ## WebSocket recovery
 
@@ -69,7 +69,7 @@ The initial connection receives a snapshot. On a short disconnection the client 
 - Set `SIMLAB_API_TOKEN` or `--access-token` to require Bearer authentication for every project, simulation, and artifact HTTP route and the matching WebSocket token.
 - An unauthenticated WebSocket is upgraded only to return the explicit application close code `4401`; clients can distinguish authorization failure from transport loss.
 - Python controller execution is disabled by default. `--allow-controller-execution` is an explicit trusted-local opt-in; it is not a sandbox for untrusted code.
-- Uploaded OpenUSD bundle names reject traversal and the application layer enforces its upload-size limit. Backend storage stays below the configured data root.
+- Uploaded OpenUSD bundle names reject traversal, multipart preserves relative dependency paths, and safe ZIP extraction rejects traversal and symbolic links. The application layer enforces 256 MiB and 4096-file limits. Backend storage stays below the configured data root.
 - Bind the API to loopback by default. Remote deployments should terminate TLS, issue scoped tokens, impose reverse-proxy request/rate quotas, and keep controller execution disabled unless the backend is dedicated to trusted code.
 
 ## Run independently

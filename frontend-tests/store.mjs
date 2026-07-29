@@ -17,6 +17,9 @@ const box = {
 
 assert.equal(store.current.dirty, false);
 assert.equal(store.current.scene.actors.length, 0);
+assert.equal('simulationStatus' in store.current, false);
+assert.equal('simulationState' in store.current, false);
+assert.equal('validationIssues' in store.current, false);
 
 store.setAssets([box]);
 store.addAsset(box);
@@ -37,7 +40,18 @@ assert.equal(store.current.dirty, false);
 
 store.updateActorName('actor_001', 'Renamed Box');
 assert.equal(store.current.scene.actors[0].name, 'Renamed Box');
+assert.equal(store.current.selectedActorId, 'actor_001');
 assert.equal(store.current.dirty, true);
+
+store.updateActorProperties('actor_001', { physics: { mass: 2 } });
+assert.equal(store.current.scene.actors[0].properties.physics.mass, 2);
+assert.equal(store.current.selectedActorId, 'actor_001');
+
+store.updateActorTransform('actor_001', {
+  position: [1, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1],
+});
+assert.deepEqual(store.current.scene.actors[0].transform.position, [1, 0, 0]);
+assert.equal(store.current.selectedActorId, 'actor_001');
 
 store.selectActor(null);
 assert.equal(store.current.selectedActorId, null);
