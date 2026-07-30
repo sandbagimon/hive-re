@@ -1,0 +1,2492 @@
+{
+  "version": "2.0",
+  "articulations": [
+    {
+      "id": "articulation_b1e18b6b5322",
+      "name": "panda",
+      "root_link_id": "link_74f2e0283e28",
+      "fixed_base": false,
+      "source_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+      "source_prim_path": "/panda",
+      "links": [
+        {
+          "id": "link_dfd0a44dc89d",
+          "name": "panda_hand",
+          "parent_link_id": "link_b85584a112ed",
+          "transform": {
+            "position": [
+              9.899397754458532e-15,
+              -5.386769574969182e-08,
+              0.10700005292892319
+            ],
+            "quaternion": [
+              -2.1073424255447014e-08,
+              8.429369702178806e-08,
+              -0.3826835430431755,
+              0.9238794866669107
+            ]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_5657087f2f9e",
+              "name": "panda_hand",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  -6.938893903907228e-18,
+                  0.0,
+                  2.220446049250313e-16
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.010000000968575451,
+                0.009999986067414592,
+                0.009999986663461025
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_hand/geometry/panda_hand",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_36c4ce8134b2",
+              "name": "panda_hand",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  -6.938893903907228e-18,
+                  0.0,
+                  2.220446049250313e-16
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.010000000968575451,
+                0.009999986067414592,
+                0.009999986663461025
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_hand/geometry/panda_hand",
+              "friction": [
+                1.0,
+                0.005,
+                0.0001
+              ],
+              "restitution": 0.0,
+              "collision_mesh": "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_36c4ce8134b2/collision.obj"
+            }
+          ],
+          "inertial": {
+            "mass": 0.5583304762840271,
+            "center_of_mass": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "diagonal_inertia": [
+              2.3394447623559245e-07,
+              5.782785805763524e-08,
+              2.131029361862602e-07
+            ],
+            "full_inertia": null
+          },
+          "source_prim_path": "/panda/panda_hand"
+        },
+        {
+          "id": "link_0b380c2b28b4",
+          "name": "panda_rightfinger",
+          "parent_link_id": "link_dfd0a44dc89d",
+          "transform": {
+            "position": [
+              0.0,
+              0.0,
+              0.05839997157454491
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              -5.551116855863664e-17,
+              1.0
+            ]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_0f21c64b9b0d",
+              "name": "panda_rightfinger",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  -6.938893903907228e-18,
+                  -6.938893903907228e-18,
+                  0.0
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.009999999776482582,
+                0.009999999776482582,
+                0.009999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_rightfinger/geometry/panda_rightfinger",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_91a18d6f97e8",
+              "name": "panda_rightfinger",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  -6.938893903907228e-18,
+                  -6.938893903907228e-18,
+                  0.0
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.009999999776482582,
+                0.009999999776482582,
+                0.009999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_rightfinger/geometry/panda_rightfinger",
+              "friction": [
+                1.0,
+                0.005,
+                0.0001
+              ],
+              "restitution": 0.0,
+              "collision_mesh": "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_91a18d6f97e8/collision.obj"
+            }
+          ],
+          "inertial": {
+            "mass": 0.0140552232041955,
+            "center_of_mass": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "diagonal_inertia": [
+              4.204130377161164e-10,
+              3.9026365472594193e-10,
+              1.3347495331217374e-10
+            ],
+            "full_inertia": null
+          },
+          "source_prim_path": "/panda/panda_rightfinger"
+        },
+        {
+          "id": "link_45237ecb853f",
+          "name": "panda_leftfinger",
+          "parent_link_id": "link_dfd0a44dc89d",
+          "transform": {
+            "position": [
+              0.0,
+              0.0,
+              0.05839997157454491
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              -5.551116855863664e-17,
+              1.0
+            ]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_5e08e62b2f8a",
+              "name": "panda_leftfinger",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.010000000000000002,
+                0.010000000000000004,
+                0.01
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_leftfinger/geometry/panda_leftfinger",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_7ac796eb9f0a",
+              "name": "panda_leftfinger",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.010000000000000002,
+                0.010000000000000004,
+                0.01
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_leftfinger/geometry/panda_leftfinger",
+              "friction": [
+                1.0,
+                0.005,
+                0.0001
+              ],
+              "restitution": 0.0,
+              "collision_mesh": "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_7ac796eb9f0a/collision.obj"
+            }
+          ],
+          "inertial": {
+            "mass": 0.0140552232041955,
+            "center_of_mass": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "diagonal_inertia": [
+              4.204130377161164e-10,
+              3.9026365472594193e-10,
+              1.3347495331217374e-10
+            ],
+            "full_inertia": null
+          },
+          "source_prim_path": "/panda/panda_leftfinger"
+        },
+        {
+          "id": "link_74f2e0283e28",
+          "name": "panda_link0",
+          "parent_link_id": null,
+          "transform": {
+            "position": [
+              -2.38418573772492e-09,
+              2.98023217215615e-10,
+              2.384185648907078e-08
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_ca659a81f467",
+              "name": "ID3_000",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  -0.70710676908493,
+                  0.7071067932881648
+                ]
+              },
+              "size": [
+                0.9999998408005268,
+                0.9999998408005268,
+                0.9999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link0/geometry/ID3_000",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_720123859794",
+              "name": "ID3_000frA",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  -0.70710676908493,
+                  0.7071067932881648
+                ]
+              },
+              "size": [
+                0.9999998408005268,
+                0.9999998408005268,
+                0.9999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link0/geometry/ID3_000frA",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_9caa8b553aba",
+              "name": "ID3_000jEI",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  -0.70710676908493,
+                  0.7071067932881648
+                ]
+              },
+              "size": [
+                0.9999999098983838,
+                0.9999999098983838,
+                0.9999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link0/geometry/ID3_000jEI",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_5820c56b28cb",
+              "name": "ID3_000m4u",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  -0.70710676908493,
+                  0.7071067932881648
+                ]
+              },
+              "size": [
+                0.9999999098983838,
+                0.9999999098983838,
+                0.9999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link0/geometry/ID3_000m4u",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_0d2d16075752",
+              "name": "ID3_000pR3",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  -0.70710676908493,
+                  0.7071067932881648
+                ]
+              },
+              "size": [
+                0.9999999098983838,
+                0.9999999098983838,
+                0.9999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link0/geometry/ID3_000pR3",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_67cdc38d261b",
+              "name": "polySurface8",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  -4.7683713688684317e-11,
+                  0.0
+                ],
+                "quaternion": [
+                  -2.1073424255447017e-08,
+                  0.0,
+                  0.0,
+                  0.9999999999999998
+                ]
+              },
+              "size": [
+                9.999999552965169e-05,
+                9.999999552965176e-05,
+                9.999999552965176e-05
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link0/geometry/logo_decals/polySurface8",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_4d4bd1fae88f",
+              "name": "ID3_000frA",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  -0.70710676908493,
+                  0.7071067932881648
+                ]
+              },
+              "size": [
+                0.9999998408005268,
+                0.9999998408005268,
+                0.9999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link0/geometry/ID3_000frA",
+              "friction": [
+                1.0,
+                0.005,
+                0.0001
+              ],
+              "restitution": 0.0,
+              "collision_mesh": "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_4d4bd1fae88f/collision.obj"
+            }
+          ],
+          "inertial": {
+            "mass": 2.8142027854919434,
+            "center_of_mass": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "diagonal_inertia": [
+              1.298869733545871e-06,
+              1.6535527720407117e-06,
+              2.033116288657766e-06
+            ],
+            "full_inertia": null
+          },
+          "source_prim_path": "/panda/panda_link0"
+        },
+        {
+          "id": "link_eb7a18d6a8cd",
+          "name": "panda_link1",
+          "parent_link_id": "link_74f2e0283e28",
+          "transform": {
+            "position": [
+              0.0,
+              0.0,
+              0.33299997448921204
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_b314901089d7",
+              "name": "ID3_000",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  -0.19200000333785994
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.9999999455413471,
+                0.9999999455413471,
+                0.9999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link1/geometry/ID3_000",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_521d38b52f01",
+              "name": "ID3_000",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  -0.19200000333785994
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.9999999455413471,
+                0.9999999455413471,
+                0.9999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link1/geometry/ID3_000",
+              "friction": [
+                1.0,
+                0.005,
+                0.0001
+              ],
+              "restitution": 0.0,
+              "collision_mesh": "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_521d38b52f01/collision.obj"
+            }
+          ],
+          "inertial": {
+            "mass": 2.359999656677246,
+            "center_of_mass": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "diagonal_inertia": [
+              1.8686388330024783e-06,
+              1.4378986179508502e-06,
+              9.068119766197924e-07
+            ],
+            "full_inertia": null
+          },
+          "source_prim_path": "/panda/panda_link1"
+        },
+        {
+          "id": "link_022aa10ee1e2",
+          "name": "panda_link2",
+          "parent_link_id": "link_eb7a18d6a8cd",
+          "transform": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              -0.7071067811865475,
+              0.0,
+              0.0,
+              0.7071067811865475
+            ]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_44684ee70415",
+              "name": "ID3_000",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  5.551115123125783e-17,
+                  0.0
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.9999999776482713,
+                1.0000000968575582,
+                1.0000000968575449
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link2/geometry/ID3_000",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_0ec335b35cc9",
+              "name": "ID3_000",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  5.551115123125783e-17,
+                  0.0
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.9999999776482713,
+                1.0000000968575582,
+                1.0000000968575449
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link2/geometry/ID3_000",
+              "friction": [
+                1.0,
+                0.005,
+                0.0001
+              ],
+              "restitution": 0.0,
+              "collision_mesh": "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_0ec335b35cc9/collision.obj"
+            }
+          ],
+          "inertial": {
+            "mass": 2.379518747329712,
+            "center_of_mass": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "diagonal_inertia": [
+              1.90388720966439e-06,
+              9.142911494564032e-07,
+              1.469753669880447e-06
+            ],
+            "full_inertia": null
+          },
+          "source_prim_path": "/panda/panda_link2"
+        },
+        {
+          "id": "link_9a8a5bf41047",
+          "name": "panda_link3",
+          "parent_link_id": "link_022aa10ee1e2",
+          "transform": {
+            "position": [
+              0.0,
+              -0.31599998474121094,
+              0.0
+            ],
+            "quaternion": [
+              0.7071067811865476,
+              0.0,
+              0.0,
+              0.7071067811865476
+            ]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_93867ffd7fd8",
+              "name": "ID17_001",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  -0.12100000111013642
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.9999999776482714,
+                0.9999999776482714,
+                0.9999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link3/geometry/ID17_001",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_fa558abb5ec0",
+              "name": "ID17_001frA",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  -0.12100000111013642
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.9999999776482714,
+                0.9999999776482714,
+                0.9999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link3/geometry/ID17_001frA",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_19fbd2887f30",
+              "name": "ID17_001",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  -0.12100000111013642
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.9999999776482714,
+                0.9999999776482714,
+                0.9999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link3/geometry/ID17_001",
+              "friction": [
+                1.0,
+                0.005,
+                0.0001
+              ],
+              "restitution": 0.0,
+              "collision_mesh": "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_19fbd2887f30/collision.obj"
+            }
+          ],
+          "inertial": {
+            "mass": 2.6498823165893555,
+            "center_of_mass": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "diagonal_inertia": [
+              1.2930017874168698e-06,
+              1.5024211279524025e-06,
+              1.4273459782998543e-06
+            ],
+            "full_inertia": null
+          },
+          "source_prim_path": "/panda/panda_link3"
+        },
+        {
+          "id": "link_834dcc4c12f6",
+          "name": "panda_link4",
+          "parent_link_id": "link_9a8a5bf41047",
+          "transform": {
+            "position": [
+              0.08249995857477188,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.7071067811865475,
+              0.0,
+              0.0,
+              0.7071067811865475
+            ]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_57776c24738a",
+              "name": "ID25_000",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "quaternion": [
+                  -3.976895725835059e-23,
+                  0.7070142664004349,
+                  -3.509951125473653e-23,
+                  0.70719928387001
+                ]
+              },
+              "size": [
+                0.9999997655011293,
+                0.9999998502937577,
+                0.9999998928556142
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link4/geometry/ID25_000",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_4e6a836d6eb9",
+              "name": "ID25_000frA",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "quaternion": [
+                  -7.954709993608824e-23,
+                  0.7071067728102216,
+                  -7.0188618315065e-23,
+                  0.7071067895628733
+                ]
+              },
+              "size": [
+                0.9999997456858076,
+                0.9999998147836577,
+                0.9999999085503967
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link4/geometry/ID25_000frA",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_0befee34e895",
+              "name": "ID25_000frA",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.0
+                ],
+                "quaternion": [
+                  -7.954709993608824e-23,
+                  0.7071067728102216,
+                  -7.0188618315065e-23,
+                  0.7071067895628733
+                ]
+              },
+              "size": [
+                0.9999997456858076,
+                0.9999998147836577,
+                0.9999999085503967
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link4/geometry/ID25_000frA",
+              "friction": [
+                1.0,
+                0.005,
+                0.0001
+              ],
+              "restitution": 0.0,
+              "collision_mesh": "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_0befee34e895/collision.obj"
+            }
+          ],
+          "inertial": {
+            "mass": 2.6948018074035645,
+            "center_of_mass": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "diagonal_inertia": [
+              1.3387460739977541e-06,
+              1.45143246754742e-06,
+              1.55175541749486e-06
+            ],
+            "full_inertia": null
+          },
+          "source_prim_path": "/panda/panda_link4"
+        },
+        {
+          "id": "link_969bc1c3bfd9",
+          "name": "panda_link5",
+          "parent_link_id": "link_834dcc4c12f6",
+          "transform": {
+            "position": [
+              -0.08249994367361069,
+              0.38399988412857056,
+              -1.4210854715202004e-14
+            ],
+            "quaternion": [
+              -0.7071067811865475,
+              0.0,
+              0.0,
+              0.7071067811865475
+            ]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_1b8c72bc4184",
+              "name": "ID11_000",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  -0.2589999903962017
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.9999999776482714,
+                0.9999999776482714,
+                0.9999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link5/geometry/ID11_000",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_933de2eeca28",
+              "name": "ID11_000frA",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  -0.2589999903962017
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.9999999776482714,
+                0.9999999776482714,
+                0.9999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link5/geometry/ID11_000frA",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_b74170f4484f",
+              "name": "ID11_000",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  -0.2589999903962017
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.9999999776482714,
+                0.9999999776482714,
+                0.9999999776482582
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link5/geometry/ID11_000",
+              "friction": [
+                1.0,
+                0.005,
+                0.0001
+              ],
+              "restitution": 0.0,
+              "collision_mesh": "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_b74170f4484f/collision.obj"
+            }
+          ],
+          "inertial": {
+            "mass": 2.9812817573547363,
+            "center_of_mass": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "diagonal_inertia": [
+              3.255657020417857e-06,
+              2.706604618651909e-06,
+              1.1502337429192266e-06
+            ],
+            "full_inertia": null
+          },
+          "source_prim_path": "/panda/panda_link5"
+        },
+        {
+          "id": "link_1c47ee5b15d2",
+          "name": "panda_link6",
+          "parent_link_id": "link_969bc1c3bfd9",
+          "transform": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.7071067811865476,
+              0.0,
+              0.0,
+              0.7071067811865476
+            ]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_534d9d186771",
+              "name": "ID389_001",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  -2.6469779601696886e-23,
+                  0.0,
+                  -0.015000000000000001
+                ],
+                "quaternion": [
+                  1.5971799790961602e-22,
+                  1.6810716017965143e-24,
+                  1.4901161193847655e-08,
+                  0.9999999999999999
+                ]
+              },
+              "size": [
+                0.9999999776482716,
+                1.0000003352761324,
+                1.0000003352761189
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link6/geometry/ID389_001",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_df12ed01b0fa",
+              "name": "ID389_001frA",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  -2.6469779601696886e-23,
+                  0.0,
+                  -0.015000000000000001
+                ],
+                "quaternion": [
+                  1.5971799790961602e-22,
+                  1.6810716017965143e-24,
+                  1.4901161193847655e-08,
+                  0.9999999999999999
+                ]
+              },
+              "size": [
+                0.9999999776482716,
+                1.0000003352761324,
+                1.0000003352761189
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link6/geometry/ID389_001frA",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_202defd3688b",
+              "name": "ID389_001jEI",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  -2.6469779601696886e-23,
+                  0.0,
+                  -0.015000000000000001
+                ],
+                "quaternion": [
+                  1.5971799790961602e-22,
+                  1.6810716017965143e-24,
+                  1.4901161193847655e-08,
+                  0.9999999999999999
+                ]
+              },
+              "size": [
+                0.9999999776482716,
+                1.0000003352761324,
+                1.0000003352761189
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link6/geometry/ID389_001jEI",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_7e185b97d869",
+              "name": "ID389_001m4u",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  -2.6469779601696886e-23,
+                  0.0,
+                  -0.015000000000000001
+                ],
+                "quaternion": [
+                  1.5971799790961602e-22,
+                  1.6810716017965143e-24,
+                  1.4901161193847655e-08,
+                  0.9999999999999999
+                ]
+              },
+              "size": [
+                0.9999999776482716,
+                1.0000003352761324,
+                1.0000003352761189
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link6/geometry/ID389_001m4u",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_30cb4e548f79",
+              "name": "ID389_001pR3",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  -2.6469779601696886e-23,
+                  0.0,
+                  -0.015000000000000001
+                ],
+                "quaternion": [
+                  1.5971799790961602e-22,
+                  1.6810716017965143e-24,
+                  1.4901161193847655e-08,
+                  0.9999999999999999
+                ]
+              },
+              "size": [
+                0.9999999776482716,
+                1.0000003352761324,
+                1.0000003352761189
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link6/geometry/ID389_001pR3",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_6d56a56d136c",
+              "name": "ID389_001snf",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  -2.6469779601696886e-23,
+                  0.0,
+                  -0.015000000000000001
+                ],
+                "quaternion": [
+                  4.791539912908517e-22,
+                  9.16181196141615e-25,
+                  1.4901161193847656e-08,
+                  0.9999999999999999
+                ]
+              },
+              "size": [
+                0.999999987890777,
+                1.0000003455186413,
+                1.0000003352761189
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link6/geometry/ID389_001snf",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_22f3e39ec9e9",
+              "name": "ID389_001wdn",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  -2.6469779601696886e-23,
+                  0.0,
+                  -0.015000000000000001
+                ],
+                "quaternion": [
+                  1.5971799790961602e-22,
+                  1.6810716017965143e-24,
+                  1.4901161193847655e-08,
+                  0.9999999999999999
+                ]
+              },
+              "size": [
+                0.9999999776482716,
+                1.0000003352761324,
+                1.0000003352761189
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link6/geometry/ID389_001wdn",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_71e605c37e41",
+              "name": "ID389_001z0P",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  -2.6469779601696886e-23,
+                  0.0,
+                  -0.015000000000000001
+                ],
+                "quaternion": [
+                  1.5971799790961602e-22,
+                  1.6810716017965143e-24,
+                  1.4901161193847655e-08,
+                  0.9999999999999999
+                ]
+              },
+              "size": [
+                0.9999999776482716,
+                1.0000003352761324,
+                1.0000003352761189
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link6/geometry/ID389_001z0P",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_77d0acb9cc88",
+              "name": "ID389_0012M1",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  -2.6469779601696886e-23,
+                  0.0,
+                  -0.015000000000000001
+                ],
+                "quaternion": [
+                  1.5971799790961602e-22,
+                  1.6810716017965143e-24,
+                  1.4901161193847655e-08,
+                  0.9999999999999999
+                ]
+              },
+              "size": [
+                0.9999999776482716,
+                1.0000003352761324,
+                1.0000003352761189
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link6/geometry/ID389_0012M1",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_90618878c34d",
+              "name": "ID389_001frA",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  -2.6469779601696886e-23,
+                  0.0,
+                  -0.015000000000000001
+                ],
+                "quaternion": [
+                  1.5971799790961602e-22,
+                  1.6810716017965143e-24,
+                  1.4901161193847655e-08,
+                  0.9999999999999999
+                ]
+              },
+              "size": [
+                0.9999999776482716,
+                1.0000003352761324,
+                1.0000003352761189
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link6/geometry/ID389_001frA",
+              "friction": [
+                1.0,
+                0.005,
+                0.0001
+              ],
+              "restitution": 0.0,
+              "collision_mesh": "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_90618878c34d/collision.obj"
+            }
+          ],
+          "inertial": {
+            "mass": 1.1285806894302368,
+            "center_of_mass": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "diagonal_inertia": [
+              2.6052563839584764e-07,
+              3.9897227566143556e-07,
+              4.7048590090525977e-07
+            ],
+            "full_inertia": null
+          },
+          "source_prim_path": "/panda/panda_link6"
+        },
+        {
+          "id": "link_b85584a112ed",
+          "name": "panda_link7",
+          "parent_link_id": "link_1c47ee5b15d2",
+          "transform": {
+            "position": [
+              0.08799993246793747,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.7071067811865475,
+              0.0,
+              0.0,
+              0.7071067811865475
+            ]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_b0c20846102c",
+              "name": "ID1683_001",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.05200002649426538
+                ],
+                "quaternion": [
+                  -2.8469224746174164e-33,
+                  1.1792344877192352e-33,
+                  -0.3826834841973257,
+                  0.92387951104167
+                ]
+              },
+              "size": [
+                1.000000443504134,
+                0.9999999666669916,
+                1.0000004544854058
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link7/geometry/ID1683_001",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_d363bf1ff508",
+              "name": "ID1683_001frA",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.05200002649426538
+                ],
+                "quaternion": [
+                  -2.8469224746174164e-33,
+                  1.1792344877192352e-33,
+                  -0.3826834841973257,
+                  0.92387951104167
+                ]
+              },
+              "size": [
+                1.000000443504134,
+                0.9999999666669916,
+                1.0000004544854058
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link7/geometry/ID1683_001frA",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            },
+            {
+              "id": "visual_2509925e564f",
+              "name": "ID1683_001jEI",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.05200002649426538
+                ],
+                "quaternion": [
+                  -2.8469224746174164e-33,
+                  1.1792344877192352e-33,
+                  -0.3826834841973257,
+                  0.92387951104167
+                ]
+              },
+              "size": [
+                1.000000443504134,
+                0.9999999666669916,
+                1.0000004544854058
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link7/geometry/ID1683_001jEI",
+              "rgba": [
+                0.7,
+                0.7,
+                0.7,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_7a8f8af2a4d0",
+              "name": "ID1683_001",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.05200002649426538
+                ],
+                "quaternion": [
+                  -2.8469224746174164e-33,
+                  1.1792344877192352e-33,
+                  -0.3826834841973257,
+                  0.92387951104167
+                ]
+              },
+              "size": [
+                1.000000443504134,
+                0.9999999666669916,
+                1.0000004544854058
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link7/geometry/ID1683_001",
+              "friction": [
+                1.0,
+                0.005,
+                0.0001
+              ],
+              "restitution": 0.0,
+              "collision_mesh": "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_7a8f8af2a4d0/collision.obj"
+            },
+            {
+              "id": "collider_90d23985a8a2",
+              "name": "ID1683_001frA",
+              "geometry_type": "mesh",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.05200002649426538
+                ],
+                "quaternion": [
+                  -2.8469224746174164e-33,
+                  1.1792344877192352e-33,
+                  -0.3826834841973257,
+                  0.92387951104167
+                ]
+              },
+              "size": [
+                1.000000443504134,
+                0.9999999666669916,
+                1.0000004544854058
+              ],
+              "asset_uri": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+              "source_prim_path": "/panda/panda_link7/geometry/ID1683_001frA",
+              "friction": [
+                1.0,
+                0.005,
+                0.0001
+              ],
+              "restitution": 0.0,
+              "collision_mesh": "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_90d23985a8a2/collision.obj"
+            }
+          ],
+          "inertial": {
+            "mass": 0.40529125928878784,
+            "center_of_mass": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "diagonal_inertia": [
+              6.316591338872968e-08,
+              6.319638856666643e-08,
+              1.0607720923871966e-07
+            ],
+            "full_inertia": null
+          },
+          "source_prim_path": "/panda/panda_link7"
+        }
+      ],
+      "joints": [
+        {
+          "id": "joint_40781109024a",
+          "name": "panda_finger_joint1",
+          "type": "prismatic",
+          "parent_link_id": "link_dfd0a44dc89d",
+          "child_link_id": "link_45237ecb853f",
+          "origin": {
+            "position": [
+              0.0,
+              0.0,
+              0.05839997157454491
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              0.7071065902709961,
+              0.7071065306663513
+            ]
+          },
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "limits": {
+            "lower": 0.0,
+            "upper": 0.03999999910593033,
+            "effort": null,
+            "velocity": null
+          },
+          "initial_position": 0.0,
+          "source_prim_path": "/panda/panda_hand/panda_finger_joint1",
+          "parent_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.05839997157454491
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              0.7071065902709961,
+              0.7071065306663513
+            ]
+          },
+          "child_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              0.7071065902709961,
+              0.7071065306663513
+            ]
+          },
+          "initial_velocity": 0.0
+        },
+        {
+          "id": "joint_9c990ae1030f",
+          "name": "panda_finger_joint2",
+          "type": "prismatic",
+          "parent_link_id": "link_dfd0a44dc89d",
+          "child_link_id": "link_0b380c2b28b4",
+          "origin": {
+            "position": [
+              0.0,
+              0.0,
+              0.05839997157454491
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              -0.7071065306663513,
+              0.7071065902709961
+            ]
+          },
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "limits": {
+            "lower": 0.0,
+            "upper": 0.03999999910593033,
+            "effort": null,
+            "velocity": null
+          },
+          "initial_position": 0.0,
+          "source_prim_path": "/panda/panda_hand/panda_finger_joint2",
+          "parent_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.05839997157454491
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              -0.7071065306663513,
+              0.7071065902709961
+            ]
+          },
+          "child_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              -0.7071065306663513,
+              0.7071065902709961
+            ]
+          },
+          "initial_velocity": 0.0
+        },
+        {
+          "id": "joint_5cff8870396d",
+          "name": "panda_joint1",
+          "type": "revolute",
+          "parent_link_id": "link_74f2e0283e28",
+          "child_link_id": "link_eb7a18d6a8cd",
+          "origin": {
+            "position": [
+              0.0,
+              0.0,
+              0.33299997448921204
+            ],
+            "quaternion": [
+              0.0,
+              -0.7071067690849304,
+              0.0,
+              0.7071067690849304
+            ]
+          },
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "limits": {
+            "lower": -2.897300087848498,
+            "upper": 2.897300087848498,
+            "effort": null,
+            "velocity": null
+          },
+          "initial_position": 0.011999999973626089,
+          "source_prim_path": "/panda/panda_link0/panda_joint1",
+          "parent_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.33299997448921204
+            ],
+            "quaternion": [
+              0.0,
+              -0.7071067690849304,
+              0.0,
+              0.7071067690849304
+            ]
+          },
+          "child_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.0,
+              -0.7071067690849304,
+              0.0,
+              0.7071067690849304
+            ]
+          },
+          "initial_velocity": 0.0
+        },
+        {
+          "id": "joint_3709a1fbee67",
+          "name": "panda_joint2",
+          "type": "revolute",
+          "parent_link_id": "link_eb7a18d6a8cd",
+          "child_link_id": "link_022aa10ee1e2",
+          "origin": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              -0.4999999701976776,
+              -0.4999999701976776,
+              0.4999999701976776,
+              0.4999999701976776
+            ]
+          },
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "limits": {
+            "lower": -1.762799988219413,
+            "upper": 1.762799988219413,
+            "effort": null,
+            "velocity": null
+          },
+          "initial_position": -0.5700000299561582,
+          "source_prim_path": "/panda/panda_link1/panda_joint2",
+          "parent_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              -0.4999999701976776,
+              -0.4999999701976776,
+              0.4999999701976776,
+              0.4999999701976776
+            ]
+          },
+          "child_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.0,
+              -0.7071067094802856,
+              0.0,
+              0.7071067094802856
+            ]
+          },
+          "initial_velocity": 0.0
+        },
+        {
+          "id": "joint_8a38b9606d96",
+          "name": "panda_joint3",
+          "type": "revolute",
+          "parent_link_id": "link_022aa10ee1e2",
+          "child_link_id": "link_9a8a5bf41047",
+          "origin": {
+            "position": [
+              0.0,
+              -0.31599998474121094,
+              0.0
+            ],
+            "quaternion": [
+              0.4999999403953552,
+              -0.4999999403953552,
+              -0.4999999403953552,
+              0.4999999403953552
+            ]
+          },
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "limits": {
+            "lower": -2.897300087848498,
+            "upper": 2.897300087848498,
+            "effort": null,
+            "velocity": null
+          },
+          "initial_position": 0.0,
+          "source_prim_path": "/panda/panda_link2/panda_joint3",
+          "parent_frame": {
+            "position": [
+              0.0,
+              -0.31599998474121094,
+              0.0
+            ],
+            "quaternion": [
+              0.4999999403953552,
+              -0.4999999403953552,
+              -0.4999999403953552,
+              0.4999999403953552
+            ]
+          },
+          "child_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.0,
+              -0.7071066498756409,
+              0.0,
+              0.7071066498756409
+            ]
+          },
+          "initial_velocity": 0.0
+        },
+        {
+          "id": "joint_903087cb1fca",
+          "name": "panda_joint4",
+          "type": "revolute",
+          "parent_link_id": "link_9a8a5bf41047",
+          "child_link_id": "link_834dcc4c12f6",
+          "origin": {
+            "position": [
+              0.08249995857477188,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.49999991059303284,
+              -0.49999991059303284,
+              -0.49999991059303284,
+              0.49999991059303284
+            ]
+          },
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "limits": {
+            "lower": -3.0717999898504136,
+            "upper": -0.06979999575475569,
+            "effort": null,
+            "velocity": null
+          },
+          "initial_position": -2.810000069419046,
+          "source_prim_path": "/panda/panda_link3/panda_joint4",
+          "parent_frame": {
+            "position": [
+              0.08249995857477188,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.49999991059303284,
+              -0.49999991059303284,
+              -0.49999991059303284,
+              0.49999991059303284
+            ]
+          },
+          "child_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.0,
+              -0.7071066498756409,
+              0.0,
+              0.7071066498756409
+            ]
+          },
+          "initial_velocity": 0.0
+        },
+        {
+          "id": "joint_d95c5d5f9e0b",
+          "name": "panda_joint5",
+          "type": "revolute",
+          "parent_link_id": "link_834dcc4c12f6",
+          "child_link_id": "link_969bc1c3bfd9",
+          "origin": {
+            "position": [
+              -0.08249994367361069,
+              0.38399988412857056,
+              -1.4210854715202004e-14
+            ],
+            "quaternion": [
+              -0.49999991059303284,
+              -0.49999991059303284,
+              0.49999991059303284,
+              0.49999991059303284
+            ]
+          },
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "limits": {
+            "lower": -2.897300087848498,
+            "upper": 2.897300087848498,
+            "effort": null,
+            "velocity": null
+          },
+          "initial_position": 0.0,
+          "source_prim_path": "/panda/panda_link4/panda_joint5",
+          "parent_frame": {
+            "position": [
+              -0.08249994367361069,
+              0.38399988412857056,
+              -1.4210854715202004e-14
+            ],
+            "quaternion": [
+              -0.49999991059303284,
+              -0.49999991059303284,
+              0.49999991059303284,
+              0.49999991059303284
+            ]
+          },
+          "child_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.0,
+              -0.7071066498756409,
+              0.0,
+              0.7071066498756409
+            ]
+          },
+          "initial_velocity": 0.0
+        },
+        {
+          "id": "joint_043dd985aa35",
+          "name": "panda_joint6",
+          "type": "revolute",
+          "parent_link_id": "link_969bc1c3bfd9",
+          "child_link_id": "link_1c47ee5b15d2",
+          "origin": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.49999988079071045,
+              -0.49999988079071045,
+              -0.49999988079071045,
+              0.49999988079071045
+            ]
+          },
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "limits": {
+            "lower": -0.01749999978815516,
+            "upper": 3.752499969733032,
+            "effort": null,
+            "velocity": null
+          },
+          "initial_position": 3.03699993125413,
+          "source_prim_path": "/panda/panda_link5/panda_joint6",
+          "parent_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.49999988079071045,
+              -0.49999988079071045,
+              -0.49999988079071045,
+              0.49999988079071045
+            ]
+          },
+          "child_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.0,
+              -0.7071066498756409,
+              0.0,
+              0.7071066498756409
+            ]
+          },
+          "initial_velocity": 0.0
+        },
+        {
+          "id": "joint_3279635afa3f",
+          "name": "panda_joint7",
+          "type": "revolute",
+          "parent_link_id": "link_1c47ee5b15d2",
+          "child_link_id": "link_b85584a112ed",
+          "origin": {
+            "position": [
+              0.08799993246793747,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.49999991059303284,
+              -0.49999991059303284,
+              -0.49999991059303284,
+              0.49999991059303284
+            ]
+          },
+          "axis": [
+            1.0,
+            0.0,
+            0.0
+          ],
+          "limits": {
+            "lower": -2.897300087848498,
+            "upper": 2.897300087848498,
+            "effort": null,
+            "velocity": null
+          },
+          "initial_position": 0.741000005653492,
+          "source_prim_path": "/panda/panda_link6/panda_joint7",
+          "parent_frame": {
+            "position": [
+              0.08799993246793747,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.49999991059303284,
+              -0.49999991059303284,
+              -0.49999991059303284,
+              0.49999991059303284
+            ]
+          },
+          "child_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.0,
+              -0.7071066498756409,
+              0.0,
+              0.7071066498756409
+            ]
+          },
+          "initial_velocity": 0.0
+        },
+        {
+          "id": "joint_90b3dfaf81f9",
+          "name": "panda_hand_joint",
+          "type": "fixed",
+          "parent_link_id": "link_b85584a112ed",
+          "child_link_id": "link_dfd0a44dc89d",
+          "origin": {
+            "position": [
+              0.0,
+              0.0,
+              0.10699999332427979
+            ],
+            "quaternion": [
+              0.0,
+              0.7071067690849304,
+              0.0,
+              0.7071067690849304
+            ]
+          },
+          "axis": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "limits": null,
+          "initial_position": 0.0,
+          "source_prim_path": "/panda/panda_link7/panda_hand_joint",
+          "parent_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.10699999332427979
+            ],
+            "quaternion": [
+              0.0,
+              0.7071067690849304,
+              0.0,
+              0.7071067690849304
+            ]
+          },
+          "child_frame": {
+            "position": [
+              -3.809022075529356e-08,
+              3.8090202991725164e-08,
+              -5.960464477539063e-08
+            ],
+            "quaternion": [
+              -0.2705981135368347,
+              0.6532813906669617,
+              0.2705981433391571,
+              0.6532815098762512
+            ]
+          },
+          "initial_velocity": 0.0
+        }
+      ],
+      "actuators": [
+        {
+          "id": "actuator_69258007acd6",
+          "name": "panda_finger_joint1 Drive",
+          "joint_id": "joint_40781109024a",
+          "control_type": "position",
+          "control_range": [
+            0.0,
+            0.03999999910593033
+          ],
+          "stiffness": 400.0,
+          "damping": 80.0,
+          "max_force": 7.199999809265137,
+          "source_prim_path": "/panda/panda_hand/panda_finger_joint1.drive:linear",
+          "target_position": 0.0,
+          "target_velocity": 0.0
+        },
+        {
+          "id": "actuator_453335dca813",
+          "name": "panda_joint1 Drive",
+          "joint_id": "joint_5cff8870396d",
+          "control_type": "position",
+          "control_range": [
+            -2.897300087848498,
+            2.897300087848498
+          ],
+          "stiffness": 400.0,
+          "damping": 80.0,
+          "max_force": 87.0,
+          "source_prim_path": "/panda/panda_link0/panda_joint1.drive:angular",
+          "target_position": 0.011999999973626089,
+          "target_velocity": 0.0
+        },
+        {
+          "id": "actuator_f04db6663efe",
+          "name": "panda_joint2 Drive",
+          "joint_id": "joint_3709a1fbee67",
+          "control_type": "position",
+          "control_range": [
+            -1.762799988219413,
+            1.762799988219413
+          ],
+          "stiffness": 400.0,
+          "damping": 80.0,
+          "max_force": 87.0,
+          "source_prim_path": "/panda/panda_link1/panda_joint2.drive:angular",
+          "target_position": -0.5700000299561582,
+          "target_velocity": 0.0
+        },
+        {
+          "id": "actuator_8bfe7d7ab4e9",
+          "name": "panda_joint3 Drive",
+          "joint_id": "joint_8a38b9606d96",
+          "control_type": "position",
+          "control_range": [
+            -2.897300087848498,
+            2.897300087848498
+          ],
+          "stiffness": 400.0,
+          "damping": 80.0,
+          "max_force": 87.0,
+          "source_prim_path": "/panda/panda_link2/panda_joint3.drive:angular",
+          "target_position": 0.0,
+          "target_velocity": 0.0
+        },
+        {
+          "id": "actuator_e82c8a0d5336",
+          "name": "panda_joint4 Drive",
+          "joint_id": "joint_903087cb1fca",
+          "control_type": "position",
+          "control_range": [
+            -3.0717999898504136,
+            -0.06979999575475569
+          ],
+          "stiffness": 400.0,
+          "damping": 80.0,
+          "max_force": 87.0,
+          "source_prim_path": "/panda/panda_link3/panda_joint4.drive:angular",
+          "target_position": -2.810000069419046,
+          "target_velocity": 0.0
+        },
+        {
+          "id": "actuator_57afcfe026ad",
+          "name": "panda_joint5 Drive",
+          "joint_id": "joint_d95c5d5f9e0b",
+          "control_type": "position",
+          "control_range": [
+            -2.897300087848498,
+            2.897300087848498
+          ],
+          "stiffness": 400.0,
+          "damping": 80.0,
+          "max_force": 12.0,
+          "source_prim_path": "/panda/panda_link4/panda_joint5.drive:angular",
+          "target_position": 0.0,
+          "target_velocity": 0.0
+        },
+        {
+          "id": "actuator_86991ff052ac",
+          "name": "panda_joint6 Drive",
+          "joint_id": "joint_043dd985aa35",
+          "control_type": "position",
+          "control_range": [
+            -0.01749999978815516,
+            3.752499969733032
+          ],
+          "stiffness": 400.0,
+          "damping": 80.0,
+          "max_force": 12.0,
+          "source_prim_path": "/panda/panda_link5/panda_joint6.drive:angular",
+          "target_position": 3.03699993125413,
+          "target_velocity": 0.0
+        },
+        {
+          "id": "actuator_a0c23dc503be",
+          "name": "panda_joint7 Drive",
+          "joint_id": "joint_3279635afa3f",
+          "control_type": "position",
+          "control_range": [
+            -2.897300087848498,
+            2.897300087848498
+          ],
+          "stiffness": 400.0,
+          "damping": 80.0,
+          "max_force": 12.0,
+          "source_prim_path": "/panda/panda_link6/panda_joint7.drive:angular",
+          "target_position": 0.741000005653492,
+          "target_velocity": 0.0
+        }
+      ],
+      "sensors": [],
+      "visual_bundle": "assets/imported/openusd_franka_quality_4b35c27245/visual-0bd50cf565b9422a.simbin"
+    }
+  ]
+}

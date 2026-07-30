@@ -1,0 +1,30 @@
+{
+  "version": 4,
+  "format": "openusd",
+  "kind": "robot",
+  "kinematics_contract_version": 2,
+  "source_sha256": "4b35c2724569590400b11ccf62dcb7172cc24580cd3c149e16e28ea09d3b9992",
+  "source": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+  "robotics_model": "assets/imported/openusd_franka_quality_4b35c27245/robotics.json",
+  "import_report": "assets/imported/openusd_franka_quality_4b35c27245/import-report.json",
+  "dependencies": [],
+  "visual_bundle": "assets/imported/openusd_franka_quality_4b35c27245/visual-0bd50cf565b9422a.simbin",
+  "visual_bundle_format": 1,
+  "collision_meshes": [
+    "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_36c4ce8134b2/collision.obj",
+    "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_91a18d6f97e8/collision.obj",
+    "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_7ac796eb9f0a/collision.obj",
+    "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_4d4bd1fae88f/collision.obj",
+    "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_521d38b52f01/collision.obj",
+    "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_0ec335b35cc9/collision.obj",
+    "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_19fbd2887f30/collision.obj",
+    "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_0befee34e895/collision.obj",
+    "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_b74170f4484f/collision.obj",
+    "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_90618878c34d/collision.obj",
+    "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_7a8f8af2a4d0/collision.obj",
+    "assets/imported/openusd_franka_quality_4b35c27245/colliders/collider_90d23985a8a2/collision.obj"
+  ],
+  "articulation_ids": [
+    "articulation_b1e18b6b5322"
+  ]
+}

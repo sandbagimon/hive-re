@@ -8,6 +8,7 @@ from typing import Any
 import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
 from simlab.api_v1 import create_v1_router
@@ -56,9 +57,15 @@ def create_app(
         allow_origins=cors_origins or DEFAULT_CORS_ORIGINS,
         allow_credentials=False,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type"],
-        expose_headers=["Content-Disposition", "X-SimLab-Artifact-Id"],
+        allow_headers=["Authorization", "Content-Type", "If-None-Match"],
+        expose_headers=[
+            "Cache-Control",
+            "Content-Disposition",
+            "ETag",
+            "X-SimLab-Artifact-Id",
+        ],
     )
+    app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=5)
     app.include_router(create_v1_router(manager, access_token))
 
     @app.exception_handler(KeyError)

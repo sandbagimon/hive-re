@@ -67,6 +67,7 @@ export interface RobotArticulation {
   fixed_base: boolean;
   source_uri?: string | null;
   source_prim_path?: string | null;
+  visual_bundle?: string | null;
   links: RobotLink[];
   joints: RobotJoint[];
   actuators: RobotActuator[];
@@ -91,6 +92,7 @@ export interface RobotGeometry {
   transform: { position: Vector3; quaternion: Quaternion };
   size: number[];
   asset_uri: string | null;
+  visual_cache?: string | null;
   source_prim_path?: string | null;
 }
 
@@ -101,6 +103,7 @@ export interface RobotVisualGeometry extends RobotGeometry {
 }
 
 export interface RobotCollider extends RobotGeometry {
+  collision_mesh?: string | null;
   friction: [number, number, number];
   restitution: number;
 }
@@ -112,6 +115,8 @@ export interface RobotJoint {
   parent_link_id: string;
   child_link_id: string;
   origin: { position: Vector3; quaternion: Quaternion };
+  parent_frame?: { position: Vector3; quaternion: Quaternion };
+  child_frame?: { position: Vector3; quaternion: Quaternion };
   axis: Vector3;
   limits: {
     lower: number | null;
@@ -120,6 +125,7 @@ export interface RobotJoint {
     velocity: number | null;
   } | null;
   initial_position: number;
+  initial_velocity?: number;
   source_prim_path?: string | null;
 }
 
@@ -132,6 +138,8 @@ export interface RobotActuator {
   stiffness: number;
   damping: number;
   max_force: number | null;
+  target_position?: number | null;
+  target_velocity?: number | null;
   source_prim_path?: string | null;
 }
 
@@ -186,6 +194,7 @@ export interface AssetMetadata {
   source_format?: 'openusd';
   default_transform?: Transform;
   default_properties?: ActorProperties;
+  robotics?: RoboticsModel;
 }
 
 export interface ActorSimulationState {

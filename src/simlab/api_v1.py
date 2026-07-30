@@ -298,25 +298,34 @@ def create_v1_router(manager: ResourceManager, access_token: str | None) -> APIR
         return envelope(manager.call_simulation(simulation_id, "detachController", []))
 
     @router.get("/artifacts/{artifact_id}", dependencies=[auth])
-    async def download_artifact(artifact_id: str) -> Response:
+    async def download_artifact(artifact_id: str, request: Request) -> Response:
         artifact = manager.get_artifact(artifact_id)
+        etag = f'"{artifact.id}"'
+        cache_control = (
+            "private, max-age=31536000, immutable"
+            if artifact.filename.endswith(".simbin")
+            else "private, max-age=0, must-revalidate"
+        )
+        headers = {
+            "Content-Disposition": f'inline; filename="{artifact.filename}"',
+            "Content-Encoding": "identity",
+            "X-SimLab-Artifact-Id": artifact.id,
+            "Cache-Control": cache_control,
+            "ETag": etag,
+        }
+        if request.headers.get("if-none-match") == etag:
+            return Response(status_code=304, headers=headers)
         if artifact.content is None:
             path = manager.artifact_path(artifact_id)
             return Response(
                 content=path.read_bytes(),
                 media_type=artifact.media_type,
-                headers={
-                    "Content-Disposition": f'attachment; filename="{artifact.filename}"',
-                    "X-SimLab-Artifact-Id": artifact.id,
-                },
+                headers=headers,
             )
         return Response(
             content=artifact.content,
             media_type=artifact.media_type,
-            headers={
-                "Content-Disposition": f'attachment; filename="{artifact.filename}"',
-                "X-SimLab-Artifact-Id": artifact.id,
-            },
+            headers=headers,
         )
 
     @router.websocket("/simulations/{simulation_id}/events")

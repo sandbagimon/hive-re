@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 import pytest
 
@@ -7,6 +8,7 @@ from simlab.models.robotics import RigidTransform, Sensor
 from simlab.models.scene import Scene
 from simlab.models.transform import Transform
 from simlab.services.mjcf_exporter import export_scene_to_mjcf, scene_to_mjcf_xml
+from simlab.services.openusd.articulation_importer import import_openusd_articulations
 from simlab.services.openusd_importer import import_openusd_asset
 
 
@@ -53,11 +55,21 @@ def test_mjcf_export_contains_expected_geoms() -> None:
     body_names = [body.attrib.get("name") for body in root.findall(".//body")]
 
     assert root.tag == "mujoco"
+    assert root.find("option").attrib["integrator"] == "implicitfast"
     assert "box" in geom_types
     assert "sphere" in geom_types
     assert "cylinder" in geom_types
     assert "actor_001" in body_names
     assert len(root.findall(".//freejoint")) == 3
+
+
+def test_mjcf_export_allows_integrator_override() -> None:
+    scene = _scene_with_primitives()
+    scene.simulation_config["integrator"] = "RK4"
+
+    root = ET.fromstring(scene_to_mjcf_xml(scene))
+
+    assert root.find("option").attrib["integrator"] == "RK4"
 
 
 def test_empty_scene_does_not_export_hidden_collision_geometry() -> None:
@@ -227,13 +239,14 @@ def test_external_usd_robot_exports_compilable_articulation(tmp_path) -> None:
         [-1.57079632679, 1.57079632679]
     )
     assert len(actuators) == 2
-    assert len(contact_excludes) == 2
+    assert len(contact_excludes) == 3
     assert {
         (item.attrib["body1"], item.attrib["body2"])
         for item in contact_excludes
     } == {
-        (joint.parent_link_id, joint.child_link_id)
-        for joint in imported.robotics_model.articulations[0].joints
+        (first.id, second.id)
+        for index, first in enumerate(imported.robotics_model.articulations[0].links)
+        for second in imported.robotics_model.articulations[0].links[index + 1 :]
     }
     assert actuators[0].attrib["kp"] == "120.0"
     assert actuators[0].attrib["kv"] == "12.0"
@@ -247,7 +260,128 @@ def test_external_usd_robot_exports_compilable_articulation(tmp_path) -> None:
     assert model.jnt_range[0] == pytest.approx(
         [-1.5707963267948966, 1.5707963267948966]
     )
-    assert model.key_qpos[0, 1] == pytest.approx(-0.4)
+    assert model.key_qpos[0, 1] == pytest.approx(0.0)
+    assert model.key_ctrl[0, 1] == pytest.approx(-0.4)
+
+
+def test_mjcf_converts_joint_frame_axis_into_child_body_frame(tmp_path) -> None:
+    mujoco = pytest.importorskip("mujoco")
+    fixture = Path("tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda")
+    source = tmp_path / "rotated-child-frame.usda"
+    source.write_text(
+        fixture.read_text(encoding="utf-8").replace(
+            "point3f physics:localPos1 = (0, 0, 0)",
+            "point3f physics:localPos1 = (0.1, 0, 0)\n"
+            "            quatf physics:localRot1 = (0.70710678, 0.70710678, 0, 0)",
+            1,
+        ),
+        encoding="utf-8",
+    )
+    model = import_openusd_articulations(source).model
+    articulation = model.articulations[0]
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id="rotated_arm",
+                properties={"articulation_ids": [articulation.id]},
+            )
+        ],
+        robotics=model,
+    )
+
+    xml = scene_to_mjcf_xml(scene)
+    root = ET.fromstring(xml)
+    shoulder = articulation.joints[0]
+    element = root.find(f".//joint[@name='{shoulder.id}']")
+
+    assert element is not None
+    assert [float(value) for value in element.attrib["pos"].split()] == pytest.approx(
+        [0.1, 0.0, 0.0]
+    )
+    assert [float(value) for value in element.attrib["axis"].split()] == pytest.approx(
+        [0.0, 0.0, 1.0], abs=1e-6
+    )
+    mujoco.MjModel.from_xml_string(xml)
+
+
+FRANKA_FIXTURE = Path("assets/external/franka_panda/franka_quality.usdc")
+
+
+@pytest.mark.skipif(not FRANKA_FIXTURE.is_file(), reason="Franka test asset is not installed")
+def test_franka_joint_frames_compile_to_plausible_home_pose() -> None:
+    mujoco = pytest.importorskip("mujoco")
+    imported = import_openusd_articulations(FRANKA_FIXTURE)
+    articulation = imported.model.articulations[0]
+    for link in articulation.links:
+        link.colliders.clear()
+    scene = Scene(
+        name="Franka Kinematics",
+        actors=[
+            Actor(
+                id="actor_franka",
+                name="Franka",
+                type="robot",
+                asset_id="franka",
+                properties={"articulation_ids": [articulation.id]},
+            )
+        ],
+        robotics=imported.model,
+    )
+
+    model = mujoco.MjModel.from_xml_string(scene_to_mjcf_xml(scene))
+    data = mujoco.MjData(model)
+    mujoco.mj_resetDataKeyframe(model, data, 0)
+    mujoco.mj_forward(model, data)
+    hand = next(link for link in articulation.links if link.name == "panda_hand")
+    hand_body = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, hand.id)
+    arm_joints = [
+        joint for joint in articulation.joints if joint.name.startswith("panda_joint")
+    ]
+
+    assert data.xpos[hand_body] == pytest.approx(
+        [0.38929447, 0.0046718, 0.45821302], abs=1e-5
+    )
+    for joint in arm_joints:
+        joint_id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, joint.id)
+        assert model.jnt_axis[joint_id] == pytest.approx([0.0, 0.0, 1.0], abs=1e-6)
+
+
+def test_robot_mesh_collider_registers_compilable_mjcf_mesh(tmp_path) -> None:
+    mujoco = pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/mesh_collider_arm.usda",
+        tmp_path,
+    )
+    assert imported.robotics_model is not None
+    scene = Scene(
+        name="Mesh Collider Arm",
+        actors=[
+            Actor(
+                id="actor_mesh_arm",
+                name="Mesh Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+    )
+
+    xml = scene_to_mjcf_xml(scene, asset_root=tmp_path)
+    root = ET.fromstring(xml)
+    mesh_asset = root.find("./asset/mesh")
+    collider = root.find(".//geom[@type='mesh']")
+
+    assert mesh_asset is not None
+    assert mesh_asset.attrib["file"].endswith("collision.obj")
+    assert collider is not None
+    assert collider.attrib["mesh"] == mesh_asset.attrib["name"]
+    assert "size" not in collider.attrib
+    model = mujoco.MjModel.from_xml_string(xml)
+    assert model.nmesh == 1
 
 
 def test_robot_imu_exports_site_and_compilable_mujoco_sensors(tmp_path) -> None:
@@ -341,4 +475,5 @@ def test_robot_and_free_body_home_keyframe_has_complete_qpos(tmp_path) -> None:
     assert model.nq == 9
     assert model.key_qpos.shape == (1, 9)
     assert model.key_qpos[0, :3] == pytest.approx([1, 2, 3])
-    assert model.key_qpos[0, -1] == pytest.approx(-0.4)
+    assert model.key_qpos[0, -1] == pytest.approx(0.0)
+    assert model.key_ctrl[0, -1] == pytest.approx(-0.4)

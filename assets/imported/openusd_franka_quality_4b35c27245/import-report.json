@@ -1,0 +1,79 @@
+{
+  "source_path": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+  "issues": [
+    {
+      "severity": "warning",
+      "code": "usd.missing_dependency",
+      "prim_path": "/panda/panda_link0/geometry/logo_decals/Looks/OmniPBR/Shader",
+      "field": "inputs:diffuse_texture",
+      "message": "OpenUSD dependency could not be resolved: Materials/Textures/Logo_Textures_Albedo.png",
+      "fallback": "Geometry will import with its authored display color or the default material."
+    },
+    {
+      "severity": "warning",
+      "code": "usd.missing_dependency",
+      "prim_path": "/panda/panda_link0/geometry/logo_decals/Looks/OmniPBR/Shader",
+      "field": "inputs:metallic_texture",
+      "message": "OpenUSD dependency could not be resolved: Materials/Textures/Logo_Textures_Metallic.png",
+      "fallback": "Geometry will import with its authored display color or the default material."
+    },
+    {
+      "severity": "warning",
+      "code": "usd.missing_dependency",
+      "prim_path": "/panda/panda_link0/geometry/logo_decals/Looks/OmniPBR/Shader",
+      "field": "inputs:opacity_texture",
+      "message": "OpenUSD dependency could not be resolved: Materials/Textures/Logo_Textures_Opacity.png",
+      "fallback": "Geometry will import with its authored display color or the default material."
+    },
+    {
+      "severity": "warning",
+      "code": "usd.missing_dependency",
+      "prim_path": "/panda/panda_link0/geometry/logo_decals/Looks/OmniPBR/Shader",
+      "field": "inputs:reflectionroughness_texture",
+      "message": "OpenUSD dependency could not be resolved: Materials/Textures/Logo_Textures_roughness.png",
+      "fallback": "Geometry will import with its authored display color or the default material."
+    },
+    {
+      "severity": "warning",
+      "code": "usd.missing_dependency",
+      "prim_path": "/panda/panda_link0/geometry/logo_decals/Looks/OmniPBR/Shader",
+      "field": "inputs:normalmap_texture",
+      "message": "OpenUSD dependency could not be resolved: Materials/Textures/normal.png",
+      "fallback": "Geometry will import with its authored display color or the default material."
+    },
+    {
+      "severity": "warning",
+      "code": "usd.missing_dependency",
+      "prim_path": "/panda/panda_link7/geometry/Looks/PlasticWhite/Shader",
+      "field": "info:mdl:sourceAsset",
+      "message": "OpenUSD dependency could not be resolved: OmniPBR.mdl",
+      "fallback": "Geometry will import with its authored display color or the default material."
+    },
+    {
+      "severity": "warning",
+      "code": "usd.joint_body_unresolved",
+      "prim_path": "/panda/rootJoint",
+      "field": "physics:body0/physics:body1",
+      "message": "Joint was skipped because its body relationship is outside the articulation.",
+      "fallback": "joint omitted"
+    },
+    {
+      "severity": "warning",
+      "code": "usd.joint_state_invalid_fallback",
+      "prim_path": "/panda",
+      "field": "state:*:physics:position",
+      "message": "Authored joint state violates the articulation limits; valid drive targets were used as the initial pose.",
+      "fallback": "drive target position, clamped to joint limits"
+    }
+  ],
+  "resolved_dependencies": [],
+  "unresolved_dependencies": [
+    "Materials/Textures/Logo_Textures_Albedo.png",
+    "Materials/Textures/Logo_Textures_Metallic.png",
+    "Materials/Textures/Logo_Textures_Opacity.png",
+    "Materials/Textures/Logo_Textures_roughness.png",
+    "Materials/Textures/normal.png",
+    "OmniPBR.mdl"
+  ],
+  "has_errors": false
+}

@@ -22,6 +22,7 @@ def test_external_usd_arm_maps_to_robotics_model() -> None:
 
     assert result.report.has_errors is False
     assert result.report.issues == []
+    assert result.model.version == "2.0"
     assert len(result.model.articulations) == 1
     arm = result.model.articulations[0]
     assert arm.fixed_base is True
@@ -50,7 +51,10 @@ def test_external_usd_arm_maps_to_robotics_model() -> None:
     assert shoulder.limits is not None
     assert shoulder.limits.lower == pytest.approx(-math.pi / 2)
     assert shoulder.limits.upper == pytest.approx(math.pi / 2)
-    assert elbow.initial_position == pytest.approx(-0.4)
+    assert shoulder.parent_frame is not None
+    assert shoulder.child_frame is not None
+    assert shoulder.parent_frame.position == pytest.approx([0.0, 0.0, 0.2])
+    assert elbow.initial_position == pytest.approx(0.0)
 
     shoulder_drive, elbow_drive = arm.actuators
     assert shoulder_drive.joint_id == shoulder.id
@@ -59,6 +63,7 @@ def test_external_usd_arm_maps_to_robotics_model() -> None:
     assert shoulder_drive.damping == pytest.approx(12.0)
     assert shoulder_drive.max_force == pytest.approx(80.0)
     assert elbow_drive.joint_id == elbow.id
+    assert elbow_drive.target_position == pytest.approx(-0.4)
 
 
 def test_imported_robotics_model_round_trips() -> None:
@@ -112,6 +117,71 @@ def test_articulation_converts_stage_units_and_y_up_basis(tmp_path: Path) -> Non
     assert upper.inertial.diagonal_inertia == pytest.approx(
         [0.065e-4, 0.008e-4, 0.065e-4]
     )
+
+
+def test_prismatic_joint_uses_linear_units_and_drive(tmp_path: Path) -> None:
+    source = tmp_path / "prismatic-arm.usda"
+    text = ARM_FIXTURE.read_text(encoding="utf-8")
+    prefix, axis_b = text.split('def PhysicsRevoluteJoint "AxisB"', 1)
+    axis_b = axis_b.replace("PhysicsDriveAPI:angular", "PhysicsDriveAPI:linear")
+    axis_b = axis_b.replace("drive:angular:", "drive:linear:")
+    axis_b = axis_b.replace("targetPosition = -22.918312", "targetPosition = 0.025")
+    axis_b = axis_b.replace("lowerLimit = -126.05071", "lowerLimit = -0.02")
+    axis_b = axis_b.replace("upperLimit = 11.459156", "upperLimit = 0.08")
+    source.write_text(prefix + 'def PhysicsPrismaticJoint "AxisB"' + axis_b, encoding="utf-8")
+
+    arm = import_openusd_articulations(source).model.articulations[0]
+    joint = next(item for item in arm.joints if item.name == "AxisB")
+    actuator = next(item for item in arm.actuators if item.joint_id == joint.id)
+
+    assert joint.type == "prismatic"
+    assert joint.limits is not None
+    assert joint.limits.lower == pytest.approx(-0.02)
+    assert joint.limits.upper == pytest.approx(0.08)
+    assert joint.initial_position == pytest.approx(0.0)
+    assert actuator.target_position == pytest.approx(0.025)
+    assert actuator.source_prim_path.endswith(".drive:linear")
+
+
+def test_joint_state_is_distinct_from_drive_target(tmp_path: Path) -> None:
+    source = tmp_path / "stateful-arm.usda"
+    text = ARM_FIXTURE.read_text(encoding="utf-8").replace(
+        "float drive:angular:physics:targetPosition = -22.918312",
+        "float drive:angular:physics:targetPosition = -22.918312\n"
+        "            float state:angular:physics:position = -10\n"
+        "            float state:angular:physics:velocity = 5",
+    )
+    source.write_text(text, encoding="utf-8")
+
+    arm = import_openusd_articulations(source).model.articulations[0]
+    joint = next(item for item in arm.joints if item.name == "AxisB")
+    actuator = next(item for item in arm.actuators if item.joint_id == joint.id)
+
+    assert joint.initial_position == pytest.approx(math.radians(-10))
+    assert joint.initial_velocity == pytest.approx(math.radians(5))
+    assert actuator.target_position == pytest.approx(-0.4)
+
+
+def test_dual_joint_frames_define_zero_pose_and_joint_frame_axis(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "rotated-child-frame.usda"
+    text = ARM_FIXTURE.read_text(encoding="utf-8").replace(
+        "point3f physics:localPos1 = (0, 0, 0)",
+        "point3f physics:localPos1 = (0.1, 0, 0)\n"
+        "            quatf physics:localRot1 = (0.70710678, 0.70710678, 0, 0)",
+        1,
+    )
+    source.write_text(text, encoding="utf-8")
+
+    arm = import_openusd_articulations(source).model.articulations[0]
+    shoulder = next(item for item in arm.joints if item.name == "AxisA")
+    upper = next(item for item in arm.links if item.id == shoulder.child_link_id)
+
+    assert shoulder.axis == pytest.approx([0.0, 1.0, 0.0])
+    assert shoulder.child_frame is not None
+    assert shoulder.child_frame.position == pytest.approx([0.1, 0.0, 0.0])
+    assert upper.transform.position == pytest.approx([-0.1, 0.0, 0.2])
 
 
 def test_non_articulation_stage_returns_located_error() -> None:

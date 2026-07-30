@@ -157,9 +157,12 @@
         "parent_link_id": { "$ref": "#/$defs/id" },
         "child_link_id": { "$ref": "#/$defs/id" },
         "origin": { "$ref": "#/$defs/transform" },
+        "parent_frame": { "$ref": "#/$defs/transform" },
+        "child_frame": { "$ref": "#/$defs/transform" },
         "axis": { "$ref": "#/$defs/vector3" },
         "limits": { "anyOf": [{ "$ref": "#/$defs/jointLimits" }, { "type": "null" }] },
         "initial_position": { "type": "number" },
+        "initial_velocity": { "type": "number" },
         "source_prim_path": { "type": ["string", "null"] }
       },
       "required": [
@@ -191,6 +194,8 @@
         "stiffness": { "type": "number", "minimum": 0 },
         "damping": { "type": "number", "minimum": 0 },
         "max_force": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "target_position": { "type": ["number", "null"] },
+        "target_velocity": { "type": ["number", "null"] },
         "source_prim_path": { "type": ["string", "null"] }
       },
       "required": [
@@ -279,6 +284,7 @@
         "fixed_base": { "type": "boolean" },
         "source_uri": { "type": ["string", "null"] },
         "source_prim_path": { "type": ["string", "null"] },
+        "visual_bundle": { "type": ["string", "null"], "minLength": 1 },
         "links": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/link" } },
         "joints": { "type": "array", "items": { "$ref": "#/$defs/joint" } },
         "actuators": { "type": "array", "items": { "$ref": "#/$defs/actuator" } },
@@ -298,7 +304,7 @@
     }
   },
   "properties": {
-    "version": { "const": "1.0" },
+    "version": { "enum": ["1.0", "2.0"] },
     "articulations": {
       "type": "array",
       "items": { "$ref": "#/$defs/articulation" }

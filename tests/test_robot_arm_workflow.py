@@ -86,5 +86,8 @@ def test_external_usd_robot_round_trip_and_control_workflow(tmp_path) -> None:
         [shoulder.initial_position, elbow.initial_position]
     )
     assert [state.ctrl for state in reset.actuators] == pytest.approx(
-        [shoulder.initial_position, elbow.initial_position]
+        [
+            actuator.target_position
+            for actuator in articulation.actuators
+        ]
     )

@@ -1,0 +1,16 @@
+{
+  "version": 3,
+  "format": "openusd",
+  "kind": "robot",
+  "kinematics_contract_version": 2,
+  "source_sha256": "b6c7a8177297cf876982cbf9dff97e9c205d9bf0fc6b27eb1addd9e27441a8a4",
+  "source": "assets/imported/openusd_external_two_joint_arm_b6c7a81772/source/external_two_joint_arm.usda",
+  "robotics_model": "assets/imported/openusd_external_two_joint_arm_b6c7a81772/robotics.json",
+  "import_report": "assets/imported/openusd_external_two_joint_arm_b6c7a81772/import-report.json",
+  "dependencies": [],
+  "visual_caches": [],
+  "collision_meshes": [],
+  "articulation_ids": [
+    "articulation_0421586e9cde"
+  ]
+}

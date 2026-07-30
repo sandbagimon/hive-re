@@ -199,6 +199,8 @@ export class EditorBridgeClient {
                 return this.importOpenUsd('folder');
             case 'getVisualGeometry':
                 return this.getVisualGeometry(String(args[0]));
+            case 'getVisualGeometryBundle':
+                return this.getVisualGeometryBundle(String(args[0]));
             case 'preflight':
                 await this.synchronizeSceneArgument(args[0]);
                 return this.success(await this.request(this.projectPath('/preflight'), { method: 'POST' }));
@@ -306,6 +308,10 @@ export class EditorBridgeClient {
             payload.base_color_texture_url = URL.createObjectURL(await response.blob());
         }
         return this.success(payload);
+    }
+    async getVisualGeometryBundle(artifactId) {
+        const response = await this.requestResponse(`/api/v1/artifacts/${encodeURIComponent(artifactId)}`, { cache: 'force-cache' });
+        return this.success(await response.arrayBuffer());
     }
     selectOpenUsdEntry(paths) {
         const candidates = paths
@@ -530,13 +536,13 @@ export class EditorBridgeClient {
         const response = await this.requestResponse(artifact.download_url);
         this.download(artifact.filename, await response.blob(), artifact.media_type);
     }
-    async requestResponse(path) {
+    async requestResponse(path, init = {}) {
         if (!this.config)
             throw new Error('Runtime configuration unavailable');
-        const headers = new Headers();
+        const headers = new Headers(init.headers);
         if (this.config.accessToken)
             headers.set('Authorization', `Bearer ${this.config.accessToken}`);
-        const response = await fetch(`${this.config.apiBaseUrl}${path}`, { headers });
+        const response = await fetch(`${this.config.apiBaseUrl}${path}`, { ...init, headers });
         if (!response.ok)
             throw new Error(`Artifact download HTTP ${response.status}`);
         return response;

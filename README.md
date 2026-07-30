@@ -39,22 +39,27 @@ On macOS or Linux, activate the virtual environment with `source .venv/bin/activ
 
 ## Run
 
-Run the API backend:
+Run the complete backend stack (FastAPI on `8765` and the independent MuJoCo gRPC algorithm
+data plane on `50051`):
 
 ```bash
-simlab-api --host 127.0.0.1 --port 8765 \
-  --data-root .simlab-data \
-  --cors-origin http://127.0.0.1:4173 \
-  --cors-origin http://127.0.0.1:5173
+./start_backend.sh
 ```
 
 In a separate terminal, run the frontend:
 
 ```bash
-npm run dev:frontend
+./start_frontend.sh
 ```
 
 Then open `http://127.0.0.1:5173`. For a production-like build use `npm run build` followed by `npm run preview:frontend`, which serves `frontend/dist` at `http://127.0.0.1:4173`. Deployment-specific API and WebSocket addresses are read from `simlab-config.json`, so the static bundle does not need to share a host or release cycle with Python.
+
+The backend launcher checks both ports, verifies the HTTP health endpoint, and shuts down both
+services together on `Ctrl+C`. Override its defaults with `SIMLAB_BACKEND_HOST`,
+`SIMLAB_BACKEND_PORT`, `SIMLAB_DATA_ROOT`, `SIMLAB_ALGORITHM_HOST`,
+`SIMLAB_ALGORITHM_PORT`, `SIMLAB_ALGORITHM_ASSET_ROOT`, or `SIMLAB_ALGORITHM_WORKERS`.
+Additional command-line arguments are passed to the FastAPI process, for example
+`./start_backend.sh --allow-controller-execution` on a trusted development machine.
 
 The optional desktop adapter remains available after installing the `desktop` extra:
 
@@ -74,7 +79,7 @@ See [`docs/MODULAR_DEVELOPMENT.md`](docs/MODULAR_DEVELOPMENT.md) for module boun
 
 Use **Import USD** for a self-contained `.usd`, `.usda`, `.usdc`, `.usdz`, or safe ZIP package. Use **Import USD Folder** for a composed asset with sublayers, payloads, references, or textures; relative directory paths are preserved through multipart upload. The importer resolves stage transforms, converts stage units and Y-up coordinates to SimLab's meter/Z-up convention, triangulates meshes and native geometric primitives, expands PointInstancer instances at the default time, and registers a relocatable project cache. See [`docs/OPENUSD_IMPORT.md`](docs/OPENUSD_IMPORT.md) for the supported subset and package rules.
 
-OpenUSD physics values are imported when authored, including rigid-body state, mass/density, and basic friction. Dedicated `PhysicsCollisionAPI` geometry is preferred; otherwise import emits a warning and falls back to the visual mesh. Display colors, a bound `UsdPreviewSurface` base color/opacity, UVs, and the first base-color texture are carried into the Three.js viewport. The generated project cache contains viewport geometry plus an OBJ collision mesh. Export and simulation convert that asset to a MuJoCo mesh geom, so the default runtime does not require MuJoCo's experimental native USD decoder.
+OpenUSD physics values are imported when authored, including rigid-body state, mass/density, and basic friction. Dedicated `PhysicsCollisionAPI` geometry is preferred; otherwise import emits a warning and falls back to the visual mesh. Display colors, a bound `UsdPreviewSurface` base color/opacity, UVs, and the first base-color texture are carried into the Three.js viewport. Robot visuals are cached as one content-addressed typed-array geometry bundle with precomputed normals and browser cache headers, while legacy per-mesh JSON remains readable. The generated project cache also contains OBJ collision meshes. Export and simulation convert that asset to MuJoCo mesh geoms, so the default runtime does not require MuJoCo's experimental native USD decoder.
 
 OpenUSD articulations are imported as robot actors with independent links, colliders, inertial properties, revolute joints, and position drives. The Scene Tree and viewport preserve the robot hierarchy; joint targets, jog controls, and editable keyframe trajectories drive the generated MuJoCo articulation while live link poses and joint feedback remain separate from authoring transforms.
 

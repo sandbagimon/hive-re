@@ -81,6 +81,41 @@ def _quaternion_multiply(left: list[float], right: list[float]) -> list[float]:
     ]
 
 
+def _quaternion_normalize(value: list[float]) -> list[float]:
+    length = math.sqrt(sum(component * component for component in value))
+    if math.isclose(length, 0.0, abs_tol=1e-12):
+        return [0.0, 0.0, 0.0, 1.0]
+    return [component / length for component in value]
+
+
+def _rotate_vector(quaternion: list[float], vector: list[float]) -> list[float]:
+    rotation = _quaternion_normalize(quaternion)
+    inverse = [-rotation[0], -rotation[1], -rotation[2], rotation[3]]
+    rotated = _quaternion_multiply(
+        _quaternion_multiply(rotation, [*vector, 0.0]), inverse
+    )
+    return rotated[:3]
+
+
+def _compose_transform(left: RigidTransform, right: RigidTransform) -> RigidTransform:
+    offset = _rotate_vector(left.quaternion, right.position)
+    return RigidTransform(
+        position=[left.position[index] + offset[index] for index in range(3)],
+        quaternion=_quaternion_normalize(
+            _quaternion_multiply(left.quaternion, right.quaternion)
+        ),
+    )
+
+
+def _inverse_transform(value: RigidTransform) -> RigidTransform:
+    rotation = _quaternion_normalize(value.quaternion)
+    inverse = [-rotation[0], -rotation[1], -rotation[2], rotation[3]]
+    return RigidTransform(
+        position=_rotate_vector(inverse, [-component for component in value.position]),
+        quaternion=inverse,
+    )
+
+
 def _to_z_up_vector(value: list[float], up_axis: str) -> list[float]:
     if up_axis == "Y":
         return [value[0], -value[2], value[1]]
@@ -158,7 +193,7 @@ def _geometry_size(
         radius = float(capsule.GetRadiusAttr().Get() or 1.0)
         half_height = float(capsule.GetHeightAttr().Get() or 2.0) * 0.5
         return "capsule", [radius * scale[0], half_height * scale[2]]
-    return "mesh", [1.0, 1.0, 1.0]
+    return "mesh", list(scale)
 
 
 def _display_color(prim: Any, usd_geom: Any) -> list[float]:
@@ -233,13 +268,14 @@ def _joint_axis(joint: Any, up_axis: str) -> list[float]:
     return _to_z_up_vector(source, up_axis)
 
 
-def _joint_origin(
+def _joint_frame(
     joint: Any,
+    body_index: int,
     up_axis: str,
     meters_per_unit: float,
 ) -> RigidTransform:
-    position_value = joint.GetLocalPos0Attr().Get()
-    rotation_value = joint.GetLocalRot0Attr().Get()
+    position_value = getattr(joint, f"GetLocalPos{body_index}Attr")().Get()
+    rotation_value = getattr(joint, f"GetLocalRot{body_index}Attr")().Get()
     position = _vector3(position_value) if position_value is not None else [0.0, 0.0, 0.0]
     position = [component * meters_per_unit for component in position]
     quaternion = (
@@ -253,14 +289,38 @@ def _joint_origin(
     )
 
 
-def _joint_limits(joint: Any) -> JointLimits | None:
+def _joint_state(
+    prim: Any,
+    drive_name: str,
+    value_scale: float,
+) -> tuple[float, float]:
+    """Read initial state independently from the drive controller targets."""
+    prefix = f"state:{drive_name}:physics"
+
+    def read(field: str) -> float:
+        attribute = prim.GetAttribute(f"{prefix}:{field}")
+        if not attribute or not attribute.IsValid():
+            return 0.0
+        value = attribute.Get()
+        return float(value) * value_scale if value is not None else 0.0
+
+    return read("position"), read("velocity")
+
+
+def _joint_limits(
+    joint: Any,
+    *,
+    angular: bool,
+    meters_per_unit: float,
+) -> JointLimits | None:
     lower = joint.GetLowerLimitAttr().Get()
     upper = joint.GetUpperLimitAttr().Get()
     if lower is None and upper is None:
         return None
+    scale = math.pi / 180.0 if angular else meters_per_unit
     return JointLimits(
-        lower=math.radians(float(lower)) if lower is not None else None,
-        upper=math.radians(float(upper)) if upper is not None else None,
+        lower=float(lower) * scale if lower is not None else None,
+        upper=float(upper) * scale if upper is not None else None,
     )
 
 
@@ -268,8 +328,10 @@ def _drive_actuator(
     prim: Any,
     joint_model: Joint,
     usd_physics: Any,
+    drive_name: str,
+    value_scale: float,
 ) -> Actuator | None:
-    drive = usd_physics.DriveAPI.Get(prim, "angular")
+    drive = usd_physics.DriveAPI.Get(prim, drive_name)
     if not drive or not drive.GetPrim().IsValid():
         return None
     stiffness = float(drive.GetStiffnessAttr().Get() or 0.0)
@@ -305,7 +367,17 @@ def _drive_actuator(
         stiffness=stiffness,
         damping=damping,
         max_force=max_force,
-        source_prim_path=f"{prim.GetPath()}.drive:angular",
+        target_position=(
+            float(target_position) * value_scale
+            if target_position is not None
+            else None
+        ),
+        target_velocity=(
+            float(target_velocity) * value_scale
+            if target_velocity is not None
+            else None
+        ),
+        source_prim_path=f"{prim.GetPath()}.drive:{drive_name}",
     )
 
 
@@ -410,7 +482,8 @@ def _import_articulation(
                 _relative_matrix(geometry_world, world), gf, up_axis, meters_per_unit
             )
             geometry_type, size = _geometry_size(geometry_prim, usd_geom, geometry_scale)
-            size = [component * meters_per_unit for component in size]
+            if geometry_type != "mesh":
+                size = [component * meters_per_unit for component in size]
             is_collider = "PhysicsCollisionAPI" in geometry_prim.GetAppliedSchemas()
             if is_collider:
                 link.colliders.append(
@@ -462,13 +535,32 @@ def _import_articulation(
         if prim.IsA(usd_physics.RevoluteJoint):
             typed_joint = usd_physics.RevoluteJoint(prim)
             joint_type: JointType = "revolute"
-            limits = _joint_limits(typed_joint)
+            limits = _joint_limits(
+                typed_joint,
+                angular=True,
+                meters_per_unit=meters_per_unit,
+            )
             axis = _joint_axis(typed_joint, up_axis)
+            drive_name = "angular"
+            target_scale = math.pi / 180.0
+        elif prim.IsA(usd_physics.PrismaticJoint):
+            typed_joint = usd_physics.PrismaticJoint(prim)
+            joint_type = "prismatic"
+            limits = _joint_limits(
+                typed_joint,
+                angular=False,
+                meters_per_unit=meters_per_unit,
+            )
+            axis = _joint_axis(typed_joint, up_axis)
+            drive_name = "linear"
+            target_scale = meters_per_unit
         elif prim.IsA(usd_physics.FixedJoint):
             typed_joint = usd_physics.FixedJoint(prim)
             joint_type = "fixed"
             limits = None
             axis = [0.0, 0.0, 0.0]
+            drive_name = "angular"
+            target_scale = 1.0
         else:
             report.add(
                 "warning",
@@ -479,25 +571,81 @@ def _import_articulation(
                 fallback="joint omitted",
             )
             continue
-        drive = usd_physics.DriveAPI.Get(prim, "angular")
-        target = drive.GetTargetPositionAttr().Get() if drive else None
-        initial_position = math.radians(float(target)) if target is not None else 0.0
+        parent_frame = _joint_frame(
+            typed_joint, 0, up_axis, meters_per_unit
+        )
+        child_frame = _joint_frame(
+            typed_joint, 1, up_axis, meters_per_unit
+        )
+        initial_position, initial_velocity = _joint_state(
+            prim, drive_name, target_scale
+        )
         joint_model = Joint(
             id=_stable_id("joint", prim.GetPath()),
             name=_display_name(prim),
             type=joint_type,
             parent_link_id=link_id_by_path[body0],
             child_link_id=link_id_by_path[body1],
-            origin=_joint_origin(typed_joint, up_axis, meters_per_unit),
+            origin=parent_frame,
+            parent_frame=parent_frame,
+            child_frame=child_frame,
             axis=axis,
             limits=limits,
             initial_position=initial_position,
+            initial_velocity=initial_velocity,
             source_prim_path=str(prim.GetPath()),
         )
         joints.append(joint_model)
-        actuator = _drive_actuator(prim, joint_model, usd_physics)
+        # The body xforms in USD may be authored independently from the joint
+        # frames.  The dual-frame relation is the canonical zero pose shared by
+        # the browser renderer and MuJoCo exporter.
+        links_by_path[body1].transform = _compose_transform(
+            parent_frame, _inverse_transform(child_frame)
+        )
+        actuator = _drive_actuator(
+            prim,
+            joint_model,
+            usd_physics,
+            drive_name,
+            target_scale,
+        )
         if actuator is not None:
             actuators.append(actuator)
+
+    invalid_state = any(
+        joint.limits is not None
+        and joint.limits.lower is not None
+        and joint.limits.upper is not None
+        and not joint.limits.lower <= joint.initial_position <= joint.limits.upper
+        for joint in joints
+    )
+    if invalid_state:
+        actuator_by_joint = {actuator.joint_id: actuator for actuator in actuators}
+        for joint in joints:
+            if joint.type == "fixed":
+                continue
+            actuator = actuator_by_joint.get(joint.id)
+            target = actuator.target_position if actuator is not None else None
+            if target is not None:
+                joint.initial_position = target
+            if (
+                joint.limits is not None
+                and joint.limits.lower is not None
+                and joint.limits.upper is not None
+            ):
+                joint.initial_position = min(
+                    max(joint.initial_position, joint.limits.lower),
+                    joint.limits.upper,
+                )
+        report.add(
+            "warning",
+            "usd.joint_state_invalid_fallback",
+            "Authored joint state violates the articulation limits; valid drive "
+            "targets were used as the initial pose.",
+            prim_path=str(root_path),
+            field="state:*:physics:position",
+            fallback="drive target position, clamped to joint limits",
+        )
 
     return Articulation(
         id=_stable_id("articulation", root_path),
@@ -560,7 +708,7 @@ def import_openusd_articulations(source: str | Path) -> ArticulationImportResult
         )
         for root in roots
     ]
-    model = RoboticsModel(articulations=articulations)
+    model = RoboticsModel(version="2.0", articulations=articulations)
     try:
         validate_robotics_model(model)
     except RoboticsValidationError as exc:

@@ -2,12 +2,48 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import shutil
+import tempfile
 from pathlib import Path
 from typing import Any
 
 from simlab.services.openusd.import_report import ImportReport
+
+
+def atomic_write_bytes(path: Path, content: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    mode = path.stat().st_mode & 0o777 if path.exists() else 0o644
+    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(content)
+        temporary.chmod(mode)
+        temporary.replace(path)
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        raise
+
+
+def atomic_write_text(path: Path, content: str) -> None:
+    atomic_write_bytes(path, content.encode("utf-8"))
+
+
+def atomic_copy(source: Path, destination: Path) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{destination.name}.", dir=destination.parent
+    )
+    os.close(descriptor)
+    temporary = Path(temporary_name)
+    try:
+        shutil.copy2(source, temporary)
+        temporary.replace(destination)
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        raise
 
 
 def openusd_asset_id(path: Path) -> str:
@@ -21,8 +57,7 @@ def upsert_asset_metadata(path: Path, asset: dict[str, Any]) -> None:
     assets = data.setdefault("assets", [])
     assets[:] = [item for item in assets if item.get("id") != asset["id"]]
     assets.append(asset)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    atomic_write_text(path, json.dumps(data, indent=2) + "\n")
 
 
 def copy_openusd_dependencies(
@@ -55,7 +90,6 @@ def copy_openusd_dependencies(
     for dependency in dependencies:
         relative = dependency.relative_to(source_path.parent)
         destination = cache_source_dir / relative
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(dependency, destination)
+        atomic_copy(dependency, destination)
         copied[str(dependency.resolve())] = destination
     return copied

@@ -44,6 +44,23 @@ def test_robotics_model_round_trip_preserves_two_joint_arm() -> None:
     ]
 
 
+def test_v2_joint_frames_and_drive_targets_round_trip() -> None:
+    data = fixture_data()
+    data["version"] = "2.0"
+    for joint in data["articulations"][0]["joints"]:
+        joint["parent_frame"] = copy.deepcopy(joint["origin"])
+        joint["child_frame"] = {
+            "position": [0.0, 0.0, 0.0],
+            "quaternion": [0.0, 0.0, 0.0, 1.0],
+        }
+        joint["initial_velocity"] = 0.0
+    data["articulations"][0]["actuators"][0]["target_position"] = 0.25
+
+    restored = RoboticsModel.from_dict(data)
+
+    assert restored.to_dict() == data
+
+
 def test_joint_state_sensor_round_trip_and_requires_joint_reference() -> None:
     data = fixture_data()
     sensor = data["articulations"][0]["sensors"][0]

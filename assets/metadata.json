@@ -423,6 +423,36 @@
           "Collision uses the merged visual mesh; author a dedicated collider for production use."
         ]
       }
+    },
+    {
+      "id": "openusd_external_two_joint_arm_b6c7a81772",
+      "name": "Two-Joint Robot Arm",
+      "type": "robot",
+      "source_format": "openusd",
+      "default_properties": {
+        "source": "assets/imported/openusd_external_two_joint_arm_b6c7a81772/source/external_two_joint_arm.usda",
+        "robotics_cache": "assets/imported/openusd_external_two_joint_arm_b6c7a81772/robotics.json",
+        "import_report": "assets/imported/openusd_external_two_joint_arm_b6c7a81772/import-report.json",
+        "manifest": "assets/imported/openusd_external_two_joint_arm_b6c7a81772/manifest.json",
+        "articulation_ids": [
+          "articulation_0421586e9cde"
+        ]
+      }
+    },
+    {
+      "id": "openusd_franka_quality_4b35c27245",
+      "name": "Franka Panda (High Quality)",
+      "type": "robot",
+      "source_format": "openusd",
+      "default_properties": {
+        "source": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
+        "robotics_cache": "assets/imported/openusd_franka_quality_4b35c27245/robotics.json",
+        "import_report": "assets/imported/openusd_franka_quality_4b35c27245/import-report.json",
+        "manifest": "assets/imported/openusd_franka_quality_4b35c27245/manifest.json",
+        "articulation_ids": [
+          "articulation_b1e18b6b5322"
+        ]
+      }
     }
   ]
 }

@@ -12,6 +12,7 @@ def test_typescript_editor_assets_are_an_independent_frontend() -> None:
     assert (root / "ts" / "bridge.ts").exists()
     assert (root / "ts" / "viewport.ts").exists()
     assert (root / "ts" / "geometry-contract.ts").exists()
+    assert (root / "ts" / "geometry-bundle.ts").exists()
     assert (generated / "app.js").exists()
     assert (generated / "viewport.js").exists()
     assert Path("frontend/public/simlab-config.json").exists()
@@ -56,6 +57,8 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "startRecording" in bridge
     assert "recordings/${formatName}/artifact" in bridge
     assert "getVisualGeometry" in app
+    assert "getVisualGeometryBundle" in app
+    assert "decodeGeometryBundle" in viewport
     assert "new THREE.WireframeGeometry(mesh.geometry)" in viewport
     assert "onActorTransformChanged" in viewport
     assert "addRobotActor" in viewport

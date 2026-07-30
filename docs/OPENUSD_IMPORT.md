@@ -58,7 +58,8 @@ OpenUSD Stage composition
               v
 项目内可迁移缓存
   - source dependencies
-  - visual.json
+  - visual.json（单刚体与旧机器人兼容）
+  - visual-<content-hash>.simbin（机器人批量几何）
   - collision.obj
   - manifest.json
               |
@@ -79,7 +80,7 @@ Asset metadata + opaque artifact IDs
 - Cube、Sphere、Cylinder、Cone、Capsule 网格化；
 - 默认时间点的 PointInstancer 展开；
 - Vertex、Varying、Uniform 和 Face-Varying UV；
-- 浏览器端法线重建。
+- 单刚体兼容缓存由浏览器重建法线；机器人 bundle 在导入时预计算法线。
 
 ### 材质与纹理
 
@@ -99,10 +100,27 @@ Asset metadata + opaque artifact IDs
 
 ### Robot Articulation
 
-- 固定和 Revolute Joint 子集；
-- Link、Collider、Inertial、Position Drive；
+- Fixed、Revolute 和 Prismatic Joint 子集；
+- Link、Collider、Inertial、Position/Velocity Drive；
+- 同时保留 `physics:localPos0/localRot0` 与 `localPos1/localRot1` 两侧关节帧；
+- `physics:axis` 保持在 joint frame；导出 MuJoCo 时转换到 child body frame；
+- `JointStateAPI` position/velocity 作为初始状态，Drive targetPosition/targetVelocity 作为独立控制目标；
 - 项目内依赖复制和可迁移 source URI；
-- Robotics cache、Import Report 和 Manifest。
+- Robotics cache v2、Import Report 和带源文件 SHA-256 的 Manifest v4；
+- 一个 articulation 的全部 Mesh Visual 被写入一个小端二进制 bundle，顶点/法线/UV 使用
+  Float32、索引使用 Uint32、颜色使用归一化 Uint8；前端只发一次 Artifact 请求并直接创建
+  Three.js typed BufferAttribute；
+- bundle 文件名包含内容摘要，Artifact 响应带 ETag 和 immutable cache；旧的逐 Visual
+  `visual_cache` 仍由前端兼容加载。
+
+关节的规范化零位变换为：
+
+```text
+T_parent_child(q) = T_parent_joint * Motion(axis_joint, q) * inverse(T_child_joint)
+```
+
+Three.js 和 MJCF 导出都使用这一公式。旧的 RoboticsModel v1 没有双帧字段时仍走兼容路径。若资产
+写入的 JointState 超出关节限位，导入器会记录 warning，并以有效 Drive target 生成可运行的初始姿态。
 
 ## 依赖错误策略
 

@@ -56,7 +56,7 @@ function renderAssets(assets) {
         button.addEventListener('click', () => {
             const asset = store.current.assets.find((item) => item.id === button.dataset.assetId);
             if (asset)
-                store.addAsset(asset);
+                store.addAsset(asset, asset.robotics);
         });
     }
 }
@@ -1205,6 +1205,13 @@ configureViewport({
         if (result.ok && result.data)
             return result.data;
         store.appendLog(`Mesh cache load failed: ${result.error ?? cachePath}`);
+        return null;
+    },
+    resolveVisualGeometryBundle: async (artifactId) => {
+        const result = await bridge.call('getVisualGeometryBundle', artifactId);
+        if (result.ok && result.data)
+            return result.data;
+        store.appendLog(`Mesh bundle load failed: ${result.error ?? artifactId}`);
         return null;
     },
 });

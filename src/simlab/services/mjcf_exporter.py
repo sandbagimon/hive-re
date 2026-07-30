@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import math
 import xml.etree.ElementTree as ET
+from itertools import combinations
 from pathlib import Path
 from typing import Any
 
@@ -21,9 +23,14 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
     ET.SubElement(root, "compiler", {"angle": "radian"})
     option = ET.SubElement(root, "option")
     option.set("timestep", str(scene.simulation_config.get("timestep", 0.01)))
+    option.set(
+        "integrator",
+        str(scene.simulation_config.get("integrator", "implicitfast")),
+    )
 
     mesh_assets = ET.SubElement(root, "asset")
     mesh_names: dict[str, str] = {}
+    robot_mesh_names: dict[str, str] = {}
     for actor in scene.actors:
         mesh_path = _collision_mesh_path(actor)
         if mesh_path is None:
@@ -44,7 +51,40 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                 "scale": _format_vector(actor.transform.scale),
             },
         )
-    if not mesh_names:
+    if scene.robotics is not None:
+        for articulation in scene.robotics.articulations:
+            for link in articulation.links:
+                for robot_collider in link.colliders:
+                    if robot_collider.geometry_type != "mesh":
+                        continue
+                    if not robot_collider.collision_mesh:
+                        raise ValueError(
+                            "Robot mesh collider has no collision cache: "
+                            f"{robot_collider.id}"
+                        )
+                    if asset_root is None:
+                        raise ValueError(
+                            "Robot mesh colliders require an asset_root when generating MJCF."
+                        )
+                    resolved = resolve_imported_asset_path(
+                        robot_collider.collision_mesh,
+                        asset_root,
+                    )
+                    if not resolved.is_file():
+                        raise ValueError(
+                            "Robot collision mesh is missing: "
+                            f"{robot_collider.collision_mesh}"
+                        )
+                    if robot_collider.id in robot_mesh_names:
+                        continue
+                    asset_mesh_name = f"{_xml_name(robot_collider.id)}_mesh"
+                    robot_mesh_names[robot_collider.id] = asset_mesh_name
+                    ET.SubElement(
+                        mesh_assets,
+                        "mesh",
+                        {"name": asset_mesh_name, "file": str(resolved)},
+                    )
+    if not mesh_names and not robot_mesh_names:
         root.remove(mesh_assets)
 
     worldbody = ET.SubElement(root, "worldbody")
@@ -53,6 +93,7 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
     robot_imu_sensors: list[tuple[Sensor, str]] = []
     robot_contact_excludes: list[tuple[str, str]] = []
     home_positions: list[float] = []
+    home_velocities: list[float] = []
 
     for actor in scene.actors:
         if actor.type != "object":
@@ -71,11 +112,11 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                 "friction": friction,
             }
         else:
-            collider = collider_geometry(actor)
+            primitive_collider = collider_geometry(actor)
             geom_attrs = {
                 "name": f"{_xml_name(actor.id)}_geom",
-                "type": collider.geom_type,
-                "size": _format_vector(collider.size),
+                "type": primitive_collider.geom_type,
+                "size": _format_vector(primitive_collider.size),
                 "rgba": rgba,
                 "friction": friction,
             }
@@ -102,6 +143,7 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
             home_positions.extend(
                 euler_xyz_to_mujoco_quaternion(actor.transform.rotation)
             )
+            home_velocities.extend([0.0] * 6)
             if _physics_value(actor, "mass_mode", "mass") == "density":
                 geom_attrs["density"] = str(_physics_value(actor, "density", 1000.0))
             else:
@@ -122,8 +164,8 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                 continue
             ids = actor.properties.get("articulation_ids", [])
             for articulation_id in ids:
-                articulation = articulations.get(str(articulation_id))
-                if articulation is None:
+                selected_articulation = articulations.get(str(articulation_id))
+                if selected_articulation is None:
                     continue
                 wrapper = ET.SubElement(
                     worldbody,
@@ -138,11 +180,13 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                 )
                 _append_articulation(
                     wrapper,
-                    articulation,
+                    selected_articulation,
                     robot_actuators,
                     robot_imu_sensors,
                     robot_contact_excludes,
                     home_positions,
+                    home_velocities,
+                    robot_mesh_names,
                 )
 
     if robot_contact_excludes:
@@ -209,8 +253,10 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
             )
     if home_positions:
         keyframe = ET.SubElement(root, "keyframe")
-        home_controls = [initial for _, _, initial in robot_actuators]
+        home_controls = [target for _, _, target in robot_actuators]
         key_attrs = {"name": "home", "qpos": _format_vector(home_positions)}
+        if any(value != 0.0 for value in home_velocities):
+            key_attrs["qvel"] = _format_vector(home_velocities)
         if home_controls:
             key_attrs["ctrl"] = _format_vector(home_controls)
         ET.SubElement(
@@ -245,17 +291,44 @@ def _mujoco_quaternion(value: list[float]) -> list[float]:
     return [w, x, y, z]
 
 
-def _append_collider(body: Any, collider: Collider) -> None:
+def _rotate_vector(quaternion: list[float], vector: list[float]) -> list[float]:
+    x, y, z, w = quaternion
+    length = math.sqrt(x * x + y * y + z * z + w * w)
+    if math.isclose(length, 0.0, abs_tol=1e-12):
+        return list(vector)
+    x, y, z, w = x / length, y / length, z / length, w / length
+    vx, vy, vz = vector
+    tx = 2.0 * (y * vz - z * vy)
+    ty = 2.0 * (z * vx - x * vz)
+    tz = 2.0 * (x * vy - y * vx)
+    return [
+        vx + w * tx + (y * tz - z * ty),
+        vy + w * ty + (z * tx - x * tz),
+        vz + w * tz + (x * ty - y * tx),
+    ]
+
+
+def _append_collider(
+    body: Any,
+    collider: Collider,
+    mesh_names: dict[str, str],
+) -> None:
     geom_type = collider.geometry_type
     attrs = {
         "name": _xml_name(collider.id),
-        "type": geom_type if geom_type != "capsule" else "capsule",
-        "size": _format_vector(collider.size),
+        "type": geom_type,
         "pos": _format_vector(collider.transform.position),
         "quat": _format_vector(_mujoco_quaternion(collider.transform.quaternion)),
         "friction": _format_vector(collider.friction),
         "rgba": "0.55 0.62 0.7 1",
     }
+    if geom_type == "mesh":
+        mesh_name = mesh_names.get(collider.id)
+        if mesh_name is None:
+            raise ValueError(f"Robot mesh collider was not registered: {collider.id}")
+        attrs["mesh"] = mesh_name
+    else:
+        attrs["size"] = _format_vector(collider.size)
     ET.SubElement(body, "geom", attrs)
 
 
@@ -266,6 +339,8 @@ def _append_articulation(
     exported_imu_sensors: list[tuple[Sensor, str]],
     contact_excludes: list[tuple[str, str]],
     home_positions: list[float],
+    home_velocities: list[float],
+    mesh_names: dict[str, str],
 ) -> None:
     links = {link.id: link for link in articulation.links}
     joints_by_child = {joint.child_link_id: joint for joint in articulation.joints}
@@ -273,6 +348,10 @@ def _append_articulation(
     for link in articulation.links:
         if link.parent_link_id in children:
             children[link.parent_link_id].append(link)
+    contact_excludes.extend(
+        (_xml_name(first.id), _xml_name(second.id))
+        for first, second in combinations(articulation.links, 2)
+    )
 
     joint_names: dict[str, str] = {}
     imu_sensors_by_link: dict[str, list[Sensor]] = {}
@@ -293,21 +372,24 @@ def _append_articulation(
         joint = joints_by_child.get(link.id)
         if joint is not None and joint.type != "fixed":
             joint_name = _xml_name(joint.id)
+            axis = joint.axis
             attrs = {
                 "name": joint_name,
                 "type": "hinge" if joint.type in {"revolute", "continuous"} else "slide",
-                "axis": _format_vector(joint.axis),
+                "axis": _format_vector(axis),
             }
+            if joint.child_frame is not None:
+                attrs["pos"] = _format_vector(joint.child_frame.position)
+                attrs["axis"] = _format_vector(
+                    _rotate_vector(joint.child_frame.quaternion, axis)
+                )
             if joint.limits and joint.limits.lower is not None and joint.limits.upper is not None:
                 attrs["range"] = _format_vector([joint.limits.lower, joint.limits.upper])
                 attrs["limited"] = "true"
             ET.SubElement(body, "joint", attrs)
             joint_names[joint.id] = joint_name
             home_positions.append(joint.initial_position)
-        if link.parent_link_id is not None:
-            contact_excludes.append(
-                (_xml_name(link.parent_link_id), _xml_name(link.id))
-            )
+            home_velocities.append(joint.initial_velocity)
         if link.inertial is not None:
             inertial_attrs = {
                 "mass": str(link.inertial.mass),
@@ -319,7 +401,7 @@ def _append_articulation(
                 )
             ET.SubElement(body, "inertial", inertial_attrs)
         for collider in link.colliders:
-            _append_collider(body, collider)
+            _append_collider(body, collider, mesh_names)
         for sensor in imu_sensors_by_link.get(link.id, []):
             if sensor.local_transform is None:
                 raise ValueError(f"IMU sensor requires local_transform: {sensor.id}")
@@ -346,12 +428,22 @@ def _append_articulation(
     for actuator in articulation.actuators:
         joint_name = joint_names.get(actuator.joint_id)
         if joint_name is not None:
-            initial = next(
-                joint.initial_position
+            joint = next(
+                joint
                 for joint in articulation.joints
                 if joint.id == actuator.joint_id
             )
-            exported_actuators.append((joint_name, actuator, initial))
+            if actuator.control_type == "position":
+                target = (
+                    actuator.target_position
+                    if actuator.target_position is not None
+                    else joint.initial_position
+                )
+            elif actuator.control_type == "velocity":
+                target = actuator.target_velocity or 0.0
+            else:
+                target = 0.0
+            exported_actuators.append((joint_name, actuator, target))
 
 
 def _physics_value(actor: Actor, key: str, default: Any) -> Any:

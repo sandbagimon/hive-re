@@ -1,7 +1,8 @@
 import type { RpcResult, SimulationState, SimulationStatus } from './types.js';
 
 type BridgeMethod =
-  | 'getAssets' | 'importOpenUsd' | 'importOpenUsdFolder' | 'getVisualGeometry'
+  | 'getAssets' | 'importOpenUsd' | 'importOpenUsdFolder'
+  | 'getVisualGeometry' | 'getVisualGeometryBundle'
   | 'openProject' | 'saveProject'
   | 'validateProjectContent' | 'exportMjcf' | 'preflight'
   | 'runSimulation' | 'pauseSimulation' | 'setSimulationSpeed'
@@ -227,6 +228,8 @@ export class EditorBridgeClient {
         return this.importOpenUsd<T>('folder');
       case 'getVisualGeometry':
         return this.getVisualGeometry<T>(String(args[0]));
+      case 'getVisualGeometryBundle':
+        return this.getVisualGeometryBundle<T>(String(args[0]));
       case 'preflight':
         await this.synchronizeSceneArgument(args[0]);
         return this.success<T>(await this.request(this.projectPath('/preflight'), { method: 'POST' }));
@@ -337,6 +340,14 @@ export class EditorBridgeClient {
       payload.base_color_texture_url = URL.createObjectURL(await response.blob());
     }
     return this.success<T>(payload);
+  }
+
+  private async getVisualGeometryBundle<T>(artifactId: string): Promise<RpcResult<T>> {
+    const response = await this.requestResponse(
+      `/api/v1/artifacts/${encodeURIComponent(artifactId)}`,
+      { cache: 'force-cache' },
+    );
+    return this.success<T>(await response.arrayBuffer());
   }
 
   private selectOpenUsdEntry(paths: string[]): string | null | undefined {
@@ -599,11 +610,11 @@ export class EditorBridgeClient {
     this.download(artifact.filename, await response.blob(), artifact.media_type);
   }
 
-  private async requestResponse(path: string): Promise<Response> {
+  private async requestResponse(path: string, init: RequestInit = {}): Promise<Response> {
     if (!this.config) throw new Error('Runtime configuration unavailable');
-    const headers = new Headers();
+    const headers = new Headers(init.headers);
     if (this.config.accessToken) headers.set('Authorization', `Bearer ${this.config.accessToken}`);
-    const response = await fetch(`${this.config.apiBaseUrl}${path}`, { headers });
+    const response = await fetch(`${this.config.apiBaseUrl}${path}`, { ...init, headers });
     if (!response.ok) throw new Error(`Artifact download HTTP ${response.status}`);
     return response;
   }

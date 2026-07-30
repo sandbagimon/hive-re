@@ -3,6 +3,8 @@ import { OrbitControls } from '../vendor/OrbitControls.js';
 import { TransformControls } from '../vendor/TransformControls.js';
 
 import { sourceGeometry } from './geometry-contract.js';
+import { decodeGeometryBundle, type BundledGeometry } from './geometry-bundle.js';
+import { jointLocalPose } from './robot-kinematics.js';
 import type {
   Actor,
   RobotArticulation,
@@ -50,6 +52,12 @@ let actorSelectedCallback: (actorId: string | null) => void = () => undefined;
 let actorTransformCallback: (actorId: string, transform: Transform) => void = () => undefined;
 let visualGeometryResolver: (cachePath: string) => Promise<VisualGeometryPayload | null> =
   async () => null;
+let visualGeometryBundleResolver: (artifactId: string) => Promise<ArrayBuffer | null> =
+  async () => null;
+const geometryBundleCache = new Map<
+  string,
+  Promise<Map<string, BundledGeometry> | null>
+>();
 
 transformControls.addEventListener('dragging-changed', (event) => {
   orbitControls.enabled = !event.value;
@@ -132,10 +140,12 @@ export function configureViewport(callbacks: {
   onActorSelected: (actorId: string | null) => void;
   onActorTransformChanged: (actorId: string, transform: Transform) => void;
   resolveVisualGeometry: (cachePath: string) => Promise<VisualGeometryPayload | null>;
+  resolveVisualGeometryBundle: (artifactId: string) => Promise<ArrayBuffer | null>;
 }): void {
   actorSelectedCallback = callbacks.onActorSelected;
   actorTransformCallback = callbacks.onActorTransformChanged;
   visualGeometryResolver = callbacks.resolveVisualGeometry;
+  visualGeometryBundleResolver = callbacks.resolveVisualGeometryBundle;
 }
 
 function resize(): void {
@@ -211,8 +221,45 @@ function geometryFromPayload(payload: VisualGeometryPayload): any {
   return geometry;
 }
 
-function geometryForRobotVisual(visual: RobotVisualGeometry): any {
+function geometryFromBundle(payload: BundledGeometry): any {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(payload.positions, 3));
+  geometry.setAttribute('normal', new THREE.BufferAttribute(payload.normals, 3));
+  if (payload.colors) {
+    geometry.setAttribute('color', new THREE.Uint8BufferAttribute(payload.colors, 3, true));
+  }
+  if (payload.uvs) geometry.setAttribute('uv', new THREE.BufferAttribute(payload.uvs, 2));
+  geometry.setIndex(new THREE.BufferAttribute(payload.indices, 1));
+  geometry.boundingBox = new THREE.Box3(
+    new THREE.Vector3(...payload.bounds.min),
+    new THREE.Vector3(...payload.bounds.max),
+  );
+  geometry.boundingSphere = new THREE.Sphere(
+    new THREE.Vector3(...payload.bounds.sphere.slice(0, 3)),
+    payload.bounds.sphere[3],
+  );
+  return geometry;
+}
+
+function resolveGeometryBundle(
+  artifactId: string,
+): Promise<Map<string, BundledGeometry> | null> {
+  let promise = geometryBundleCache.get(artifactId);
+  if (!promise) {
+    promise = visualGeometryBundleResolver(artifactId).then((buffer) => (
+      buffer ? decodeGeometryBundle(buffer) : null
+    ));
+    geometryBundleCache.set(artifactId, promise);
+    void promise.catch(() => geometryBundleCache.delete(artifactId));
+  }
+  return promise;
+}
+
+function geometryForRobotVisual(visual: RobotVisualGeometry, hasBundle: boolean): any {
   const size = visual.size;
+  if (visual.geometry_type === 'mesh' && (hasBundle || visual.visual_cache)) {
+    return new THREE.BufferGeometry();
+  }
   if (visual.geometry_type === 'sphere') {
     return new THREE.SphereGeometry(size[0] ?? 0.5, 32, 20);
   }
@@ -233,7 +280,12 @@ function geometryForRobotVisual(visual: RobotVisualGeometry): any {
   );
 }
 
-function addRobotActor(actor: Actor, articulation: RobotArticulation): any {
+function addRobotActor(
+  actor: Actor,
+  articulation: RobotArticulation,
+  visualBundle: string | null,
+  revision: number,
+): any {
   const root = new THREE.Group();
   root.position.set(...actor.transform.position);
   root.rotation.set(...actor.transform.rotation);
@@ -242,6 +294,7 @@ function addRobotActor(actor: Actor, articulation: RobotArticulation): any {
   root.userData.actorId = actor.id;
   root.userData.actor = actor;
   const groups = new Map<string, any>();
+  const bundledMeshes = new Map<string, any>();
   for (const link of articulation.links) {
     const group = new THREE.Group();
     group.name = link.name;
@@ -259,7 +312,7 @@ function addRobotActor(actor: Actor, articulation: RobotArticulation): any {
     for (const visual of link.visual_geometries) {
       const rgba = visual.rgba ?? [0.7, 0.7, 0.7, 1];
       const mesh = new THREE.Mesh(
-        geometryForRobotVisual(visual),
+        geometryForRobotVisual(visual, Boolean(visualBundle)),
         new THREE.MeshStandardMaterial({
           color: new THREE.Color(rgba[0], rgba[1], rgba[2]),
           roughness: visual.roughness ?? 0.55,
@@ -273,6 +326,65 @@ function addRobotActor(actor: Actor, articulation: RobotArticulation): any {
       mesh.userData.actorId = actor.id;
       mesh.userData.linkId = link.id;
       group.add(mesh);
+      if (visual.geometry_type === 'mesh' && visualBundle) {
+        bundledMeshes.set(visual.id, mesh);
+      }
+      if (
+        visual.geometry_type === 'mesh'
+        && visual.visual_cache
+        && !visualBundle
+        && visualGeometryResolver
+      ) {
+        const cachePath = visual.visual_cache;
+        void visualGeometryResolver(cachePath).then((payload) => {
+          if (!payload || !mesh.parent) return;
+          mesh.geometry.dispose();
+          mesh.geometry = geometryFromPayload(payload);
+          if (payload.colors?.length === (payload.positions.length / 3) * 4) {
+            mesh.material.vertexColors = true;
+            mesh.material.color.set(0xffffff);
+            mesh.material.needsUpdate = true;
+          }
+          updateSelectionOutline();
+        }).catch(() => undefined);
+      }
+    }
+  }
+  if (visualBundle && bundledMeshes.size > 0) {
+    void resolveGeometryBundle(visualBundle).then((bundle) => {
+      if (!bundle || revision !== sceneRevision || actorMeshes.get(actor.id) !== root) return;
+      for (const [geometryId, mesh] of bundledMeshes) {
+        const payload = bundle.get(geometryId);
+        if (!payload) continue;
+        mesh.geometry.dispose();
+        mesh.geometry = geometryFromBundle(payload);
+        if (payload.colors) {
+          mesh.material.vertexColors = true;
+          mesh.material.color.set(0xffffff);
+          mesh.material.needsUpdate = true;
+        }
+      }
+      updateSelectionOutline();
+    }).catch(() => undefined);
+  }
+  for (const joint of articulation.joints) {
+    const child = groups.get(joint.child_link_id);
+    if (!child) continue;
+    const canonicalPose = jointLocalPose(joint);
+    if (canonicalPose) {
+      child.position.set(...canonicalPose.position);
+      child.quaternion.set(...canonicalPose.quaternion);
+      continue;
+    }
+    if (joint.type === 'fixed' || joint.initial_position === 0) continue;
+    const axis = new THREE.Vector3(...joint.axis).normalize();
+    if (joint.type === 'prismatic') {
+      axis.applyQuaternion(child.quaternion).multiplyScalar(joint.initial_position);
+      child.position.add(axis);
+    } else {
+      child.quaternion.multiply(
+        new THREE.Quaternion().setFromAxisAngle(axis, joint.initial_position),
+      );
     }
   }
   return root;
@@ -348,7 +460,12 @@ export function setViewportScene(sceneData: Scene): void {
         (item) => articulationIds?.includes(item.id),
       );
       if (!articulation) continue;
-      const robot = addRobotActor(actor, articulation);
+      const robot = addRobotActor(
+        actor,
+        articulation,
+        articulation.visual_bundle ?? null,
+        revision,
+      );
       actorGroup.add(robot);
       actorMeshes.set(actor.id, robot);
       continue;
@@ -574,7 +691,7 @@ function frameObject(object: any, direction: any = null): void {
   const radius = Math.max(focusSphere.radius, 0.35);
   const viewDirection = direction ?? camera.position.clone().sub(orbitControls.target).normalize();
   if (viewDirection.lengthSq() < 0.0001) viewDirection.copy(viewDirections.iso);
-  const distance = Math.max(radius / Math.sin(THREE.MathUtils.degToRad(camera.fov) / 2), 2.5);
+  const distance = Math.max(radius / Math.sin(THREE.MathUtils.degToRad(camera.fov) / 2), 0.75);
   orbitControls.target.copy(focusSphere.center);
   camera.position.copy(focusSphere.center).add(viewDirection.multiplyScalar(distance * 1.35));
   camera.near = Math.max(distance / 1000, 0.01);

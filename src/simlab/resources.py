@@ -4,6 +4,7 @@ import copy
 import hashlib
 import json
 import mimetypes
+import os
 import shutil
 import threading
 import uuid
@@ -19,12 +20,36 @@ from simlab.web_application import WebApplication
 REFERENCE_FIELDS = {
     "source",
     "visual_cache",
+    "visual_bundle",
     "collision_mesh",
     "robotics_cache",
     "import_report",
     "manifest",
     "base_color_texture",
 }
+
+_FICLONE = 0x40049409
+
+
+def _clone_or_copy(source: str, destination: str) -> str:
+    """Use CoW cloning, then hard-link immutable caches, then fall back to copying."""
+    try:
+        import fcntl
+
+        with open(source, "rb") as source_file, open(destination, "xb") as target_file:
+            fcntl.ioctl(target_file.fileno(), _FICLONE, source_file.fileno())
+        shutil.copystat(source, destination)
+        return destination
+    except (ImportError, OSError):
+        try:
+            os.unlink(destination)
+        except FileNotFoundError:
+            pass
+        try:
+            os.link(source, destination)
+            return destination
+        except OSError:
+            return shutil.copy2(source, destination)
 
 
 class ResourceValidationError(ValueError):
@@ -85,7 +110,12 @@ class ResourceManager:
             root = self.data_root / "projects" / project_id
             root.mkdir(parents=True)
             if self.seed_assets.exists():
-                shutil.copytree(self.seed_assets, root / "assets")
+                shutil.copytree(
+                    self.seed_assets,
+                    root / "assets",
+                    copy_function=_clone_or_copy,
+                    ignore=shutil.ignore_patterns("external"),
+                )
             else:
                 (root / "assets").mkdir()
                 (root / "assets" / "metadata.json").write_text(

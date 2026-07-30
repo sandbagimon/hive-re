@@ -1,0 +1,475 @@
+{
+  "version": "2.0",
+  "articulations": [
+    {
+      "id": "articulation_0421586e9cde",
+      "name": "ExternalArm",
+      "root_link_id": "link_4e8fd11ae960",
+      "fixed_base": true,
+      "source_uri": "assets/imported/openusd_external_two_joint_arm_b6c7a81772/source/external_two_joint_arm.usda",
+      "source_prim_path": "/ExternalArm",
+      "links": [
+        {
+          "id": "link_4e8fd11ae960",
+          "name": "Pedestal",
+          "parent_link_id": null,
+          "transform": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_ad99ef986525",
+              "name": "Appearance",
+              "geometry_type": "box",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.1
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.20000000298023224,
+                0.20000000298023224,
+                0.10000000149011612
+              ],
+              "asset_uri": null,
+              "source_prim_path": "/ExternalArm/Pedestal/Appearance",
+              "rgba": [
+                0.18000000715255737,
+                0.2199999988079071,
+                0.2800000011920929,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_f753242b7734",
+              "name": "ContactShape",
+              "geometry_type": "box",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.1
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.20000000298023224,
+                0.20000000298023224,
+                0.10000000149011612
+              ],
+              "asset_uri": null,
+              "source_prim_path": "/ExternalArm/Pedestal/ContactShape",
+              "friction": [
+                1.0,
+                0.005,
+                0.0001
+              ],
+              "restitution": 0.0
+            }
+          ],
+          "inertial": {
+            "mass": 4.0,
+            "center_of_mass": [
+              0.0,
+              0.0,
+              0.10000000149011612
+            ],
+            "diagonal_inertia": [
+              0.02500000037252903,
+              0.02500000037252903,
+              0.03999999910593033
+            ],
+            "full_inertia": null
+          },
+          "source_prim_path": "/ExternalArm/Pedestal"
+        },
+        {
+          "id": "link_0b02e8638b0e",
+          "name": "FirstSegment",
+          "parent_link_id": "link_4e8fd11ae960",
+          "transform": {
+            "position": [
+              0.0,
+              0.0,
+              0.20000000298023224
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_7cc3688b306f",
+              "name": "Appearance",
+              "geometry_type": "box",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.3
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.05999999865889549,
+                0.05999999865889549,
+                0.30000001192092896
+              ],
+              "asset_uri": null,
+              "source_prim_path": "/ExternalArm/FirstSegment/Appearance",
+              "rgba": [
+                0.7200000286102295,
+                0.2199999988079071,
+                0.11999999731779099,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_5457ff4a1d1d",
+              "name": "ContactShape",
+              "geometry_type": "box",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.3
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.05999999865889549,
+                0.05999999865889549,
+                0.30000001192092896
+              ],
+              "asset_uri": null,
+              "source_prim_path": "/ExternalArm/FirstSegment/ContactShape",
+              "friction": [
+                1.0,
+                0.005,
+                0.0001
+              ],
+              "restitution": 0.0
+            }
+          ],
+          "inertial": {
+            "mass": 2.0,
+            "center_of_mass": [
+              0.0,
+              0.0,
+              0.30000001192092896
+            ],
+            "diagonal_inertia": [
+              0.06499999761581421,
+              0.06499999761581421,
+              0.00800000037997961
+            ],
+            "full_inertia": null
+          },
+          "source_prim_path": "/ExternalArm/FirstSegment"
+        },
+        {
+          "id": "link_6c6e17180d09",
+          "name": "SecondSegment",
+          "parent_link_id": "link_0b02e8638b0e",
+          "transform": {
+            "position": [
+              0.0,
+              0.0,
+              0.6000000238418579
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          "visual_geometries": [
+            {
+              "id": "visual_45900bf12967",
+              "name": "Appearance",
+              "geometry_type": "box",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.25
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.05000000074505806,
+                0.05000000074505806,
+                0.25
+              ],
+              "asset_uri": null,
+              "source_prim_path": "/ExternalArm/SecondSegment/Appearance",
+              "rgba": [
+                0.8799999952316284,
+                0.3799999952316284,
+                0.11999999731779099,
+                1.0
+              ],
+              "roughness": null,
+              "metalness": null
+            }
+          ],
+          "colliders": [
+            {
+              "id": "collider_6e2c31f08f64",
+              "name": "ContactShape",
+              "geometry_type": "box",
+              "transform": {
+                "position": [
+                  0.0,
+                  0.0,
+                  0.25
+                ],
+                "quaternion": [
+                  0.0,
+                  0.0,
+                  0.0,
+                  1.0
+                ]
+              },
+              "size": [
+                0.05000000074505806,
+                0.05000000074505806,
+                0.25
+              ],
+              "asset_uri": null,
+              "source_prim_path": "/ExternalArm/SecondSegment/ContactShape",
+              "friction": [
+                1.0,
+                0.005,
+                0.0001
+              ],
+              "restitution": 0.0
+            }
+          ],
+          "inertial": {
+            "mass": 1.25,
+            "center_of_mass": [
+              0.0,
+              0.0,
+              0.25
+            ],
+            "diagonal_inertia": [
+              0.02800000086426735,
+              0.02800000086426735,
+              0.004999999888241291
+            ],
+            "full_inertia": null
+          },
+          "source_prim_path": "/ExternalArm/SecondSegment"
+        }
+      ],
+      "joints": [
+        {
+          "id": "joint_7afd18e24bc6",
+          "name": "AxisA",
+          "type": "revolute",
+          "parent_link_id": "link_4e8fd11ae960",
+          "child_link_id": "link_0b02e8638b0e",
+          "origin": {
+            "position": [
+              0.0,
+              0.0,
+              0.20000000298023224
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "limits": {
+            "lower": -1.5707963267948966,
+            "upper": 1.5707963267948966,
+            "effort": null,
+            "velocity": null
+          },
+          "initial_position": 0.0,
+          "source_prim_path": "/ExternalArm/Constraints/AxisA",
+          "parent_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.20000000298023224
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          "child_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          "initial_velocity": 0.0
+        },
+        {
+          "id": "joint_cebad14123a6",
+          "name": "AxisB",
+          "type": "revolute",
+          "parent_link_id": "link_0b02e8638b0e",
+          "child_link_id": "link_6c6e17180d09",
+          "origin": {
+            "position": [
+              0.0,
+              0.0,
+              0.6000000238418579
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          "axis": [
+            0.0,
+            1.0,
+            0.0
+          ],
+          "limits": {
+            "lower": -2.199999959101143,
+            "upper": 0.20000000233456094,
+            "effort": null,
+            "velocity": null
+          },
+          "initial_position": 0.0,
+          "source_prim_path": "/ExternalArm/Constraints/AxisB",
+          "parent_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.6000000238418579
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          "child_frame": {
+            "position": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "quaternion": [
+              0.0,
+              0.0,
+              0.0,
+              1.0
+            ]
+          },
+          "initial_velocity": 0.0
+        }
+      ],
+      "actuators": [
+        {
+          "id": "actuator_5dc8a4b82197",
+          "name": "AxisA Drive",
+          "joint_id": "joint_7afd18e24bc6",
+          "control_type": "position",
+          "control_range": [
+            -1.5707963267948966,
+            1.5707963267948966
+          ],
+          "stiffness": 120.0,
+          "damping": 12.0,
+          "max_force": 80.0,
+          "source_prim_path": "/ExternalArm/Constraints/AxisA.drive:angular",
+          "target_position": 0.0,
+          "target_velocity": 0.0
+        },
+        {
+          "id": "actuator_7e3a17882889",
+          "name": "AxisB Drive",
+          "joint_id": "joint_cebad14123a6",
+          "control_type": "position",
+          "control_range": [
+            -2.199999959101143,
+            0.20000000233456094
+          ],
+          "stiffness": 90.0,
+          "damping": 9.0,
+          "max_force": 50.0,
+          "source_prim_path": "/ExternalArm/Constraints/AxisB.drive:angular",
+          "target_position": -0.4000000046691219,
+          "target_velocity": 0.0
+        }
+      ],
+      "sensors": []
+    }
+  ]
+}

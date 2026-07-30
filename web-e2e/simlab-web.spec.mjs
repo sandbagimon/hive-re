@@ -47,6 +47,38 @@ test('browser opens, simulates, saves, and exports without Qt', async ({ page })
   expect((await exportDownload).suggestedFilename()).toBe('scene.xml');
 });
 
+test('asset library loads the high-quality Franka robot meshes', async ({ page }) => {
+  await configureApi(page);
+  let bundleResponses = 0;
+  let legacyGeometryResponses = 0;
+  page.on('response', (response) => {
+    if (!response.ok()) return;
+    if (response.url().includes('/geometry/')) legacyGeometryResponses += 1;
+    if (
+      response.url().includes('/api/v1/artifacts/')
+      && response.headers()['content-type']?.includes('application/octet-stream')
+    ) bundleResponses += 1;
+  });
+  await page.goto('/');
+  const franka = page.locator('[data-asset-id="openusd_franka_quality_4b35c27245"]');
+  await expect(franka).toContainText('Franka Panda (High Quality)', { timeout: 10_000 });
+
+  await franka.click();
+
+  await expect(page.locator('#scene-tree')).toContainText('panda_link7');
+  await expect(page.locator('#scene-tree')).toContainText('panda_finger_joint2');
+  await expect.poll(() => bundleResponses, { timeout: 20_000 }).toBe(1);
+  expect(legacyGeometryResponses).toBe(0);
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(page.locator('#simulation-badge')).toHaveText('Running', {
+    timeout: 20_000,
+  });
+  await page.locator('[data-command="stop"]').click();
+  await expect(page.locator('#simulation-badge')).toHaveText('Stopped');
+  await page.locator('[data-action="frame"]').click();
+  await page.waitForTimeout(500);
+});
+
 test('frontend recovers shared assets when the API starts after the page', async ({ page }) => {
   await configureApi(page);
   const apiPattern = `${apiBaseUrl}/api/v1/**`;

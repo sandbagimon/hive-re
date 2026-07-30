@@ -177,6 +177,7 @@
         "importOpenUsd",
         "importOpenUsdPath",
         "getVisualGeometry",
+        "getVisualGeometryBundle",
         "openProject",
         "openProjectPath",
         "saveProject",

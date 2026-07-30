@@ -514,6 +514,15 @@ class WebApplication:
         properties = asset.get("default_properties")
         if not isinstance(properties, dict):
             return asset
+        robotics_cache = properties.get("robotics_cache")
+        if asset.get("type") == "robot" and isinstance(robotics_cache, str):
+            robotics_path = self._project_path(robotics_cache)
+            if not robotics_path.is_file():
+                raise ValueError(f"Robot asset cache is missing: {robotics_cache}")
+            robotics = json.loads(robotics_path.read_text(encoding="utf-8"))
+            if not isinstance(robotics, dict):
+                raise ValueError(f"Robot asset cache must contain an object: {robotics_cache}")
+            asset["robotics"] = robotics
         physics = properties.get("physics")
         if isinstance(physics, dict) and "material" in physics:
             values = material_for_id(physics["material"]).property_values()

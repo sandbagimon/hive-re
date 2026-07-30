@@ -145,7 +145,7 @@ function renderAssets(assets: AssetMetadata[]): void {
   for (const button of list.querySelectorAll<HTMLButtonElement>('[data-asset-id]')) {
     button.addEventListener('click', () => {
       const asset = store.current.assets.find((item) => item.id === button.dataset.assetId);
-      if (asset) store.addAsset(asset);
+      if (asset) store.addAsset(asset, asset.robotics);
     });
   }
 }
@@ -1425,6 +1425,12 @@ configureViewport({
     const result = await bridge.call<VisualGeometryPayload>('getVisualGeometry', cachePath);
     if (result.ok && result.data) return result.data;
     store.appendLog(`Mesh cache load failed: ${result.error ?? cachePath}`);
+    return null;
+  },
+  resolveVisualGeometryBundle: async (artifactId) => {
+    const result = await bridge.call<ArrayBuffer>('getVisualGeometryBundle', artifactId);
+    if (result.ok && result.data) return result.data;
+    store.appendLog(`Mesh bundle load failed: ${result.error ?? artifactId}`);
     return null;
   },
 });

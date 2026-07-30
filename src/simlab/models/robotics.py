@@ -123,6 +123,7 @@ class VisualGeometry:
     transform: RigidTransform = field(default_factory=RigidTransform)
     size: list[float] = field(default_factory=lambda: [1.0])
     asset_uri: str | None = None
+    visual_cache: str | None = None
     source_prim_path: str | None = None
     rgba: list[float] = field(default_factory=lambda: [0.7, 0.7, 0.7, 1.0])
     roughness: float | None = None
@@ -135,7 +136,7 @@ class VisualGeometry:
         self.metalness = _optional_float(self.metalness)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data = {
             "id": self.id,
             "name": self.name,
             "geometry_type": self.geometry_type,
@@ -147,6 +148,9 @@ class VisualGeometry:
             "roughness": self.roughness,
             "metalness": self.metalness,
         }
+        if self.visual_cache is not None:
+            data["visual_cache"] = self.visual_cache
+        return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> VisualGeometry:
@@ -157,6 +161,7 @@ class VisualGeometry:
             transform=RigidTransform.from_dict(data.get("transform")),
             size=list(data.get("size", [1.0])),
             asset_uri=data.get("asset_uri"),
+            visual_cache=data.get("visual_cache"),
             source_prim_path=data.get("source_prim_path"),
             rgba=list(data.get("rgba", [0.7, 0.7, 0.7, 1.0])),
             roughness=data.get("roughness"),
@@ -172,6 +177,7 @@ class Collider:
     transform: RigidTransform = field(default_factory=RigidTransform)
     size: list[float] = field(default_factory=lambda: [1.0])
     asset_uri: str | None = None
+    collision_mesh: str | None = None
     source_prim_path: str | None = None
     friction: list[float] = field(default_factory=lambda: [1.0, 0.005, 0.0001])
     restitution: float = 0.0
@@ -182,7 +188,7 @@ class Collider:
         self.restitution = float(self.restitution)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data = {
             "id": self.id,
             "name": self.name,
             "geometry_type": self.geometry_type,
@@ -193,6 +199,9 @@ class Collider:
             "friction": list(self.friction),
             "restitution": self.restitution,
         }
+        if self.collision_mesh is not None:
+            data["collision_mesh"] = self.collision_mesh
+        return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Collider:
@@ -203,6 +212,7 @@ class Collider:
             transform=RigidTransform.from_dict(data.get("transform")),
             size=list(data.get("size", [1.0])),
             asset_uri=data.get("asset_uri"),
+            collision_mesh=data.get("collision_mesh"),
             source_prim_path=data.get("source_prim_path"),
             friction=list(data.get("friction", [1.0, 0.005, 0.0001])),
             restitution=float(data.get("restitution", 0.0)),
@@ -333,17 +343,26 @@ class Joint:
     parent_link_id: str
     child_link_id: str
     origin: RigidTransform = field(default_factory=RigidTransform)
+    # OpenUSD defines a joint with one frame in each connected body.  When
+    # these fields are present, ``axis`` is expressed in the joint frame and
+    # consumers must evaluate T_parent_child(q) as
+    # parent_frame * motion(axis, q) * inverse(child_frame).
+    # ``origin`` remains as the v1 compatibility alias for parent_frame.
+    parent_frame: RigidTransform | None = None
+    child_frame: RigidTransform | None = None
     axis: list[float] = field(default_factory=lambda: [0.0, 0.0, 1.0])
     limits: JointLimits | None = None
     initial_position: float = 0.0
+    initial_velocity: float = 0.0
     source_prim_path: str | None = None
 
     def __post_init__(self) -> None:
         self.axis = _float_list(self.axis, 3, "axis")
         self.initial_position = float(self.initial_position)
+        self.initial_velocity = float(self.initial_velocity)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data = {
             "id": self.id,
             "name": self.name,
             "type": self.type,
@@ -355,6 +374,17 @@ class Joint:
             "initial_position": self.initial_position,
             "source_prim_path": self.source_prim_path,
         }
+        if self.parent_frame is not None:
+            data["parent_frame"] = self.parent_frame.to_dict()
+        if self.child_frame is not None:
+            data["child_frame"] = self.child_frame.to_dict()
+        if (
+            self.initial_velocity != 0.0
+            or self.parent_frame is not None
+            or self.child_frame is not None
+        ):
+            data["initial_velocity"] = self.initial_velocity
+        return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Joint:
@@ -366,9 +396,20 @@ class Joint:
             parent_link_id=str(data["parent_link_id"]),
             child_link_id=str(data["child_link_id"]),
             origin=RigidTransform.from_dict(data.get("origin")),
+            parent_frame=(
+                RigidTransform.from_dict(data["parent_frame"])
+                if data.get("parent_frame") is not None
+                else None
+            ),
+            child_frame=(
+                RigidTransform.from_dict(data["child_frame"])
+                if data.get("child_frame") is not None
+                else None
+            ),
             axis=list(data.get("axis", [0.0, 0.0, 1.0])),
             limits=JointLimits.from_dict(limits) if limits is not None else None,
             initial_position=float(data.get("initial_position", 0.0)),
+            initial_velocity=float(data.get("initial_velocity", 0.0)),
             source_prim_path=data.get("source_prim_path"),
         )
 
@@ -383,6 +424,8 @@ class Actuator:
     stiffness: float = 0.0
     damping: float = 0.0
     max_force: float | None = None
+    target_position: float | None = None
+    target_velocity: float | None = None
     source_prim_path: str | None = None
 
     def __post_init__(self) -> None:
@@ -390,9 +433,11 @@ class Actuator:
         self.stiffness = float(self.stiffness)
         self.damping = float(self.damping)
         self.max_force = _optional_float(self.max_force)
+        self.target_position = _optional_float(self.target_position)
+        self.target_velocity = _optional_float(self.target_velocity)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data = {
             "id": self.id,
             "name": self.name,
             "joint_id": self.joint_id,
@@ -403,6 +448,11 @@ class Actuator:
             "max_force": self.max_force,
             "source_prim_path": self.source_prim_path,
         }
+        if self.target_position is not None:
+            data["target_position"] = self.target_position
+        if self.target_velocity is not None:
+            data["target_velocity"] = self.target_velocity
+        return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Actuator:
@@ -415,6 +465,8 @@ class Actuator:
             stiffness=float(data.get("stiffness", 0.0)),
             damping=float(data.get("damping", 0.0)),
             max_force=data.get("max_force"),
+            target_position=data.get("target_position"),
+            target_velocity=data.get("target_velocity"),
             source_prim_path=data.get("source_prim_path"),
         )
 
@@ -493,9 +545,10 @@ class Articulation:
     sensors: list[Sensor] = field(default_factory=list)
     source_uri: str | None = None
     source_prim_path: str | None = None
+    visual_bundle: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        data = {
             "id": self.id,
             "name": self.name,
             "root_link_id": self.root_link_id,
@@ -507,6 +560,9 @@ class Articulation:
             "actuators": [actuator.to_dict() for actuator in self.actuators],
             "sensors": [sensor.to_dict() for sensor in self.sensors],
         }
+        if self.visual_bundle is not None:
+            data["visual_bundle"] = self.visual_bundle
+        return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Articulation:
@@ -517,6 +573,7 @@ class Articulation:
             fixed_base=bool(data["fixed_base"]),
             source_uri=data.get("source_uri"),
             source_prim_path=data.get("source_prim_path"),
+            visual_bundle=data.get("visual_bundle"),
             links=[Link.from_dict(item) for item in data.get("links", [])],
             joints=[Joint.from_dict(item) for item in data.get("joints", [])],
             actuators=[Actuator.from_dict(item) for item in data.get("actuators", [])],

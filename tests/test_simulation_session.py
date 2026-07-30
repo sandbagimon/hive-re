@@ -71,10 +71,12 @@ def test_robot_session_publishes_home_link_joint_and_actuator_state(tmp_path) ->
     assert len(initial.links) == 3
     assert len(initial.joints) == 2
     assert len(initial.actuators) == 2
-    assert initial.joints[1].qpos == pytest.approx(-0.4)
+    assert initial.joints[1].qpos == pytest.approx(0.0)
+    assert initial.actuators[1].ctrl == pytest.approx(-0.4)
     assert stepped.time > 0
     assert reset.time == 0
-    assert reset.joints[1].qpos == pytest.approx(-0.4)
+    assert reset.joints[1].qpos == pytest.approx(0.0)
+    assert reset.actuators[1].ctrl == pytest.approx(-0.4)
     payload = reset.to_dict()
     assert {item["id"] for item in payload["links"]} == {
         link.id for link in imported.robotics_model.articulations[0].links
@@ -372,7 +374,7 @@ def test_robot_session_clamps_joint_targets_and_reset_restores_home(tmp_path) ->
     assert commanded.actuators[1].ctrl == pytest.approx(-1.0)
     assert stepped.joints[0].qpos > 0
     reset = session.reset()
-    assert reset.joints[1].qpos == pytest.approx(-0.4)
+    assert reset.joints[1].qpos == pytest.approx(0.0)
     assert reset.actuators[1].ctrl == pytest.approx(-0.4)
     with pytest.raises(ValueError, match="No position actuator"):
         session.set_joint_position_targets({"joint_missing": 0.0})
@@ -522,7 +524,10 @@ def test_robot_control_watchdog_returns_targets_home(tmp_path) -> None:
     assert active.controller.timeout == pytest.approx(0.05)
     assert timed_out.controller.status == "timed_out"
     assert [state.ctrl for state in timed_out.actuators] == pytest.approx(
-        [shoulder.initial_position, elbow.initial_position]
+        [
+            actuator.target_position
+            for actuator in imported.robotics_model.articulations[0].actuators
+        ]
     )
 
 

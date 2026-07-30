@@ -272,6 +272,45 @@ def test_web_server_exposes_only_versioned_backend_resources(tmp_path: Path) -> 
     assert assets.status_code == 200
     assert assets.json()["version"] == "v1"
     assert assets.json()["assets"]
+    robot = next(asset for asset in assets.json()["assets"] if asset["type"] == "robot")
+    assert robot["name"] == "Two-Joint Robot Arm"
+    assert len(robot["robotics"]["articulations"][0]["links"]) == 3
+    assert len(robot["robotics"]["articulations"][0]["joints"]) == 2
+
+
+def test_api_streams_immutable_geometry_bundle_with_conditional_cache(
+    tmp_path: Path,
+) -> None:
+    seed = tmp_path / "seed"
+    seed.mkdir()
+    (seed / "metadata.json").write_text('{"assets": []}\n', encoding="utf-8")
+    app = create_app(tmp_path / "data", seed_assets=seed)
+    try:
+        project_id = create_api_project(app)
+        project = app.state.resources.get_project(project_id)
+        bundle_path = project.root / "assets" / "visual-test.simbin"
+        bundle_path.write_bytes(b"SIMGEOM1-test-bundle")
+        external = app.state.resources.externalize(
+            project,
+            {"visual_bundle": "assets/visual-test.simbin"},
+        )
+        artifact_id = external["visual_bundle"]
+        downloaded = request(app, "GET", f"/api/v1/artifacts/{artifact_id}")
+        unchanged = request(
+            app,
+            "GET",
+            f"/api/v1/artifacts/{artifact_id}",
+            headers={"If-None-Match": downloaded.headers["etag"]},
+        )
+    finally:
+        app.state.resources.close()
+
+    assert downloaded.status_code == 200
+    assert downloaded.content == b"SIMGEOM1-test-bundle"
+    assert downloaded.headers["cache-control"].endswith("immutable")
+    assert downloaded.headers["content-disposition"].startswith("inline;")
+    assert unchanged.status_code == 304
+    assert unchanged.content == b""
 
 
 def test_versioned_api_runs_isolated_simulation_resources(tmp_path: Path) -> None:

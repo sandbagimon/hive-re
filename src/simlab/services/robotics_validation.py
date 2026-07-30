@@ -199,6 +199,42 @@ def _validate_articulation(
                     "A joint cannot join a link to itself",
                 )
             )
+        if (joint.parent_frame is None) != (joint.child_frame is None):
+            issues.append(
+                RoboticsValidationIssue(
+                    "incomplete_joint_frames",
+                    joint_path,
+                    "Joint parent_frame and child_frame must be provided together",
+                )
+            )
+        for frame_name, frame in (
+            ("parent_frame", joint.parent_frame),
+            ("child_frame", joint.child_frame),
+        ):
+            if frame is None:
+                continue
+            values = [*frame.position, *frame.quaternion]
+            if not all(math.isfinite(value) for value in values):
+                issues.append(
+                    RoboticsValidationIssue(
+                        "non_finite_joint_frame",
+                        f"{joint_path}.{frame_name}",
+                        "Joint frame values must be finite",
+                    )
+                )
+            elif not math.isclose(
+                math.sqrt(sum(value * value for value in frame.quaternion)),
+                1.0,
+                rel_tol=0.0,
+                abs_tol=1e-6,
+            ):
+                issues.append(
+                    RoboticsValidationIssue(
+                        "invalid_joint_frame_quaternion",
+                        f"{joint_path}.{frame_name}.quaternion",
+                        "Joint frame quaternion must be normalized",
+                    )
+                )
         if joint.type != "fixed" and math.isclose(
             math.sqrt(sum(component * component for component in joint.axis)), 0.0, abs_tol=1e-9
         ):
