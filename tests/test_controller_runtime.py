@@ -6,6 +6,7 @@ import pytest
 
 from simlab.services.controller_runtime import (
     ActuatorObservation,
+    BodyObservation,
     ControllerAction,
     ControllerObservation,
     ControllerRunner,
@@ -19,6 +20,14 @@ def _observation(time: float = 0.0) -> ControllerObservation:
         timestep=0.01,
         joints={"shoulder": JointObservation(qpos=0.1, qvel=-0.2)},
         actuators={"shoulder_drive": ActuatorObservation(ctrl=0.3, force=1.2)},
+        bodies={
+            "actor_robot": BodyObservation(
+                position=(0.0, 0.0, 1.0),
+                quaternion=(1.0, 0.0, 0.0, 0.0),
+                linear_velocity=(0.0, 0.0, 0.1),
+                angular_velocity=(0.0, 0.0, 0.0),
+            )
+        },
     )
 
 
@@ -30,6 +39,8 @@ def test_controller_observation_and_action_are_immutable() -> None:
         observation.joints["elbow"] = JointObservation(0.0, 0.0)  # type: ignore[index]
     with pytest.raises(TypeError):
         action.position_targets["shoulder"] = 0.0  # type: ignore[index]
+    with pytest.raises(TypeError):
+        observation.bodies["other"] = observation.bodies["actor_robot"]  # type: ignore[index]
     with pytest.raises(FrozenInstanceError):
         observation.time = 1.0  # type: ignore[misc]
 

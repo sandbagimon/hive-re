@@ -3,7 +3,9 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
+
+import numpy as np
 
 from simlab.models.recording import JointStateRecording
 from simlab.models.scene import Scene
@@ -11,6 +13,7 @@ from simlab.models.trajectory import JointTrajectory
 from simlab.services.contact_sensors import ContactSensorSample, ContactSensorScheduler
 from simlab.services.controller_runtime import (
     ActuatorObservation,
+    BodyObservation,
     ControllerObservation,
     ControllerRunner,
     JointObservation,
@@ -25,6 +28,7 @@ from simlab.services.joint_state_sensors import (
 )
 from simlab.services.mjcf_exporter import export_scene_to_mjcf, imu_sensor_channel_names
 from simlab.services.mujoco_contact_adapter import MujocoContactAggregator
+from simlab.services.quadrotor_dynamics import quadrotor_models_from_scene
 from simlab.services.trajectory_player import (
     JointTrajectoryPlayer,
     TrajectoryPlaybackState,
@@ -142,9 +146,7 @@ class SimulationState:
     sensors: list[JointStateSensorSample | ImuSensorSample | ContactSensorSample] = field(
         default_factory=list
     )
-    controller: ControllerSimulationState = field(
-        default_factory=ControllerSimulationState
-    )
+    controller: ControllerSimulationState = field(default_factory=ControllerSimulationState)
     trajectory: TrajectoryPlaybackState = field(
         default_factory=lambda: TrajectoryPlaybackState(
             status="stopped",
@@ -153,9 +155,7 @@ class SimulationState:
             name=None,
         )
     )
-    recording: RecordingSimulationState = field(
-        default_factory=RecordingSimulationState
-    )
+    recording: RecordingSimulationState = field(default_factory=RecordingSimulationState)
     clock: ClockSimulationState = field(default_factory=ClockSimulationState)
 
     def to_dict(self) -> dict[str, Any]:
@@ -197,6 +197,8 @@ class MuJoCoSimulationSession:
         self._body_ids = self._map_actor_bodies(scene)
         self._link_ids, self._joint_ids, self._actuator_ids = self._map_robotics(scene)
         self._joint_position_actuators = self._map_joint_position_actuators(scene)
+        self._quadrotor_models = quadrotor_models_from_scene(scene)
+        self._validate_quadrotor_bindings()
         self._trajectory_player = JointTrajectoryPlayer()
         self._state_recorder = JointStateRecorder(self._read_recording_max_samples(scene))
         sensor_definitions = [
@@ -237,9 +239,7 @@ class MuJoCoSimulationSession:
             float(self.model.opt.timestep),
         )
         self._physics_step_index = 0
-        self._controller_runner = ControllerRunner(
-            deadline=self._read_controller_deadline(scene)
-        )
+        self._controller_runner = ControllerRunner(deadline=self._read_controller_deadline(scene))
         self._control_timeout = self._read_control_timeout(scene)
         self._controller_status = "ready"
         self._controller_message: str | None = None
@@ -254,6 +254,7 @@ class MuJoCoSimulationSession:
             self._apply_trajectory_target()
             self._apply_python_controller()
             self._apply_control_watchdog()
+            self._apply_quadrotor_forces()
             self._mujoco.mj_step(self.model, self.data)
             self._apply_trajectory_target()
             self._physics_step_index += 1
@@ -331,6 +332,22 @@ class MuJoCoSimulationSession:
         self._apply_joint_target_updates(updates)
         return self.state()
 
+    def set_actuator_controls(self, controls: dict[str, float]) -> SimulationState:
+        """Apply named actuator values without exposing engine indexes."""
+
+        if self._controller_runner.attached:
+            raise RuntimeError("Detach the Python controller before setting manual controls")
+        if self._trajectory_player.status == "playing":
+            self._trajectory_player.pause(float(self.data.time))
+        try:
+            updates = self._validate_actuator_controls(controls)
+        except (TypeError, ValueError) as exc:
+            self._controller_status = "fault"
+            self._controller_message = str(exc)
+            raise
+        self._apply_actuator_control_updates(updates)
+        return self.state()
+
     def load_joint_trajectory(self, trajectory: JointTrajectory) -> SimulationState:
         self._trajectory_player.load(
             trajectory,
@@ -338,9 +355,7 @@ class MuJoCoSimulationSession:
         )
         targets = self._trajectory_player.sample(float(self.data.time))
         if targets is not None:
-            self._apply_joint_target_updates(
-                self._validate_joint_position_targets(targets)
-            )
+            self._apply_joint_target_updates(self._validate_joint_position_targets(targets))
         return self.state()
 
     def play_trajectory(self) -> SimulationState:
@@ -358,9 +373,7 @@ class MuJoCoSimulationSession:
         self._trajectory_player.stop()
         targets = self._trajectory_player.sample(float(self.data.time))
         if targets is not None:
-            self._apply_joint_target_updates(
-                self._validate_joint_position_targets(targets)
-            )
+            self._apply_joint_target_updates(self._validate_joint_position_targets(targets))
         return self.state()
 
     def start_joint_recording(
@@ -379,8 +392,7 @@ class MuJoCoSimulationSession:
         unknown_sensor_ids = sorted(set(selected_sensor_ids) - self._sensor_ids)
         if unknown_sensor_ids:
             raise ValueError(
-                "Recording references unknown sensor ID(s): "
-                + ", ".join(unknown_sensor_ids)
+                "Recording references unknown sensor ID(s): " + ", ".join(unknown_sensor_ids)
             )
         self._state_recorder.start(
             name=name,
@@ -388,8 +400,7 @@ class MuJoCoSimulationSession:
             actuator_ids=selected_actuator_ids,
             sensor_ids=selected_sensor_ids,
             sensor_types={
-                sensor_id: self._sensor_types[sensor_id]
-                for sensor_id in selected_sensor_ids
+                sensor_id: self._sensor_types[sensor_id] for sensor_id in selected_sensor_ids
             },
             timestep=float(self.model.opt.timestep),
             scene_version=self.scene.version,
@@ -517,9 +528,7 @@ class MuJoCoSimulationSession:
         return links, joints, actuators
 
     def _reset_to_home(self) -> None:
-        key_id = self._mujoco.mj_name2id(
-            self.model, self._mujoco.mjtObj.mjOBJ_KEY, "home"
-        )
+        key_id = self._mujoco.mj_name2id(self.model, self._mujoco.mjtObj.mjOBJ_KEY, "home")
         if key_id >= 0:
             self._mujoco.mj_resetDataKeyframe(self.model, self.data, key_id)
         else:
@@ -547,11 +556,25 @@ class MuJoCoSimulationSession:
             updates.append((actuator_id, value))
         return updates
 
+    def _validate_actuator_controls(self, controls: dict[str, float]) -> list[tuple[int, float]]:
+        updates: list[tuple[int, float]] = []
+        for actuator_id, control in controls.items():
+            mujoco_id = self._actuator_ids.get(actuator_id)
+            if mujoco_id is None:
+                raise ValueError(f"Unknown actuator: {actuator_id}")
+            value = float(control)
+            if not math.isfinite(value):
+                raise ValueError(f"Actuator control must be finite: {actuator_id}")
+            if self.model.actuator_ctrllimited[mujoco_id]:
+                lower, upper = self.model.actuator_ctrlrange[mujoco_id]
+                value = max(float(lower), min(float(upper), value))
+            updates.append((mujoco_id, value))
+        return updates
+
     def _apply_control_watchdog(self) -> None:
         if (
             self._controller_runner.attached
-            or
-            self._control_timeout <= 0
+            or self._control_timeout <= 0
             or self._controller_status != "active"
             or self._last_command_time is None
             or self.data.time - self._last_command_time < self._control_timeout
@@ -559,9 +582,12 @@ class MuJoCoSimulationSession:
             return
         self.data.ctrl[:] = self._home_controls
         self._controller_status = "timed_out"
-        self._controller_message = "Joint command timed out; targets returned to Home."
+        self._controller_message = "Control command timed out; actuators returned to Home."
 
     def _apply_joint_target_updates(self, updates: list[tuple[int, float]]) -> None:
+        self._apply_actuator_control_updates(updates)
+
+    def _apply_actuator_control_updates(self, updates: list[tuple[int, float]]) -> None:
         for actuator_id, value in updates:
             self.data.ctrl[actuator_id] = value
         if updates:
@@ -575,9 +601,7 @@ class MuJoCoSimulationSession:
         targets = self._trajectory_player.sample(float(self.data.time))
         if targets is None:
             return
-        self._apply_joint_target_updates(
-            self._validate_joint_position_targets(targets)
-        )
+        self._apply_joint_target_updates(self._validate_joint_position_targets(targets))
 
     def _controller_observation(self) -> ControllerObservation:
         joints = {
@@ -594,11 +618,42 @@ class MuJoCoSimulationSession:
             )
             for actuator_id, mujoco_id in self._actuator_ids.items()
         }
+        body_ids = {**self._body_ids, **self._link_ids}
+        bodies: dict[str, BodyObservation] = {}
+        for body_id, mujoco_id in body_ids.items():
+            velocity = np.zeros(6, dtype=np.float64)
+            self._mujoco.mj_objectVelocity(
+                self.model,
+                self.data,
+                self._mujoco.mjtObj.mjOBJ_BODY,
+                mujoco_id,
+                velocity,
+                0,
+            )
+            bodies[body_id] = BodyObservation(
+                position=cast(
+                    tuple[float, float, float],
+                    tuple(float(value) for value in self.data.xpos[mujoco_id]),
+                ),
+                quaternion=cast(
+                    tuple[float, float, float, float],
+                    tuple(float(value) for value in self.data.xquat[mujoco_id]),
+                ),
+                linear_velocity=cast(
+                    tuple[float, float, float],
+                    tuple(float(value) for value in velocity[3:]),
+                ),
+                angular_velocity=cast(
+                    tuple[float, float, float],
+                    tuple(float(value) for value in velocity[:3]),
+                ),
+            )
         return ControllerObservation(
             time=float(self.data.time),
             timestep=float(self.model.opt.timestep),
             joints=joints,
             actuators=actuators,
+            bodies=bodies,
         )
 
     def _joint_kinematics(self) -> dict[str, JointKinematics]:
@@ -658,13 +713,9 @@ class MuJoCoSimulationSession:
             )
             w, x, y, z = (
                 float(value)
-                for value in self.data.sensordata[
-                    orientation_address : orientation_address + 4
-                ]
+                for value in self.data.sensordata[orientation_address : orientation_address + 4]
             )
-            angular_velocity = self.data.sensordata[
-                velocity_address : velocity_address + 3
-            ]
+            angular_velocity = self.data.sensordata[velocity_address : velocity_address + 3]
             linear_acceleration = self.data.sensordata[
                 acceleration_address : acceleration_address + 3
             ]
@@ -689,14 +740,83 @@ class MuJoCoSimulationSession:
         action = self._controller_runner.step(self._controller_observation())
         if action is not None:
             try:
-                updates = self._validate_joint_position_targets(
-                    dict(action.position_targets)
-                )
+                updates = self._validate_joint_position_targets(dict(action.position_targets))
+                direct_updates = self._validate_actuator_controls(dict(action.actuator_controls))
+                mapped_ids = {identifier for identifier, _ in updates}
+                duplicate_ids = mapped_ids & {identifier for identifier, _ in direct_updates}
+                if duplicate_ids:
+                    actuator_names = {
+                        identifier: name for name, identifier in self._actuator_ids.items()
+                    }
+                    duplicate_names = sorted(
+                        actuator_names[identifier] for identifier in duplicate_ids
+                    )
+                    raise ValueError(
+                        "Controller action commands an actuator twice: "
+                        + ", ".join(duplicate_names)
+                    )
             except (TypeError, ValueError) as exc:
                 self._controller_runner.fail(f"Controller action rejected: {exc}")
             else:
-                self._apply_joint_target_updates(updates)
+                self._apply_actuator_control_updates([*updates, *direct_updates])
         self._sync_python_controller_state()
+
+    def _validate_quadrotor_bindings(self) -> None:
+        for model in self._quadrotor_models:
+            if model.body_link_id not in self._link_ids:
+                raise ValueError(
+                    f"Quadrotor {model.actor_id} body link was not exported to MuJoCo: "
+                    f"{model.body_link_id}"
+                )
+            for rotor in model.rotors:
+                if rotor.link_id not in self._link_ids:
+                    raise ValueError(
+                        f"Quadrotor rotor link was not exported to MuJoCo: {rotor.link_id}"
+                    )
+                if rotor.actuator_id not in self._actuator_ids:
+                    raise ValueError(
+                        f"Quadrotor actuator was not exported to MuJoCo: {rotor.actuator_id}"
+                    )
+
+    def _apply_quadrotor_forces(self) -> None:
+        if not self._quadrotor_models:
+            return
+        affected_body_ids = {self._link_ids[model.body_link_id] for model in self._quadrotor_models}
+        affected_body_ids.update(
+            self._link_ids[rotor.link_id]
+            for model in self._quadrotor_models
+            for rotor in model.rotors
+        )
+        for body_id in affected_body_ids:
+            self.data.xfrc_applied[body_id] = 0.0
+        for model in self._quadrotor_models:
+            body_id = self._link_ids[model.body_link_id]
+            body_center = self.data.xipos[body_id]
+            net_force = np.zeros(3, dtype=np.float64)
+            net_torque = np.zeros(3, dtype=np.float64)
+            for rotor in model.rotors:
+                rotor_body_id = self._link_ids[rotor.link_id]
+                actuator_id = self._actuator_ids[rotor.actuator_id]
+                angular_velocity = float(self.data.ctrl[actuator_id])
+                angular_velocity = max(
+                    rotor.min_angular_velocity,
+                    min(rotor.max_angular_velocity, angular_velocity),
+                )
+                squared_velocity = angular_velocity * angular_velocity
+                rotation = self.data.xmat[rotor_body_id].reshape((3, 3))
+                axis = rotation @ rotor.axis
+                thrust = rotor.thrust_coefficient * squared_velocity
+                reaction_torque = rotor.direction * rotor.torque_coefficient * squared_velocity
+                force = axis * thrust
+                lever = self.data.xpos[rotor_body_id] - body_center
+                net_force += force
+                net_torque += np.cross(lever, force)
+                net_torque += axis * reaction_torque
+            # The aerodynamic wrench belongs to the airframe. Applying reaction
+            # torque directly to low-inertia, freely rotating visual rotor links
+            # accelerates their hinges without bound and destabilizes MuJoCo.
+            self.data.xfrc_applied[body_id, :3] += net_force
+            self.data.xfrc_applied[body_id, 3:] += net_torque
 
     def _sync_python_controller_state(self) -> None:
         runner_state = self._controller_runner.state
@@ -728,14 +848,10 @@ class MuJoCoSimulationSession:
     def _read_recording_max_samples(scene: Scene) -> int:
         raw_value = scene.simulation_config.get("recording_max_samples", 100_000)
         if isinstance(raw_value, bool):
-            raise ValueError(
-                "simulation_config.recording_max_samples must be an integer >= 1"
-            )
+            raise ValueError("simulation_config.recording_max_samples must be an integer >= 1")
         value = int(raw_value)
         if value < 1 or float(raw_value) != value:
-            raise ValueError(
-                "simulation_config.recording_max_samples must be an integer >= 1"
-            )
+            raise ValueError("simulation_config.recording_max_samples must be an integer >= 1")
         return value
 
     def _recording_state(self) -> RecordingSimulationState:

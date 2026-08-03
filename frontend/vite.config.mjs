@@ -4,6 +4,11 @@ import { resolve } from 'node:path';
 const repositoryRoot = resolve(import.meta.dirname, '..');
 const sourceRoot = resolve(import.meta.dirname, 'src');
 const apiProxyTarget = process.env.SIMLAB_API_PROXY_TARGET ?? 'http://127.0.0.1:8765';
+const developmentAccessToken = (
+  process.env.SIMLAB_FRONTEND_ACCESS_TOKEN
+  ?? process.env.SIMLAB_API_TOKEN
+  ?? ''
+).trim() || null;
 
 export default defineConfig({
   root: sourceRoot,
@@ -22,7 +27,7 @@ export default defineConfig({
           webSocketBaseUrl: 'same-origin',
           apiVersion: 'v1',
           projectId: null,
-          accessToken: null,
+          accessToken: developmentAccessToken,
         }));
       });
     },

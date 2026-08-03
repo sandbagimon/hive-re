@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Protocol
 
@@ -29,11 +29,37 @@ class ActuatorObservation:
 
 
 @dataclass(frozen=True, slots=True)
+class BodyObservation:
+    position: tuple[float, float, float]
+    quaternion: tuple[float, float, float, float]
+    linear_velocity: tuple[float, float, float]
+    angular_velocity: tuple[float, float, float]
+
+    def __post_init__(self) -> None:
+        if (
+            len(self.position) != 3
+            or len(self.quaternion) != 4
+            or len(self.linear_velocity) != 3
+            or len(self.angular_velocity) != 3
+        ):
+            raise ValueError("Body observation vectors have invalid dimensions")
+        values = (
+            *self.position,
+            *self.quaternion,
+            *self.linear_velocity,
+            *self.angular_velocity,
+        )
+        if any(not math.isfinite(value) for value in values):
+            raise ValueError("Body observation values must be finite")
+
+
+@dataclass(frozen=True, slots=True)
 class ControllerObservation:
     time: float
     timestep: float
     joints: Mapping[str, JointObservation]
     actuators: Mapping[str, ActuatorObservation]
+    bodies: Mapping[str, BodyObservation] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not math.isfinite(self.time) or self.time < 0:
@@ -42,11 +68,13 @@ class ControllerObservation:
             raise ValueError("Controller observation timestep must be finite and > 0")
         object.__setattr__(self, "joints", MappingProxyType(dict(self.joints)))
         object.__setattr__(self, "actuators", MappingProxyType(dict(self.actuators)))
+        object.__setattr__(self, "bodies", MappingProxyType(dict(self.bodies)))
 
 
 @dataclass(frozen=True, slots=True)
 class ControllerAction:
-    position_targets: Mapping[str, float]
+    position_targets: Mapping[str, float] = field(default_factory=dict)
+    actuator_controls: Mapping[str, float] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         targets = {str(joint_id): float(value) for joint_id, value in self.position_targets.items()}
@@ -54,7 +82,16 @@ class ControllerAction:
             raise ValueError("Controller action joint IDs must not be empty")
         if any(not math.isfinite(value) for value in targets.values()):
             raise ValueError("Controller position targets must be finite")
+        controls = {
+            str(actuator_id): float(value)
+            for actuator_id, value in self.actuator_controls.items()
+        }
+        if any(not actuator_id for actuator_id in controls):
+            raise ValueError("Controller action actuator IDs must not be empty")
+        if any(not math.isfinite(value) for value in controls.values()):
+            raise ValueError("Controller actuator controls must be finite")
         object.__setattr__(self, "position_targets", MappingProxyType(targets))
+        object.__setattr__(self, "actuator_controls", MappingProxyType(controls))
 
 
 class StepController(Protocol):

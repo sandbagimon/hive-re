@@ -1,0 +1,24 @@
+{
+  "version": 4,
+  "format": "openusd",
+  "kind": "robot",
+  "kinematics_contract_version": 2,
+  "simulation_profile": "pegasus_iris_quadrotor_v1",
+  "source_sha256": "09f8390b45a6a9d7588418030907c16bdc141d3372af12101ceb0526d670985b",
+  "source": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+  "robotics_model": "assets/imported/openusd_iris_09f8390b45/robotics.json",
+  "import_report": "assets/imported/openusd_iris_09f8390b45/import-report.json",
+  "dependencies": [],
+  "visual_bundle": "assets/imported/openusd_iris_09f8390b45/visual-0c28e711659123fc.simbin",
+  "visual_bundle_format": 1,
+  "collision_meshes": [
+    "assets/imported/openusd_iris_09f8390b45/colliders/collider_3e7913cc3d09/collision.obj",
+    "assets/imported/openusd_iris_09f8390b45/colliders/collider_5dd329fc4eed/collision.obj",
+    "assets/imported/openusd_iris_09f8390b45/colliders/collider_eb920ec6483d/collision.obj",
+    "assets/imported/openusd_iris_09f8390b45/colliders/collider_8c7aedc016eb/collision.obj",
+    "assets/imported/openusd_iris_09f8390b45/colliders/collider_81de18ca3640/collision.obj"
+  ],
+  "articulation_ids": [
+    "articulation_07d1eea61341"
+  ]
+}

@@ -5,6 +5,15 @@ export interface RigidPose {
   quaternion: Quaternion;
 }
 
+export interface RotorAnimationState {
+  angle: number;
+  time: number;
+  angularVelocity: number;
+}
+
+const TAU = Math.PI * 2;
+const ROTOR_VISUAL_SPEED_SCALE = 0.08;
+
 function normalizeQuaternion(value: Quaternion): Quaternion {
   const length = Math.hypot(...value);
   if (length < 1e-12) return [0, 0, 0, 1];
@@ -95,4 +104,25 @@ export function jointLocalPose(joint: RobotJoint): RigidPose | null {
     compose(joint.parent_frame, jointMotion(joint)),
     inverse(joint.child_frame),
   );
+}
+
+/** Integrate a deliberately slowed visual phase without changing physics. */
+export function advanceRotorAnimation(
+  previous: RotorAnimationState | undefined,
+  time: number,
+  angularVelocity: number,
+  direction: -1 | 1,
+): RotorAnimationState {
+  if (!previous || time < previous.time) {
+    return { angle: 0, time, angularVelocity };
+  }
+  const elapsed = time - previous.time;
+  const averageVelocity = (previous.angularVelocity + angularVelocity) * 0.5;
+  const unwrapped = previous.angle
+    + direction * averageVelocity * elapsed * ROTOR_VISUAL_SPEED_SCALE;
+  return {
+    angle: ((unwrapped % TAU) + TAU) % TAU,
+    time,
+    angularVelocity,
+  };
 }

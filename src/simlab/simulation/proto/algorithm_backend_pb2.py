@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n/simlab/simulation/proto/algorithm_backend.proto\x12\x13simlab.algorithm.v1\"5\n\x0bSceneBundle\x12\x12\n\nscene_json\x18\x01 \x01(\t\x12\x12\n\nscene_hash\x18\x02 \x01(\t\"\x1d\n\x0f\x42odyDescription\x12\n\n\x02id\x18\x01 \x01(\t\"Z\n\x10JointDescription\x12\n\n\x02id\x18\x01 \x01(\t\x12\x12\n\x05lower\x18\x02 \x01(\x01H\x00\x88\x01\x01\x12\x12\n\x05upper\x18\x03 \x01(\x01H\x01\x88\x01\x01\x42\x08\n\x06_lowerB\x08\n\x06_upper\"g\n\x13\x41\x63tuatorDescription\x12\n\n\x02id\x18\x01 \x01(\t\x12\x10\n\x08joint_id\x18\x02 \x01(\t\x12\x14\n\x0c\x63ontrol_type\x18\x03 \x01(\t\x12\r\n\x05lower\x18\x04 \x01(\x01\x12\r\n\x05upper\x18\x05 \x01(\x01\"\xa6\x02\n\x10ModelDescription\x12\x14\n\x0c\x62\x61\x63kend_name\x18\x01 \x01(\t\x12\x17\n\x0f\x62\x61\x63kend_version\x18\x02 \x01(\t\x12\x10\n\x08timestep\x18\x03 \x01(\x01\x12\x12\n\nscene_hash\x18\x04 \x01(\t\x12\x13\n\x0bschema_hash\x18\x05 \x01(\t\x12\x34\n\x06\x62odies\x18\x06 \x03(\x0b\x32$.simlab.algorithm.v1.BodyDescription\x12\x35\n\x06joints\x18\x07 \x03(\x0b\x32%.simlab.algorithm.v1.JointDescription\x12;\n\tactuators\x18\x08 \x03(\x0b\x32(.simlab.algorithm.v1.ActuatorDescription\"\xde\x01\n\x0c\x42\x61\x63kendState\x12\x13\n\x0bschema_hash\x18\x01 \x01(\t\x12\x0c\n\x04time\x18\x02 \x01(\x01\x12\x12\n\nstep_index\x18\x03 \x01(\x03\x12\x17\n\x0fjoint_positions\x18\x04 \x03(\x01\x12\x18\n\x10joint_velocities\x18\x05 \x03(\x01\x12\x19\n\x11\x61\x63tuator_controls\x18\x06 \x03(\x01\x12\x17\n\x0f\x61\x63tuator_forces\x18\x07 \x03(\x01\x12\x16\n\x0e\x62ody_positions\x18\x08 \x03(\x01\x12\x18\n\x10\x62ody_quaternions\x18\t \x03(\x01\"\'\n\nNamedValue\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x01\"\xbf\x01\n\x0cResetOptions\x12\x38\n\x0fjoint_positions\x18\x01 \x03(\x0b\x32\x1f.simlab.algorithm.v1.NamedValue\x12\x39\n\x10joint_velocities\x18\x02 \x03(\x0b\x32\x1f.simlab.algorithm.v1.NamedValue\x12:\n\x11\x61\x63tuator_controls\x18\x03 \x03(\x0b\x32\x1f.simlab.algorithm.v1.NamedValue\"b\n\x14\x43reateSessionRequest\x12\x18\n\x10\x63ontract_version\x18\x01 \x01(\t\x12\x30\n\x06\x62undle\x18\x02 \x01(\x0b\x32 .simlab.algorithm.v1.SceneBundle\"g\n\x15\x43reateSessionResponse\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12:\n\x0b\x64\x65scription\x18\x02 \x01(\x0b\x32%.simlab.algorithm.v1.ModelDescription\"r\n\x0cResetRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x11\n\x04seed\x18\x02 \x01(\x03H\x00\x88\x01\x01\x12\x32\n\x07options\x18\x03 \x01(\x0b\x32!.simlab.algorithm.v1.ResetOptionsB\x07\n\x05_seed\"_\n\x0bStepRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x13\n\x0bschema_hash\x18\x02 \x01(\t\x12\x10\n\x08\x63ontrols\x18\x03 \x03(\x01\x12\x15\n\rphysics_steps\x18\x04 \x01(\x05\"A\n\rStateResponse\x12\x30\n\x05state\x18\x01 \x01(\x0b\x32!.simlab.algorithm.v1.BackendState\"\"\n\x0c\x43loseRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\"\x0f\n\rCloseResponse2\xf2\x02\n\x1a\x41lgorithmSimulationBackend\x12\x66\n\rCreateSession\x12).simlab.algorithm.v1.CreateSessionRequest\x1a*.simlab.algorithm.v1.CreateSessionResponse\x12N\n\x05Reset\x12!.simlab.algorithm.v1.ResetRequest\x1a\".simlab.algorithm.v1.StateResponse\x12L\n\x04Step\x12 .simlab.algorithm.v1.StepRequest\x1a\".simlab.algorithm.v1.StateResponse\x12N\n\x05\x43lose\x12!.simlab.algorithm.v1.CloseRequest\x1a\".simlab.algorithm.v1.CloseResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n/simlab/simulation/proto/algorithm_backend.proto\x12\x13simlab.algorithm.v1\"5\n\x0bSceneBundle\x12\x12\n\nscene_json\x18\x01 \x01(\t\x12\x12\n\nscene_hash\x18\x02 \x01(\t\"\x1d\n\x0f\x42odyDescription\x12\n\n\x02id\x18\x01 \x01(\t\"Z\n\x10JointDescription\x12\n\n\x02id\x18\x01 \x01(\t\x12\x12\n\x05lower\x18\x02 \x01(\x01H\x00\x88\x01\x01\x12\x12\n\x05upper\x18\x03 \x01(\x01H\x01\x88\x01\x01\x42\x08\n\x06_lowerB\x08\n\x06_upper\"g\n\x13\x41\x63tuatorDescription\x12\n\n\x02id\x18\x01 \x01(\t\x12\x10\n\x08joint_id\x18\x02 \x01(\t\x12\x14\n\x0c\x63ontrol_type\x18\x03 \x01(\t\x12\r\n\x05lower\x18\x04 \x01(\x01\x12\r\n\x05upper\x18\x05 \x01(\x01\"\xa6\x02\n\x10ModelDescription\x12\x14\n\x0c\x62\x61\x63kend_name\x18\x01 \x01(\t\x12\x17\n\x0f\x62\x61\x63kend_version\x18\x02 \x01(\t\x12\x10\n\x08timestep\x18\x03 \x01(\x01\x12\x12\n\nscene_hash\x18\x04 \x01(\t\x12\x13\n\x0bschema_hash\x18\x05 \x01(\t\x12\x34\n\x06\x62odies\x18\x06 \x03(\x0b\x32$.simlab.algorithm.v1.BodyDescription\x12\x35\n\x06joints\x18\x07 \x03(\x0b\x32%.simlab.algorithm.v1.JointDescription\x12;\n\tactuators\x18\x08 \x03(\x0b\x32(.simlab.algorithm.v1.ActuatorDescription\"\x9f\x02\n\x0c\x42\x61\x63kendState\x12\x13\n\x0bschema_hash\x18\x01 \x01(\t\x12\x0c\n\x04time\x18\x02 \x01(\x01\x12\x12\n\nstep_index\x18\x03 \x01(\x03\x12\x17\n\x0fjoint_positions\x18\x04 \x03(\x01\x12\x18\n\x10joint_velocities\x18\x05 \x03(\x01\x12\x19\n\x11\x61\x63tuator_controls\x18\x06 \x03(\x01\x12\x17\n\x0f\x61\x63tuator_forces\x18\x07 \x03(\x01\x12\x16\n\x0e\x62ody_positions\x18\x08 \x03(\x01\x12\x18\n\x10\x62ody_quaternions\x18\t \x03(\x01\x12\x1e\n\x16\x62ody_linear_velocities\x18\n \x03(\x01\x12\x1f\n\x17\x62ody_angular_velocities\x18\x0b \x03(\x01\"\'\n\nNamedValue\x12\n\n\x02id\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x01\"\xbf\x01\n\x0cResetOptions\x12\x38\n\x0fjoint_positions\x18\x01 \x03(\x0b\x32\x1f.simlab.algorithm.v1.NamedValue\x12\x39\n\x10joint_velocities\x18\x02 \x03(\x0b\x32\x1f.simlab.algorithm.v1.NamedValue\x12:\n\x11\x61\x63tuator_controls\x18\x03 \x03(\x0b\x32\x1f.simlab.algorithm.v1.NamedValue\"b\n\x14\x43reateSessionRequest\x12\x18\n\x10\x63ontract_version\x18\x01 \x01(\t\x12\x30\n\x06\x62undle\x18\x02 \x01(\x0b\x32 .simlab.algorithm.v1.SceneBundle\"g\n\x15\x43reateSessionResponse\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12:\n\x0b\x64\x65scription\x18\x02 \x01(\x0b\x32%.simlab.algorithm.v1.ModelDescription\"r\n\x0cResetRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x11\n\x04seed\x18\x02 \x01(\x03H\x00\x88\x01\x01\x12\x32\n\x07options\x18\x03 \x01(\x0b\x32!.simlab.algorithm.v1.ResetOptionsB\x07\n\x05_seed\"_\n\x0bStepRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\x12\x13\n\x0bschema_hash\x18\x02 \x01(\t\x12\x10\n\x08\x63ontrols\x18\x03 \x03(\x01\x12\x15\n\rphysics_steps\x18\x04 \x01(\x05\"A\n\rStateResponse\x12\x30\n\x05state\x18\x01 \x01(\x0b\x32!.simlab.algorithm.v1.BackendState\"\"\n\x0c\x43loseRequest\x12\x12\n\nsession_id\x18\x01 \x01(\t\"\x0f\n\rCloseResponse2\xf2\x02\n\x1a\x41lgorithmSimulationBackend\x12\x66\n\rCreateSession\x12).simlab.algorithm.v1.CreateSessionRequest\x1a*.simlab.algorithm.v1.CreateSessionResponse\x12N\n\x05Reset\x12!.simlab.algorithm.v1.ResetRequest\x1a\".simlab.algorithm.v1.StateResponse\x12L\n\x04Step\x12 .simlab.algorithm.v1.StepRequest\x1a\".simlab.algorithm.v1.StateResponse\x12N\n\x05\x43lose\x12!.simlab.algorithm.v1.CloseRequest\x1a\".simlab.algorithm.v1.CloseResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -42,25 +42,25 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_MODELDESCRIPTION']._serialized_start=356
   _globals['_MODELDESCRIPTION']._serialized_end=650
   _globals['_BACKENDSTATE']._serialized_start=653
-  _globals['_BACKENDSTATE']._serialized_end=875
-  _globals['_NAMEDVALUE']._serialized_start=877
-  _globals['_NAMEDVALUE']._serialized_end=916
-  _globals['_RESETOPTIONS']._serialized_start=919
-  _globals['_RESETOPTIONS']._serialized_end=1110
-  _globals['_CREATESESSIONREQUEST']._serialized_start=1112
-  _globals['_CREATESESSIONREQUEST']._serialized_end=1210
-  _globals['_CREATESESSIONRESPONSE']._serialized_start=1212
-  _globals['_CREATESESSIONRESPONSE']._serialized_end=1315
-  _globals['_RESETREQUEST']._serialized_start=1317
-  _globals['_RESETREQUEST']._serialized_end=1431
-  _globals['_STEPREQUEST']._serialized_start=1433
-  _globals['_STEPREQUEST']._serialized_end=1528
-  _globals['_STATERESPONSE']._serialized_start=1530
-  _globals['_STATERESPONSE']._serialized_end=1595
-  _globals['_CLOSEREQUEST']._serialized_start=1597
-  _globals['_CLOSEREQUEST']._serialized_end=1631
-  _globals['_CLOSERESPONSE']._serialized_start=1633
-  _globals['_CLOSERESPONSE']._serialized_end=1648
-  _globals['_ALGORITHMSIMULATIONBACKEND']._serialized_start=1651
-  _globals['_ALGORITHMSIMULATIONBACKEND']._serialized_end=2021
+  _globals['_BACKENDSTATE']._serialized_end=940
+  _globals['_NAMEDVALUE']._serialized_start=942
+  _globals['_NAMEDVALUE']._serialized_end=981
+  _globals['_RESETOPTIONS']._serialized_start=984
+  _globals['_RESETOPTIONS']._serialized_end=1175
+  _globals['_CREATESESSIONREQUEST']._serialized_start=1177
+  _globals['_CREATESESSIONREQUEST']._serialized_end=1275
+  _globals['_CREATESESSIONRESPONSE']._serialized_start=1277
+  _globals['_CREATESESSIONRESPONSE']._serialized_end=1380
+  _globals['_RESETREQUEST']._serialized_start=1382
+  _globals['_RESETREQUEST']._serialized_end=1496
+  _globals['_STEPREQUEST']._serialized_start=1498
+  _globals['_STEPREQUEST']._serialized_end=1593
+  _globals['_STATERESPONSE']._serialized_start=1595
+  _globals['_STATERESPONSE']._serialized_end=1660
+  _globals['_CLOSEREQUEST']._serialized_start=1662
+  _globals['_CLOSEREQUEST']._serialized_end=1696
+  _globals['_CLOSERESPONSE']._serialized_start=1698
+  _globals['_CLOSERESPONSE']._serialized_end=1713
+  _globals['_ALGORITHMSIMULATIONBACKEND']._serialized_start=1716
+  _globals['_ALGORITHMSIMULATIONBACKEND']._serialized_end=2086
 # @@protoc_insertion_point(module_scope)

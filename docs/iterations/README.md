@@ -101,3 +101,8 @@ YYYY-MM-DD-短标题.md
 - [2026-07-16 Contact Sensor Contract](2026-07-16-contact-sensor-contract.md)
 - [2026-07-16 MuJoCo Contact Adapter](2026-07-16-mujoco-contact-adapter.md)
 - [2026-07-28 Browser Frontend and Backend Decoupling](2026-07-28-web-frontend-decoupling.md)
+- [2026-07-29 Algorithm and Simulation Backend Decoupling](2026-07-29-algorithm-backend-decoupling.md)
+- [2026-07-30 OpenUSD Robot Fidelity and Franka Control Gate](2026-07-30-openusd-robot-fidelity.md)
+- [2026-07-30 Robot Geometry Bundle and Asset Loading Performance](2026-07-30-robot-geometry-bundle.md)
+- [2026-07-31 Authenticated Full Workflow and Development Token Fix](2026-07-31-authenticated-full-workflow.md)
+- [2026-08-03 Quadrotor Propulsion and Control](2026-08-03-quadrotor-propulsion-control.md)

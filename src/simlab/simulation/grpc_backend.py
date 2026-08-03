@@ -38,7 +38,7 @@ from simlab.simulation.mujoco_backend import MujocoBackend
 from simlab.simulation.proto import algorithm_backend_pb2 as messages
 from simlab.simulation.proto import algorithm_backend_pb2_grpc as services
 
-CONTRACT_VERSION = "simlab.algorithm.v1"
+CONTRACT_VERSION = "simlab.algorithm.v2"
 
 
 @dataclass(slots=True)
@@ -425,6 +425,12 @@ def _state_to_proto(state: BackendState) -> Any:
         actuator_forces=state.actuator_forces,
         body_positions=[value for item in state.body_positions for value in item],
         body_quaternions=[value for item in state.body_quaternions for value in item],
+        body_linear_velocities=[
+            value for item in state.body_linear_velocities for value in item
+        ],
+        body_angular_velocities=[
+            value for item in state.body_angular_velocities for value in item
+        ],
     )
 
 
@@ -434,6 +440,14 @@ def _state_from_proto(state: Any, description: ModelDescription) -> BackendState
         raise SimulationBackendError("Remote backend returned invalid body position layout")
     if len(state.body_quaternions) != expected_bodies * 4:
         raise SimulationBackendError("Remote backend returned invalid body quaternion layout")
+    if len(state.body_linear_velocities) != expected_bodies * 3:
+        raise SimulationBackendError(
+            "Remote backend returned invalid body linear velocity layout"
+        )
+    if len(state.body_angular_velocities) != expected_bodies * 3:
+        raise SimulationBackendError(
+            "Remote backend returned invalid body angular velocity layout"
+        )
     return validate_state_layout(
         description,
         BackendState(
@@ -457,6 +471,20 @@ def _state_from_proto(state: Any, description: ModelDescription) -> BackendState
                     tuple(state.body_quaternions[index : index + 4]),
                 )
                 for index in range(0, expected_bodies * 4, 4)
+            ),
+            body_linear_velocities=tuple(
+                cast(
+                    tuple[float, float, float],
+                    tuple(state.body_linear_velocities[index : index + 3]),
+                )
+                for index in range(0, expected_bodies * 3, 3)
+            ),
+            body_angular_velocities=tuple(
+                cast(
+                    tuple[float, float, float],
+                    tuple(state.body_angular_velocities[index : index + 3]),
+                )
+                for index in range(0, expected_bodies * 3, 3)
             ),
         ),
     )

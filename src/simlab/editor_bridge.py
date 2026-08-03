@@ -140,6 +140,10 @@ class EditorBridge(QObject):
     def setJointTargets(self, scene_json: str, targets_json: str) -> str:
         return self._call("setJointTargets", scene_json, targets_json)
 
+    @Slot(str, str, result=str)
+    def setActuatorControls(self, scene_json: str, controls_json: str) -> str:
+        return self._call("setActuatorControls", scene_json, controls_json)
+
     @Slot(str, result=str)
     def loadController(self, scene_json: str) -> str:
         path, _ = QFileDialog.getOpenFileName(

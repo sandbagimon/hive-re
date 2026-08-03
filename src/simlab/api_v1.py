@@ -29,6 +29,10 @@ class JointTargets(BaseModel):
     targets: dict[str, float]
 
 
+class ActuatorControls(BaseModel):
+    controls: dict[str, float]
+
+
 class TrajectoryUpload(BaseModel):
     trajectory: dict[str, Any]
 
@@ -236,6 +240,12 @@ def create_v1_router(manager: ResourceManager, access_token: str | None) -> APIR
         simulation_id: str, request: JointTargets
     ) -> dict[str, Any]:
         return envelope(manager.set_joint_targets(simulation_id, request.targets))
+
+    @router.put("/simulations/{simulation_id}/actuator-controls", dependencies=[auth])
+    async def actuator_controls(
+        simulation_id: str, request: ActuatorControls
+    ) -> dict[str, Any]:
+        return envelope(manager.set_actuator_controls(simulation_id, request.controls))
 
     @router.put("/simulations/{simulation_id}/trajectory", dependencies=[auth])
     async def load_trajectory(

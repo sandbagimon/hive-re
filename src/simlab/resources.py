@@ -326,6 +326,14 @@ class ResourceManager:
             simulation_id, "setJointTargets", [scene_json, json.dumps(targets)]
         )
 
+    def set_actuator_controls(
+        self, simulation_id: str, controls: dict[str, float]
+    ) -> dict[str, Any]:
+        scene_json = self.simulation_scene_json(simulation_id)
+        return self.call_simulation(
+            simulation_id, "setActuatorControls", [scene_json, json.dumps(controls)]
+        )
+
     def load_controller(
         self, simulation_id: str, filename: str, source: str
     ) -> dict[str, Any]:

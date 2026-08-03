@@ -10,6 +10,7 @@ import pytest
 from simlab.models.actor import Actor
 from simlab.models.robotics import RoboticsModel, Sensor
 from simlab.models.scene import Scene
+from simlab.models.transform import Transform
 from simlab.services.project_service import load_scene
 from simlab.web_application import WebApplication
 from simlab.web_server import create_app
@@ -359,6 +360,67 @@ def test_versioned_api_runs_isolated_simulation_resources(tmp_path: Path) -> Non
     assert pause["ok"] is True
     assert reset["ok"] is True
     assert reset["data"]["state"]["time"] == 0
+
+
+def test_api_applies_named_quadrotor_actuator_controls(tmp_path: Path) -> None:
+    app = create_app(tmp_path, seed_assets=Path.cwd() / "assets")
+    try:
+        project_id = create_api_project(app, "Iris API")
+        assets = request(app, "GET", f"/api/v1/projects/{project_id}/assets").json()[
+            "assets"
+        ]
+        iris = next(item for item in assets if item["id"] == "openusd_iris_09f8390b45")
+        scene = Scene(
+            name="Iris API Scene",
+            actors=[
+                Actor(
+                    id="actor_001",
+                    name="Iris",
+                    type="robot",
+                    asset_id=iris["id"],
+                    transform=Transform(position=[0.0, 0.0, 1.0]),
+                    properties=iris["default_properties"],
+                )
+            ],
+            robotics=RoboticsModel.from_dict(iris["robotics"]),
+            simulation_config={"timestep": 0.002, "duration": 1.0},
+        )
+        updated = request(
+            app,
+            "PUT",
+            f"/api/v1/projects/{project_id}/scene",
+            json=scene.to_dict(),
+        )
+        simulation_id = request(
+            app,
+            "POST",
+            "/api/v1/simulations",
+            json={"project_id": project_id},
+        ).json()["id"]
+        controls = {
+            f"actuator_iris_rotor_{index}": 700.0 for index in range(4)
+        }
+        commanded = request(
+            app,
+            "PUT",
+            f"/api/v1/simulations/{simulation_id}/actuator-controls",
+            json={"controls": controls},
+        )
+        stepped = request(
+            app,
+            "POST",
+            f"/api/v1/simulations/{simulation_id}/step",
+        )
+    finally:
+        app.state.resources.close()
+
+    assert updated.status_code == 200, updated.text
+    assert commanded.status_code == 200, commanded.text
+    assert [
+        item["ctrl"] for item in commanded.json()["data"]["state"]["actuators"]
+    ] == pytest.approx([700.0] * 4)
+    assert stepped.status_code == 200, stepped.text
+    assert stepped.json()["data"]["state"]["time"] == pytest.approx(0.002)
 
 
 def test_project_edits_do_not_mutate_or_stop_simulation_snapshot(tmp_path: Path) -> None:

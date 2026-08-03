@@ -189,6 +189,7 @@
         "stepSimulation",
         "resetSimulation",
         "setJointTargets",
+        "setActuatorControls",
         "loadTrajectory",
         "playTrajectory",
         "pauseTrajectory",

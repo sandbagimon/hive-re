@@ -12,7 +12,7 @@ from simlab.simulation.backend import (
 from simlab.simulation.backend_factory import BackendConfig, create_backend
 from simlab.simulation.gym_env import SimLabEnv
 from simlab.simulation.mujoco_backend import MujocoBackend
-from simlab.simulation.robot_adapter import DirectActuatorAdapter
+from simlab.simulation.robot_adapter import DirectActuatorAdapter, QuadrotorAdapter
 from simlab.simulation.task import JointTargetTask
 
 __all__ = [
@@ -23,6 +23,7 @@ __all__ = [
     "JointTargetTask",
     "ModelDescription",
     "MujocoBackend",
+    "QuadrotorAdapter",
     "ResetOptions",
     "SceneBundle",
     "SimLabEnv",

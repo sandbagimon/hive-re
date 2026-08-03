@@ -79,6 +79,37 @@ test('asset library loads the high-quality Franka robot meshes', async ({ page }
   await page.waitForTimeout(500);
 });
 
+test('Iris controller takes off and settles into hover', async ({ page }) => {
+  await configureApi(page);
+  await page.goto('/');
+  const iris = page.locator('[data-asset-id="openusd_iris_09f8390b45"]');
+  await expect(iris).toContainText('Pegasus Iris Quadcopter', { timeout: 10_000 });
+  await iris.click();
+
+  page.once('dialog', (dialog) => dialog.accept());
+  const controllerChooser = page.waitForEvent('filechooser');
+  await page.locator('[data-controller-command="load"]').click();
+  await (await controllerChooser).setFiles('examples/controllers/iris_hover.py');
+  await expect(page.locator('[data-controller-name]')).toHaveText('Iris Takeoff and Hover');
+
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(page.locator('#simulation-badge')).toHaveText('Running');
+  await expect.poll(async () => {
+    const state = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
+    return state.simulationState?.time ?? 0;
+  }, { timeout: 12_000 }).toBeGreaterThan(5.5);
+
+  const runtime = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
+  const position = runtime.simulationState.actors[0].position;
+  expect(position[0]).toBeCloseTo(0, 3);
+  expect(position[1]).toBeCloseTo(0, 3);
+  expect(position[2]).toBeCloseTo(1.07, 2);
+  expect(runtime.simulationState.controller.status).toBe('active');
+  expect(runtime.simulationState.controller.step_count).toBeGreaterThan(500);
+  await expect(page.locator('[data-rotor-control="actuator_iris_rotor_0"]').last())
+    .toHaveValue(/641\./);
+});
+
 test('frontend recovers shared assets when the API starts after the page', async ({ page }) => {
   await configureApi(page);
   const apiPattern = `${apiBaseUrl}/api/v1/**`;

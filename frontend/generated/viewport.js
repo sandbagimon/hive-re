@@ -3,7 +3,7 @@ import { OrbitControls } from '../vendor/OrbitControls.js';
 import { TransformControls } from '../vendor/TransformControls.js';
 import { sourceGeometry } from './geometry-contract.js';
 import { decodeGeometryBundle } from './geometry-bundle.js';
-import { jointLocalPose } from './robot-kinematics.js';
+import { advanceRotorAnimation, jointLocalPose, } from './robot-kinematics.js';
 const requiredElement = (selector) => {
     const element = document.querySelector(selector);
     if (!element)
@@ -77,6 +77,7 @@ const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
 const actorMeshes = new Map();
 const robotLinkGroups = new Map();
+const rotorAnimationStates = new Map();
 let selectedActorId = null;
 let selectedLinkId = null;
 let currentScene = {
@@ -362,6 +363,7 @@ function clearActors() {
     selectionOutline.visible = false;
     actorMeshes.clear();
     robotLinkGroups.clear();
+    rotorAnimationStates.clear();
     while (actorGroup.children.length > 0) {
         const child = actorGroup.children.pop();
         if (child)
@@ -536,6 +538,25 @@ export function applySimulationState(state) {
         group.parent.getWorldQuaternion(parentQuaternion);
         group.quaternion.copy(parentQuaternion.invert().multiply(worldQuaternion));
         group.updateMatrixWorld(true);
+    }
+    const actuatorControls = new Map(state.actuators.map((actuator) => [actuator.id, actuator.ctrl]));
+    const rotorAxis = new THREE.Vector3();
+    const rotorRotation = new THREE.Quaternion();
+    for (const actor of currentScene.actors) {
+        const propulsion = actor.properties.propulsion;
+        if (propulsion?.type !== 'quadrotor')
+            continue;
+        for (const rotor of propulsion.rotors) {
+            const group = robotLinkGroups.get(rotor.link_id);
+            if (!group)
+                continue;
+            const animation = advanceRotorAnimation(rotorAnimationStates.get(rotor.link_id), state.time, actuatorControls.get(rotor.actuator_id) ?? 0, rotor.direction);
+            rotorAnimationStates.set(rotor.link_id, animation);
+            rotorAxis.set(...rotor.axis).normalize();
+            rotorRotation.setFromAxisAngle(rotorAxis, animation.angle);
+            group.quaternion.multiply(rotorRotation);
+            group.updateMatrixWorld(true);
+        }
     }
     updateSelectionOutline();
     updateHud();

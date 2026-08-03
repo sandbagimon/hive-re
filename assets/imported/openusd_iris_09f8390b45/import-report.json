@@ -1,0 +1,122 @@
+{
+  "source_path": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+  "issues": [
+    {
+      "severity": "warning",
+      "code": "usd.missing_dependency",
+      "prim_path": null,
+      "field": "asset_path",
+      "message": "OpenUSD dependency could not be resolved: http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Carpet/Carpet_Gray.mdl",
+      "fallback": "Geometry will import with its authored display color or the default material."
+    },
+    {
+      "severity": "warning",
+      "code": "usd.missing_dependency",
+      "prim_path": null,
+      "field": "asset_path",
+      "message": "OpenUSD dependency could not be resolved: http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Carpet/Carpet_Gray/Carpet_Gray_BaseColor.png",
+      "fallback": "Geometry will import with its authored display color or the default material."
+    },
+    {
+      "severity": "warning",
+      "code": "usd.missing_dependency",
+      "prim_path": null,
+      "field": "asset_path",
+      "message": "OpenUSD dependency could not be resolved: http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Carpet/Carpet_Gray/Carpet_Gray_Normal.png",
+      "fallback": "Geometry will import with its authored display color or the default material."
+    },
+    {
+      "severity": "warning",
+      "code": "usd.missing_dependency",
+      "prim_path": null,
+      "field": "asset_path",
+      "message": "OpenUSD dependency could not be resolved: http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Carpet/Carpet_Gray/Carpet_Gray_ORM.png",
+      "fallback": "Geometry will import with its authored display color or the default material."
+    },
+    {
+      "severity": "warning",
+      "code": "usd.missing_dependency",
+      "prim_path": null,
+      "field": "asset_path",
+      "message": "OpenUSD dependency could not be resolved: http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Textiles/Linen_Blue.mdl",
+      "fallback": "Geometry will import with its authored display color or the default material."
+    },
+    {
+      "severity": "warning",
+      "code": "usd.missing_dependency",
+      "prim_path": null,
+      "field": "asset_path",
+      "message": "OpenUSD dependency could not be resolved: http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Textiles/Linen_Blue/Linen_Blue_BaseColor.png",
+      "fallback": "Geometry will import with its authored display color or the default material."
+    },
+    {
+      "severity": "warning",
+      "code": "usd.missing_dependency",
+      "prim_path": null,
+      "field": "asset_path",
+      "message": "OpenUSD dependency could not be resolved: http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Textiles/Linen_Blue/Linen_Blue_DN.png",
+      "fallback": "Geometry will import with its authored display color or the default material."
+    },
+    {
+      "severity": "warning",
+      "code": "usd.missing_dependency",
+      "prim_path": null,
+      "field": "asset_path",
+      "message": "OpenUSD dependency could not be resolved: http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Textiles/Linen_Blue/Linen_Blue_N.png",
+      "fallback": "Geometry will import with its authored display color or the default material."
+    },
+    {
+      "severity": "warning",
+      "code": "usd.missing_dependency",
+      "prim_path": null,
+      "field": "asset_path",
+      "message": "OpenUSD dependency could not be resolved: http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Textiles/Linen_Blue/Linen_Blue_ORM.png",
+      "fallback": "Geometry will import with its authored display color or the default material."
+    },
+    {
+      "severity": "warning",
+      "code": "asset.rotor_mass_profile",
+      "prim_path": "/vehicle/rotor0",
+      "field": "physics:mass",
+      "message": "Rigid body has no positive authored mass; the Iris flight profile assigns a 0.005 kg rotor mass.",
+      "fallback": "mass=0.005"
+    },
+    {
+      "severity": "warning",
+      "code": "asset.rotor_mass_profile",
+      "prim_path": "/vehicle/rotor1",
+      "field": "physics:mass",
+      "message": "Rigid body has no positive authored mass; the Iris flight profile assigns a 0.005 kg rotor mass.",
+      "fallback": "mass=0.005"
+    },
+    {
+      "severity": "warning",
+      "code": "asset.rotor_mass_profile",
+      "prim_path": "/vehicle/rotor2",
+      "field": "physics:mass",
+      "message": "Rigid body has no positive authored mass; the Iris flight profile assigns a 0.005 kg rotor mass.",
+      "fallback": "mass=0.005"
+    },
+    {
+      "severity": "warning",
+      "code": "asset.rotor_mass_profile",
+      "prim_path": "/vehicle/rotor3",
+      "field": "physics:mass",
+      "message": "Rigid body has no positive authored mass; the Iris flight profile assigns a 0.005 kg rotor mass.",
+      "fallback": "mass=0.005"
+    }
+  ],
+  "resolved_dependencies": [],
+  "unresolved_dependencies": [
+    "http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Carpet/Carpet_Gray.mdl",
+    "http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Carpet/Carpet_Gray/Carpet_Gray_BaseColor.png",
+    "http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Carpet/Carpet_Gray/Carpet_Gray_Normal.png",
+    "http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Carpet/Carpet_Gray/Carpet_Gray_ORM.png",
+    "http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Textiles/Linen_Blue.mdl",
+    "http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Textiles/Linen_Blue/Linen_Blue_BaseColor.png",
+    "http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Textiles/Linen_Blue/Linen_Blue_DN.png",
+    "http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Textiles/Linen_Blue/Linen_Blue_N.png",
+    "http:/omniverse-content-production.s3-us-west-2.amazonaws.com/Materials/Base/Textiles/Linen_Blue/Linen_Blue_ORM.png"
+  ],
+  "has_errors": false
+}

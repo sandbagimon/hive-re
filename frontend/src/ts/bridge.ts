@@ -6,7 +6,8 @@ type BridgeMethod =
   | 'openProject' | 'saveProject'
   | 'validateProjectContent' | 'exportMjcf' | 'preflight'
   | 'runSimulation' | 'pauseSimulation' | 'setSimulationSpeed'
-  | 'stepSimulation' | 'resetSimulation' | 'discardSimulation' | 'setJointTargets'
+  | 'stepSimulation' | 'resetSimulation' | 'discardSimulation'
+  | 'setJointTargets' | 'setActuatorControls'
   | 'loadController' | 'reloadController' | 'detachController'
   | 'loadTrajectory' | 'playTrajectory' | 'pauseTrajectory' | 'stopTrajectory'
   | 'startRecording' | 'stopRecording' | 'getRecording'
@@ -255,6 +256,11 @@ export class EditorBridgeClient {
         await this.synchronizeSceneArgument(args[0]);
         return this.simulationRequest<T>('/joint-targets', {
           method: 'PUT', body: JSON.stringify({ targets: JSON.parse(String(args[1])) }),
+        });
+      case 'setActuatorControls':
+        await this.synchronizeSceneArgument(args[0]);
+        return this.simulationRequest<T>('/actuator-controls', {
+          method: 'PUT', body: JSON.stringify({ controls: JSON.parse(String(args[1])) }),
         });
       case 'loadTrajectory':
         await this.synchronizeSceneArgument(args[0]);

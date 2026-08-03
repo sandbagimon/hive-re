@@ -15,6 +15,7 @@ from simlab.services.openusd import (
 pytest.importorskip("pxr")
 
 ARM_FIXTURE = Path("tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda")
+IRIS_FIXTURE = Path("assets/external/pegasus_iris/iris.usd")
 
 
 def test_external_usd_arm_maps_to_robotics_model() -> None:
@@ -100,6 +101,98 @@ def test_importer_uses_usd_relationships_instead_of_known_names(tmp_path: Path) 
     assert all(joint.parent_link_id != joint.child_link_id for joint in arm.joints)
 
 
+def test_joint_body_target_on_collider_resolves_to_owning_rigid_body(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "collider-target-arm.usda"
+    text = ARM_FIXTURE.read_text(encoding="utf-8").replace(
+        "rel physics:body0 = </ExternalArm/Pedestal>",
+        "rel physics:body0 = </ExternalArm/Pedestal/Appearance>",
+        1,
+    )
+    source.write_text(text, encoding="utf-8")
+
+    result = import_openusd_articulations(source)
+    arm = result.model.articulations[0]
+
+    assert len(arm.joints) == 2
+    assert not any(issue.code == "usd.joint_body_unresolved" for issue in result.report.issues)
+
+
+def test_descendant_body_target_remaps_joint_frame_to_rigid_body(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "rotated-joint-anchor.usda"
+    text = ARM_FIXTURE.read_text(encoding="utf-8").replace(
+        '        def Cube "Appearance"',
+        '        def Xform "JointAnchor"\n'
+        "        {\n"
+        "            quatf xformOp:orient = (0.70710678, 0, 0, 0.70710678)\n"
+        '            uniform token[] xformOpOrder = ["xformOp:orient"]\n'
+        "        }\n\n"
+        '        def Cube "Appearance"',
+        1,
+    )
+    text = text.replace(
+        "rel physics:body0 = </ExternalArm/Pedestal>",
+        "rel physics:body0 = </ExternalArm/Pedestal/JointAnchor>",
+        1,
+    ).replace(
+        "point3f physics:localPos0 = (0, 0, 0.2)",
+        "point3f physics:localPos0 = (0.2, 0, 0)",
+        1,
+    )
+    source.write_text(text, encoding="utf-8")
+
+    arm = import_openusd_articulations(source).model.articulations[0]
+    joint = next(item for item in arm.joints if item.name == "AxisA")
+
+    assert joint.parent_frame is not None
+    assert joint.parent_frame.position == pytest.approx([0.0, 0.2, 0.0], abs=1e-7)
+    assert joint.parent_frame.quaternion == pytest.approx(
+        [0.0, 0.0, math.sqrt(0.5), math.sqrt(0.5)]
+    )
+
+
+def test_iris_rotors_keep_joint_offsets_in_body_frame() -> None:
+    iris = import_openusd_articulations(IRIS_FIXTURE).model.articulations[0]
+    expected_positions = {
+        "joint0": [0.13759533, -0.20673534, 0.023],
+        "joint1": [-0.12499997, 0.21869458, 0.023],
+        "joint2": [0.13830880, 0.20321965, 0.023],
+        "joint3": [-0.12450201, -0.22199887, 0.023],
+    }
+
+    for joint in iris.joints:
+        assert joint.parent_frame is not None
+        assert joint.child_frame is not None
+        assert joint.parent_frame.position == pytest.approx(
+            expected_positions[joint.name], abs=1e-7
+        )
+        assert joint.parent_frame.quaternion == pytest.approx(
+            [0.0, 0.0, math.sqrt(0.5), math.sqrt(0.5)], abs=1e-5
+        )
+        child = next(link for link in iris.links if link.id == joint.child_link_id)
+        assert child.transform == joint.parent_frame
+
+
+def test_joint_frames_normalize_authored_quaternions(tmp_path: Path) -> None:
+    source = tmp_path / "non-normalized-joint-frame.usda"
+    text = ARM_FIXTURE.read_text(encoding="utf-8").replace(
+        "point3f physics:localPos0 = (0, 0, 0.2)",
+        "point3f physics:localPos0 = (0, 0, 0.2)\n"
+        "            quatf physics:localRot0 = (0.70711, 0, 0, 0)",
+        1,
+    )
+    source.write_text(text, encoding="utf-8")
+
+    arm = import_openusd_articulations(source).model.articulations[0]
+    joint = next(item for item in arm.joints if item.name == "AxisA")
+
+    assert joint.parent_frame is not None
+    assert joint.parent_frame.quaternion == pytest.approx([0.0, 0.0, 0.0, 1.0])
+
+
 def test_articulation_converts_stage_units_and_y_up_basis(tmp_path: Path) -> None:
     converted = tmp_path / "centimeter-y-up-arm.usda"
     text = ARM_FIXTURE.read_text(encoding="utf-8")
@@ -114,9 +207,7 @@ def test_articulation_converts_stage_units_and_y_up_basis(tmp_path: Path) -> Non
     assert upper.visual_geometries[0].size == pytest.approx([0.0006, 0.0006, 0.003])
     assert upper.inertial is not None
     assert upper.inertial.center_of_mass == pytest.approx([0.0, -0.003, 0.0])
-    assert upper.inertial.diagonal_inertia == pytest.approx(
-        [0.065e-4, 0.008e-4, 0.065e-4]
-    )
+    assert upper.inertial.diagonal_inertia == pytest.approx([0.065e-4, 0.008e-4, 0.065e-4])
 
 
 def test_prismatic_joint_uses_linear_units_and_drive(tmp_path: Path) -> None:

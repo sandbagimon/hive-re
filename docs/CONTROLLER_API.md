@@ -1,7 +1,8 @@
 # Python Controller API
 
 SimLab controllers receive an immutable snapshot before every MuJoCo physics step and may return
-joint position targets. They never receive mutable `MjModel` or `MjData` objects.
+joint position targets and/or named actuator controls. They never receive mutable `MjModel` or
+`MjData` objects.
 
 ```python
 from simlab.services.controller_runtime import (
@@ -25,9 +26,28 @@ state = session.step(steps=100)
 session.detach_controller()
 ```
 
-`ControllerObservation` contains simulation `time`, fixed `timestep`, joint `qpos/qvel`, and actuator
-`ctrl/force`, all keyed by stable Scene robotics IDs. `ControllerAction` currently supports position
-targets; Session applies the same actuator mapping and control-range clamping used by UI joint commands.
+`ControllerObservation` contains simulation `time`, fixed `timestep`, joint `qpos/qvel`, actuator
+`ctrl/force`, and body pose/linear/angular velocity, all keyed by stable Scene IDs.
+`ControllerAction.position_targets` addresses
+position-driven joints, while `ControllerAction.actuator_controls` addresses actuators directly. Session
+validates both maps atomically and applies the same stable-ID lookup and range clamping used by REST and
+UI commands. One action cannot address the same actuator through both maps.
+
+For example, a quadrotor controller can command rotor angular velocities without importing MuJoCo:
+
+```python
+return ControllerAction(
+    actuator_controls={
+        "actuator_iris_rotor_0": 641.132187,
+        "actuator_iris_rotor_1": 679.039297,
+        "actuator_iris_rotor_2": 646.466695,
+        "actuator_iris_rotor_3": 673.962654,
+    }
+)
+```
+
+The complete loadable example is
+[`examples/controllers/iris_hover.py`](../examples/controllers/iris_hover.py).
 
 For a reusable bounded outer loop, import `JointPdConfig` and `JointPositionPdController` from
 `simlab.controllers`. It computes a qpos/qvel correction, limits each per-step position-target delta, and

@@ -46,6 +46,49 @@
       "required": ["kind", "source_format", "source", "visual_cache", "collision_mesh"],
       "additionalProperties": false
     },
+    "quadrotorRotor": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "link_id": { "type": "string", "minLength": 1 },
+        "actuator_id": { "type": "string", "minLength": 1 },
+        "axis": { "$ref": "#/$defs/vector3" },
+        "direction": { "enum": [-1, 1] },
+        "thrust_coefficient": { "type": "number", "exclusiveMinimum": 0 },
+        "torque_coefficient": { "type": "number", "minimum": 0 },
+        "min_angular_velocity": { "type": "number", "minimum": 0 },
+        "max_angular_velocity": { "type": "number", "exclusiveMinimum": 0 }
+      },
+      "required": [
+        "id",
+        "link_id",
+        "actuator_id",
+        "axis",
+        "direction",
+        "thrust_coefficient",
+        "torque_coefficient",
+        "min_angular_velocity",
+        "max_angular_velocity"
+      ],
+      "additionalProperties": false
+    },
+    "quadrotorPropulsion": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "quadrotor" },
+        "model": { "const": "quadratic" },
+        "command_mode": { "const": "angular_velocity" },
+        "body_link_id": { "type": "string", "minLength": 1 },
+        "rotors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/quadrotorRotor" },
+          "minItems": 4,
+          "maxItems": 4
+        }
+      },
+      "required": ["type", "model", "command_mode", "body_link_id", "rotors"],
+      "additionalProperties": false
+    },
     "actor": {
       "type": "object",
       "properties": {
@@ -81,7 +124,8 @@
               "type": "array",
               "items": { "type": "string" }
             },
-            "physics": { "$ref": "physics.schema.json" }
+            "physics": { "$ref": "physics.schema.json" },
+            "propulsion": { "$ref": "#/$defs/quadrotorPropulsion" }
           },
           "additionalProperties": true
         }

@@ -146,6 +146,16 @@ class SimulationService:
         self.console(f"Updated {len(targets)} joint target(s).")
         return self._with_clock(state)
 
+    def set_actuator_controls(
+        self, scene: Scene, controls: dict[str, float]
+    ) -> SimulationState:
+        if self.session is None:
+            self.session = self._create_session(scene)
+            self.console(f"Loaded MuJoCo model: {self.session.xml_path}")
+        state = self.session.set_actuator_controls(controls)
+        self.console(f"Updated {len(controls)} actuator control(s).")
+        return self._with_clock(state)
+
     def attach_controller(
         self,
         scene: Scene,

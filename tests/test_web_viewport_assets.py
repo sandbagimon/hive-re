@@ -69,6 +69,10 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "parent.worldToLocal" in viewport
     assert "data-joint-target" in app
     assert "setJointTargets" in app
+    assert "data-rotor-control" in app
+    assert "data-rotor-stop" in app
+    assert "setActuatorControls" in app
+    assert "/actuator-controls" in bridge
     assert "data-controller-status" in app
     assert 'data-status="fault"' in style
     assert "result.data?.state" in app

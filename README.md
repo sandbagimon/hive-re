@@ -61,6 +61,20 @@ services together on `Ctrl+C`. Override its defaults with `SIMLAB_BACKEND_HOST`,
 Additional command-line arguments are passed to the FastAPI process, for example
 `./start_backend.sh --allow-controller-execution` on a trusted development machine.
 
+For an authenticated development backend, export the same API token in both terminals before
+starting the services. `start_frontend.sh` forwards it only into Vite's no-store runtime config;
+it is visible to that browser session and is therefore intended for trusted development only:
+
+```bash
+export SIMLAB_API_TOKEN='replace-with-a-development-token'
+./start_backend.sh
+# In the frontend terminal, export the same value (or SIMLAB_FRONTEND_ACCESS_TOKEN), then:
+./start_frontend.sh
+```
+
+Production deployments must issue user-scoped credentials outside the static bundle rather than
+embedding a shared secret in `frontend/public/simlab-config.json`.
+
 The optional desktop adapter remains available after installing the `desktop` extra:
 
 ```bash
@@ -88,6 +102,8 @@ Robot trajectories can be saved in the scene, reopened, edited, and replayed. Th
 The command bar provides 0.25x, 0.5x, 1x, and 2x simulation-speed controls plus measured real-time-factor feedback. Speed changes scale fixed-step scheduling without changing the authored MuJoCo timestep or trajectory/recording timestamps.
 
 Python controllers can attach to a MuJoCo session through an immutable per-step observation/action API. Controller exceptions and deadline overruns are isolated as runtime faults without stopping physics; manual targets, trajectory playback, and Python controllers are explicit mutually exclusive control sources. See [`docs/CONTROLLER_API.md`](docs/CONTROLLER_API.md).
+
+Quadrotors use named rotor actuators and an engine-neutral quadratic thrust profile. The bundled Pegasus Iris can be driven through Python Controller, REST/Bridge, Gymnasium, or the existing gRPC data plane. See [`docs/QUADROTOR_CONTROL.md`](docs/QUADROTOR_CONTROL.md).
 
 Training algorithms use a separate Gymnasium data plane. `SimLabEnv` composes an engine-neutral backend contract, a robot adapter, and a task, and can switch between an in-process `MujocoBackend` and an atomic gRPC backend without changing task or algorithm code. Install `.[algorithm]` for local training or `.[algorithm,remote]` for gRPC. See [`docs/ALGORITHM_BACKEND_DECOUPLING.md`](docs/ALGORITHM_BACKEND_DECOUPLING.md).
 

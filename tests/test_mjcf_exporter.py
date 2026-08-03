@@ -264,6 +264,79 @@ def test_external_usd_robot_exports_compilable_articulation(tmp_path) -> None:
     assert model.key_ctrl[0, 1] == pytest.approx(-0.4)
 
 
+def test_mjcf_infers_missing_link_inertia_from_collision_geometry() -> None:
+    mujoco = pytest.importorskip("mujoco")
+    model = import_openusd_articulations(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda"
+    ).model
+    articulation = model.articulations[0]
+    link = next(item for item in articulation.links if item.name == "FirstSegment")
+    assert link.inertial is not None
+    link.inertial.diagonal_inertia = None
+    scene = Scene(
+        name="Inferred Link Inertia",
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id="arm",
+                properties={"articulation_ids": [articulation.id]},
+            )
+        ],
+        robotics=model,
+    )
+
+    xml = scene_to_mjcf_xml(scene)
+    root = ET.fromstring(xml)
+    body = root.find(f".//body[@name='{link.id}']")
+
+    assert body is not None
+    assert body.find("inertial") is None
+    assert body.find("geom").attrib["mass"] == str(link.inertial.mass)
+    mujoco.MjModel.from_xml_string(xml)
+
+
+def test_floating_articulation_exports_root_freejoint(tmp_path: Path) -> None:
+    mujoco = pytest.importorskip("mujoco")
+    source = tmp_path / "floating-arm.usda"
+    fixture = Path("tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda")
+    text = fixture.read_text(encoding="utf-8")
+    anchor_start = text.index('        def PhysicsFixedJoint "Anchor"')
+    anchor_end = text.index('        def PhysicsRevoluteJoint "AxisA"', anchor_start)
+    source.write_text(text[:anchor_start] + text[anchor_end:], encoding="utf-8")
+    model = import_openusd_articulations(source).model
+    articulation = model.articulations[0]
+    assert articulation.fixed_base is False
+    scene = Scene(
+        name="Floating Articulation",
+        actors=[
+            Actor(
+                id="actor_floating",
+                name="Floating Arm",
+                type="robot",
+                asset_id="floating_arm",
+                transform=Transform(position=[1.0, 2.0, 3.0]),
+                properties={"articulation_ids": [articulation.id]},
+            )
+        ],
+        robotics=model,
+    )
+
+    xml = scene_to_mjcf_xml(scene)
+    root = ET.fromstring(xml)
+    wrapper = root.find(".//body[@name='actor_floating']")
+    assert wrapper is not None
+    assert wrapper.find("freejoint") is not None
+
+    compiled = mujoco.MjModel.from_xml_string(xml)
+    assert compiled.njnt == 3
+    assert compiled.nq == 9
+    assert compiled.key_qpos[0, :7] == pytest.approx(
+        [1.0, 2.0, 3.0, 1.0, 0.0, 0.0, 0.0]
+    )
+
+
 def test_mjcf_converts_joint_frame_axis_into_child_body_frame(tmp_path) -> None:
     mujoco = pytest.importorskip("mujoco")
     fixture = Path("tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda")

@@ -65,7 +65,7 @@ class ModelDescription(_message.Message):
     def __init__(self, backend_name: _Optional[str] = ..., backend_version: _Optional[str] = ..., timestep: _Optional[float] = ..., scene_hash: _Optional[str] = ..., schema_hash: _Optional[str] = ..., bodies: _Optional[_Iterable[_Union[BodyDescription, _Mapping]]] = ..., joints: _Optional[_Iterable[_Union[JointDescription, _Mapping]]] = ..., actuators: _Optional[_Iterable[_Union[ActuatorDescription, _Mapping]]] = ...) -> None: ...
 
 class BackendState(_message.Message):
-    __slots__ = ("schema_hash", "time", "step_index", "joint_positions", "joint_velocities", "actuator_controls", "actuator_forces", "body_positions", "body_quaternions")
+    __slots__ = ("schema_hash", "time", "step_index", "joint_positions", "joint_velocities", "actuator_controls", "actuator_forces", "body_positions", "body_quaternions", "body_linear_velocities", "body_angular_velocities")
     SCHEMA_HASH_FIELD_NUMBER: _ClassVar[int]
     TIME_FIELD_NUMBER: _ClassVar[int]
     STEP_INDEX_FIELD_NUMBER: _ClassVar[int]
@@ -75,6 +75,8 @@ class BackendState(_message.Message):
     ACTUATOR_FORCES_FIELD_NUMBER: _ClassVar[int]
     BODY_POSITIONS_FIELD_NUMBER: _ClassVar[int]
     BODY_QUATERNIONS_FIELD_NUMBER: _ClassVar[int]
+    BODY_LINEAR_VELOCITIES_FIELD_NUMBER: _ClassVar[int]
+    BODY_ANGULAR_VELOCITIES_FIELD_NUMBER: _ClassVar[int]
     schema_hash: str
     time: float
     step_index: int
@@ -84,7 +86,9 @@ class BackendState(_message.Message):
     actuator_forces: _containers.RepeatedScalarFieldContainer[float]
     body_positions: _containers.RepeatedScalarFieldContainer[float]
     body_quaternions: _containers.RepeatedScalarFieldContainer[float]
-    def __init__(self, schema_hash: _Optional[str] = ..., time: _Optional[float] = ..., step_index: _Optional[int] = ..., joint_positions: _Optional[_Iterable[float]] = ..., joint_velocities: _Optional[_Iterable[float]] = ..., actuator_controls: _Optional[_Iterable[float]] = ..., actuator_forces: _Optional[_Iterable[float]] = ..., body_positions: _Optional[_Iterable[float]] = ..., body_quaternions: _Optional[_Iterable[float]] = ...) -> None: ...
+    body_linear_velocities: _containers.RepeatedScalarFieldContainer[float]
+    body_angular_velocities: _containers.RepeatedScalarFieldContainer[float]
+    def __init__(self, schema_hash: _Optional[str] = ..., time: _Optional[float] = ..., step_index: _Optional[int] = ..., joint_positions: _Optional[_Iterable[float]] = ..., joint_velocities: _Optional[_Iterable[float]] = ..., actuator_controls: _Optional[_Iterable[float]] = ..., actuator_forces: _Optional[_Iterable[float]] = ..., body_positions: _Optional[_Iterable[float]] = ..., body_quaternions: _Optional[_Iterable[float]] = ..., body_linear_velocities: _Optional[_Iterable[float]] = ..., body_angular_velocities: _Optional[_Iterable[float]] = ...) -> None: ...
 
 class NamedValue(_message.Message):
     __slots__ = ("id", "value")

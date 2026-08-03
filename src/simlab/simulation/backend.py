@@ -168,6 +168,8 @@ class BackendState:
     actuator_forces: tuple[float, ...]
     body_positions: tuple[tuple[float, float, float], ...]
     body_quaternions: tuple[tuple[float, float, float, float], ...]
+    body_linear_velocities: tuple[tuple[float, float, float], ...]
+    body_angular_velocities: tuple[tuple[float, float, float], ...]
 
     def __post_init__(self) -> None:
         if not math.isfinite(self.time) or self.time < 0:
@@ -181,15 +183,27 @@ class BackendState:
             *self.actuator_forces,
             *(value for position in self.body_positions for value in position),
             *(value for quaternion in self.body_quaternions for value in quaternion),
+            *(value for velocity in self.body_linear_velocities for value in velocity),
+            *(value for velocity in self.body_angular_velocities for value in velocity),
         )
         if any(not math.isfinite(value) for value in values):
             raise ValueError("Backend state values must be finite")
-        if len(self.body_positions) != len(self.body_quaternions):
-            raise ValueError("Backend body position and quaternion counts must match")
+        body_counts = {
+            len(self.body_positions),
+            len(self.body_quaternions),
+            len(self.body_linear_velocities),
+            len(self.body_angular_velocities),
+        }
+        if len(body_counts) != 1:
+            raise ValueError("Backend body pose and velocity counts must match")
         if any(len(item) != 3 for item in self.body_positions):
             raise ValueError("Backend body positions must contain xyz triples")
         if any(len(item) != 4 for item in self.body_quaternions):
             raise ValueError("Backend body quaternions must contain wxyz quadruples")
+        if any(len(item) != 3 for item in self.body_linear_velocities):
+            raise ValueError("Backend body linear velocities must contain xyz triples")
+        if any(len(item) != 3 for item in self.body_angular_velocities):
+            raise ValueError("Backend body angular velocities must contain xyz triples")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -202,6 +216,8 @@ class BackendState:
             "actuator_forces": list(self.actuator_forces),
             "body_positions": [list(item) for item in self.body_positions],
             "body_quaternions": [list(item) for item in self.body_quaternions],
+            "body_linear_velocities": [list(item) for item in self.body_linear_velocities],
+            "body_angular_velocities": [list(item) for item in self.body_angular_velocities],
         }
 
     @classmethod
@@ -227,6 +243,20 @@ class BackendState:
                     tuple(float(value) for value in item),
                 )
                 for item in data["body_quaternions"]
+            ),
+            body_linear_velocities=tuple(
+                cast(
+                    tuple[float, float, float],
+                    tuple(float(value) for value in item),
+                )
+                for item in data["body_linear_velocities"]
+            ),
+            body_angular_velocities=tuple(
+                cast(
+                    tuple[float, float, float],
+                    tuple(float(value) for value in item),
+                )
+                for item in data["body_angular_velocities"]
             ),
         )
 
@@ -342,6 +372,8 @@ def validate_state_layout(description: ModelDescription, state: BackendState) ->
         "actuator_forces": len(description.actuators),
         "body_positions": len(description.bodies),
         "body_quaternions": len(description.bodies),
+        "body_linear_velocities": len(description.bodies),
+        "body_angular_velocities": len(description.bodies),
     }
     for field_name, size in expected.items():
         actual = len(getattr(state, field_name))
@@ -360,7 +392,7 @@ def model_schema_hash(
 ) -> str:
     payload = json.dumps(
         {
-            "contract": "simlab.backend.v1",
+            "contract": "simlab.backend.v2",
             "body_ids": list(body_ids),
             "joint_ids": list(joint_ids),
             "actuator_ids": list(actuator_ids),

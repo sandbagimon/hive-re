@@ -72,6 +72,7 @@ class WebApplication:
             "stepSimulation": self.step_simulation,
             "resetSimulation": self.reset_simulation,
             "setJointTargets": self.set_joint_targets,
+            "setActuatorControls": self.set_actuator_controls,
             "loadController": self.path_required,
             "loadControllerPath": self.load_controller_path,
             "loadControllerContent": self.load_controller_content,
@@ -293,6 +294,21 @@ class WebApplication:
         numeric = {str(key): float(value) for key, value in targets.items()}
         try:
             state = self.simulation_service.set_joint_position_targets(scene, numeric)
+        except Exception as exc:
+            session = self.simulation_service.session
+            data = {"state": session.state().to_dict()} if session else None
+            return self.failure(exc, data)
+        self._publish("state", state.to_dict())
+        return self.success({"state": state.to_dict()})
+
+    def set_actuator_controls(self, scene_json: str, controls_json: str) -> dict[str, Any]:
+        scene = self._scene_from_json(scene_json)
+        controls = json.loads(controls_json)
+        if not isinstance(controls, dict):
+            raise ValueError("Actuator controls must be a JSON object")
+        numeric = {str(key): float(value) for key, value in controls.items()}
+        try:
+            state = self.simulation_service.set_actuator_controls(scene, numeric)
         except Exception as exc:
             session = self.simulation_service.session
             data = {"state": session.state().to_dict()} if session else None

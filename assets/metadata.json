@@ -453,6 +453,92 @@
           "articulation_b1e18b6b5322"
         ]
       }
+    },
+    {
+      "id": "openusd_iris_09f8390b45",
+      "name": "Pegasus Iris Quadcopter",
+      "type": "robot",
+      "source_format": "openusd",
+      "license": "BSD-3-Clause",
+      "source_url": "https://github.com/PegasusSimulator/PegasusSimulator/tree/main/extensions/pegasus.simulator/pegasus/simulator/assets/Robots/Iris",
+      "default_transform": {
+        "position": [
+          0.0,
+          0.0,
+          0.07
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "default_properties": {
+        "source": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+        "robotics_cache": "assets/imported/openusd_iris_09f8390b45/robotics.json",
+        "import_report": "assets/imported/openusd_iris_09f8390b45/import-report.json",
+        "manifest": "assets/imported/openusd_iris_09f8390b45/manifest.json",
+        "articulation_ids": [
+          "articulation_07d1eea61341"
+        ],
+        "propulsion": {
+          "type": "quadrotor",
+          "model": "quadratic",
+          "command_mode": "angular_velocity",
+          "body_link_id": "link_c46480014a33",
+          "rotors": [
+            {
+              "id": "iris_rotor_0",
+              "link_id": "link_65e89d9cb4b6",
+              "actuator_id": "actuator_iris_rotor_0",
+              "axis": [0.0, 0.0, 1.0],
+              "direction": -1,
+              "thrust_coefficient": 8.54858e-6,
+              "torque_coefficient": 1e-6,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            },
+            {
+              "id": "iris_rotor_1",
+              "link_id": "link_dd560abfac8c",
+              "actuator_id": "actuator_iris_rotor_1",
+              "axis": [0.0, 0.0, 1.0],
+              "direction": -1,
+              "thrust_coefficient": 8.54858e-6,
+              "torque_coefficient": 1e-6,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            },
+            {
+              "id": "iris_rotor_2",
+              "link_id": "link_d53e5880040c",
+              "actuator_id": "actuator_iris_rotor_2",
+              "axis": [0.0, 0.0, 1.0],
+              "direction": 1,
+              "thrust_coefficient": 8.54858e-6,
+              "torque_coefficient": 1e-6,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            },
+            {
+              "id": "iris_rotor_3",
+              "link_id": "link_81aeca72ce7b",
+              "actuator_id": "actuator_iris_rotor_3",
+              "axis": [0.0, 0.0, 1.0],
+              "direction": 1,
+              "thrust_coefficient": 8.54858e-6,
+              "torque_coefficient": 1e-6,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            }
+          ]
+        }
+      }
     }
   ]
 }

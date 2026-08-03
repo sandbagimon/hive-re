@@ -276,10 +276,29 @@ function renderInspector(
       </div>`;
     }),
   ).join('');
-  const robotSection = jointControls && !selectedSensor ? `
-    <section class="property-group"><div class="group-heading"><h3>Joint Control</h3><div class="joint-tools"><label>Step <input type="number" min="0.001" max="1" step="0.01" value="0.05" data-joint-step></label><button type="button" data-joint-home>Home</button></div></div>
+  const propulsion = actor.properties.propulsion;
+  const robotActuators = new Map(
+    articulations.flatMap((item) => item.actuators).map((item) => [item.id, item]),
+  );
+  const rotorControls = propulsion?.type === 'quadrotor'
+    ? propulsion.rotors.map((rotor) => {
+      const actuator = robotActuators.get(rotor.actuator_id);
+      if (!actuator) return '';
+      const target = actuatorStates.get(actuator.id)?.ctrl ?? 0;
+      return `<div class="joint-control">
+        <div class="joint-header"><label>${escapeHtml(rotor.id)}</label><span>${target.toFixed(1)} rad/s</span></div>
+        <div class="joint-target-row">
+          <input type="range" min="${rotor.min_angular_velocity}" max="${rotor.max_angular_velocity}" step="1" value="${target}" data-rotor-control="${escapeHtml(actuator.id)}" data-actuator-id="${escapeHtml(actuator.id)}">
+          <input type="number" min="${rotor.min_angular_velocity}" max="${rotor.max_angular_velocity}" step="1" value="${target.toFixed(1)}" data-rotor-control="${escapeHtml(actuator.id)}" data-actuator-id="${escapeHtml(actuator.id)}">
+        </div>
+      </div>`;
+    }).join('')
+    : '';
+  const robotSection = (jointControls || rotorControls) && !selectedSensor ? `
+    <section class="property-group"><div class="group-heading"><h3>${rotorControls ? 'Rotor Control' : 'Joint Control'}</h3><div class="joint-tools">${jointControls ? '<label>Step <input type="number" min="0.001" max="1" step="0.01" value="0.05" data-joint-step></label><button type="button" data-joint-home>Home</button>' : '<button type="button" data-rotor-stop>Stop Rotors</button>'}</div></div>
       ${controllerStatus}
       ${jointControls}
+      ${rotorControls}
     </section>` : '';
   const sourceSection = geometry ? `
     <section class="property-group"><h3>Imported Geometry</h3>
@@ -404,6 +423,12 @@ function renderInspector(
       if (jointId) void sendJointTargets({ [jointId]: Number(input.value) });
     });
   }
+  for (const input of inspector.querySelectorAll<HTMLInputElement>('[data-rotor-control]')) {
+    input.addEventListener('change', () => {
+      const actuatorId = input.dataset.rotorControl;
+      if (actuatorId) void sendActuatorControls({ [actuatorId]: Number(input.value) });
+    });
+  }
   inspector.querySelector<HTMLInputElement>('[data-joint-step]')?.addEventListener('change', (event) => {
     const value = Number((event.currentTarget as HTMLInputElement).value);
     if (!Number.isFinite(value) || value <= 0) return;
@@ -441,6 +466,12 @@ function renderInspector(
       ),
     );
     void sendJointTargets(targets);
+  });
+  inspector.querySelector<HTMLButtonElement>('[data-rotor-stop]')?.addEventListener('click', () => {
+    if (propulsion?.type !== 'quadrotor') return;
+    void sendActuatorControls(
+      Object.fromEntries(propulsion.rotors.map((rotor) => [rotor.actuator_id, 0])),
+    );
   });
 }
 
@@ -518,6 +549,21 @@ async function sendJointTargets(targets: Record<string, number>): Promise<void> 
   if (!result.ok || !result.data) {
     if (result.data?.state) simulationStore.setSimulation('paused', result.data.state);
     showToast(result.error ?? 'Joint control failed', true);
+    return;
+  }
+  const status = simulationStore.current.simulationStatus === 'running' ? 'running' : 'paused';
+  simulationStore.setSimulation(status, result.data.state);
+}
+
+async function sendActuatorControls(controls: Record<string, number>): Promise<void> {
+  const result = await bridge.call<RunPayload>(
+    'setActuatorControls',
+    JSON.stringify(store.current.scene),
+    JSON.stringify(controls),
+  );
+  if (!result.ok || !result.data) {
+    if (result.data?.state) simulationStore.setSimulation('paused', result.data.state);
+    showToast(result.error ?? 'Actuator control failed', true);
     return;
   }
   const status = simulationStore.current.simulationStatus === 'running' ? 'running' : 'paused';

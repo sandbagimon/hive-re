@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from simlab.models.scene import Scene
+from simlab.services.quadrotor_dynamics import quadrotor_models_from_scene
 from simlab.services.robotics_validation import validate_robotics_model
 from simlab.services.trajectory_validation import (
     TrajectoryValidationError,
@@ -26,6 +27,11 @@ def validate_scene(scene: Scene) -> None:
 
     if scene.robotics is not None:
         validate_robotics_model(scene.robotics)
+
+    try:
+        quadrotor_models_from_scene(scene)
+    except ValueError as exc:
+        raise ProjectValidationError(str(exc)) from exc
 
     trajectory_ids = [item.id for item in scene.trajectories]
     if len(trajectory_ids) != len(set(trajectory_ids)):

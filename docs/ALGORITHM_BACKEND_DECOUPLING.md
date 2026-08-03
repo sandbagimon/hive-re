@@ -154,6 +154,10 @@ CreateSession、Reset、Step、Close。远程请求不接受客户端文件路�
 默认只绑定 `127.0.0.1`。远程开发时建议通过 SSH/VS Code 转发 50051；当前实现是
 明文 gRPC，跨不可信网络部署前必须在反向代理或服务端增加 TLS，不能只依赖 token。
 
+当前握手版本为 `simlab.algorithm.v2`。v2 在 body 状态中增加线速度和角速度，使四旋翼等
+浮动基座机器人能够闭环控制；客户端和服务端版本不一致时会在创建 Session 阶段明确拒绝，
+而不是静默错读状态数组。
+
 ## 6. 与 Web API 的关系
 
 - `/api/v1` REST + WebSocket 是编辑器资源控制面和低频实时预览接口；

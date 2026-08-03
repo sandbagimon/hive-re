@@ -178,6 +178,13 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                         ),
                     },
                 )
+                if not selected_articulation.fixed_base:
+                    ET.SubElement(wrapper, "freejoint")
+                    home_positions.extend(actor.transform.position)
+                    home_positions.extend(
+                        euler_xyz_to_mujoco_quaternion(actor.transform.rotation)
+                    )
+                    home_velocities.extend([0.0] * 6)
                 _append_articulation(
                     wrapper,
                     selected_articulation,
@@ -312,6 +319,8 @@ def _append_collider(
     body: Any,
     collider: Collider,
     mesh_names: dict[str, str],
+    *,
+    mass: float | None = None,
 ) -> None:
     geom_type = collider.geometry_type
     attrs = {
@@ -322,6 +331,8 @@ def _append_collider(
         "friction": _format_vector(collider.friction),
         "rgba": "0.55 0.62 0.7 1",
     }
+    if mass is not None:
+        attrs["mass"] = str(mass)
     if geom_type == "mesh":
         mesh_name = mesh_names.get(collider.id)
         if mesh_name is None:
@@ -390,7 +401,13 @@ def _append_articulation(
             joint_names[joint.id] = joint_name
             home_positions.append(joint.initial_position)
             home_velocities.append(joint.initial_velocity)
-        if link.inertial is not None:
+        infer_inertia_from_colliders = bool(
+            link.inertial is not None
+            and link.inertial.diagonal_inertia is None
+            and link.inertial.full_inertia is None
+            and link.colliders
+        )
+        if link.inertial is not None and not infer_inertia_from_colliders:
             inertial_attrs = {
                 "mass": str(link.inertial.mass),
                 "pos": _format_vector(link.inertial.center_of_mass),
@@ -399,9 +416,23 @@ def _append_articulation(
                 inertial_attrs["diaginertia"] = _format_vector(
                     link.inertial.diagonal_inertia
                 )
+            elif link.inertial.full_inertia is not None:
+                inertial_attrs["fullinertia"] = _format_vector(
+                    link.inertial.full_inertia
+                )
             ET.SubElement(body, "inertial", inertial_attrs)
+        inferred_collider_mass = (
+            link.inertial.mass / len(link.colliders)
+            if infer_inertia_from_colliders and link.inertial is not None
+            else None
+        )
         for collider in link.colliders:
-            _append_collider(body, collider, mesh_names)
+            _append_collider(
+                body,
+                collider,
+                mesh_names,
+                mass=inferred_collider_mass,
+            )
         for sensor in imu_sensors_by_link.get(link.id, []):
             if sensor.local_transform is None:
                 raise ValueError(f"IMU sensor requires local_transform: {sensor.id}")

@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 
 def test_physics_playground_assets_are_declared() -> None:
     metadata = json.loads(Path("assets/metadata.json").read_text(encoding="utf-8"))
@@ -54,3 +56,34 @@ def test_high_quality_franka_robot_is_declared() -> None:
         for link in articulation["links"]
         for collider in link["colliders"]
     ) == 12
+
+
+def test_pegasus_iris_quadcopter_is_declared() -> None:
+    metadata = json.loads(Path("assets/metadata.json").read_text(encoding="utf-8"))
+    robots = {asset["id"]: asset for asset in metadata["assets"] if asset["type"] == "robot"}
+
+    robot = robots["openusd_iris_09f8390b45"]
+    assert robot["name"] == "Pegasus Iris Quadcopter"
+    assert robot["license"] == "BSD-3-Clause"
+    assert robot["source_url"].startswith("https://github.com/PegasusSimulator/")
+    assert robot["default_transform"]["position"] == [0.0, 0.0, 0.07]
+
+    properties = robot["default_properties"]
+    for key in ("source", "robotics_cache", "import_report", "manifest"):
+        assert Path(properties[key]).is_file()
+    robotics = json.loads(Path(properties["robotics_cache"]).read_text(encoding="utf-8"))
+    articulation = robotics["articulations"][0]
+    assert len(articulation["links"]) == 5
+    assert len(articulation["joints"]) == 4
+    assert len(articulation["actuators"]) == 4
+    assert {item["control_type"] for item in articulation["actuators"]} == {"velocity"}
+    assert all(
+        item["inertial"]["mass"] == pytest.approx(0.005)
+        for item in articulation["links"]
+        if item["name"].startswith("rotor")
+    )
+    propulsion = properties["propulsion"]
+    assert propulsion["type"] == "quadrotor"
+    assert len(propulsion["rotors"]) == 4
+    assert articulation["visual_bundle"].endswith(".simbin")
+    assert Path(articulation["visual_bundle"]).is_file()

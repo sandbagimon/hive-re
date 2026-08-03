@@ -73,6 +73,8 @@ class FakeSession:
             actuator_forces=(0.0, 0.0),
             body_positions=((0.0, 0.0, 0.0),),
             body_quaternions=((1.0, 0.0, 0.0, 0.0),),
+            body_linear_velocities=((0.0, 0.0, 0.0),),
+            body_angular_velocities=((0.0, 0.0, 0.0),),
         )
         return self.state
 
@@ -95,6 +97,8 @@ class FakeSession:
             actuator_forces=(0.0, 0.0),
             body_positions=old.body_positions,
             body_quaternions=old.body_quaternions,
+            body_linear_velocities=old.body_linear_velocities,
+            body_angular_velocities=old.body_angular_velocities,
         )
         return self.state
 

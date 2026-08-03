@@ -53,6 +53,8 @@ message BackendState {
   repeated double actuator_forces = 7;
   repeated double body_positions = 8;
   repeated double body_quaternions = 9;
+  repeated double body_linear_velocities = 10;
+  repeated double body_angular_velocities = 11;
 }
 
 message NamedValue {

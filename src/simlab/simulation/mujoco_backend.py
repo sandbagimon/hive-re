@@ -4,6 +4,8 @@ import tempfile
 from pathlib import Path
 from typing import cast
 
+import numpy as np
+
 from simlab.models.robotics import Actuator, Joint
 from simlab.services.simulation_session import MuJoCoSimulationSession, SimulationState
 from simlab.simulation.backend import (
@@ -196,6 +198,26 @@ class MujocoBackendSession:
         joint_by_id = {item.joint_id: item for item in state.joints}
         actuator_by_id = {item.actuator_id: item for item in state.actuators}
         body_by_id = {item.actor_id: item for item in [*state.actors, *state.links]}
+        mujoco_body_ids = {**self._require_open()._body_ids, **self._require_open()._link_ids}
+        linear_velocities: list[tuple[float, float, float]] = []
+        angular_velocities: list[tuple[float, float, float]] = []
+        session = self._require_open()
+        for item in description.bodies:
+            velocity = np.zeros(6, dtype=np.float64)
+            session._mujoco.mj_objectVelocity(
+                session.model,
+                session.data,
+                session._mujoco.mjtObj.mjOBJ_BODY,
+                mujoco_body_ids[item.id],
+                velocity,
+                0,
+            )
+            angular_velocities.append(
+                cast(tuple[float, float, float], tuple(float(value) for value in velocity[:3]))
+            )
+            linear_velocities.append(
+                cast(tuple[float, float, float], tuple(float(value) for value in velocity[3:]))
+            )
         return validate_state_layout(
             description,
             BackendState(
@@ -224,6 +246,8 @@ class MujocoBackendSession:
                     )
                     for item in description.bodies
                 ),
+                body_linear_velocities=tuple(linear_velocities),
+                body_angular_velocities=tuple(angular_velocities),
             ),
         )
 

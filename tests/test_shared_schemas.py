@@ -29,6 +29,7 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     assert "saveProjectPath" in bridge["properties"]["rpc_methods"]["const"]
     assert "getVisualGeometry" in bridge["properties"]["rpc_methods"]["const"]
     assert "setJointTargets" in bridge["properties"]["rpc_methods"]["const"]
+    assert "setActuatorControls" in bridge["properties"]["rpc_methods"]["const"]
     assert "loadTrajectory" in bridge["properties"]["rpc_methods"]["const"]
     assert "playTrajectory" in bridge["properties"]["rpc_methods"]["const"]
     assert "simulationStateChanged" in bridge["properties"]["events"]["const"]
@@ -52,6 +53,7 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     assert "exportRecording" in bridge["properties"]["rpc_methods"]["const"]
     assert "exportRecordingDialog" in bridge["properties"]["rpc_methods"]["const"]
     assert "meshGeometry" in scene["$defs"]
+    assert {"quadrotorRotor", "quadrotorPropulsion"}.issubset(scene["$defs"])
     assert scene["properties"]["robotics"]["$ref"] == "robotics.schema.json"
     assert scene["properties"]["trajectories"]["items"]["$ref"] == (
         "#/$defs/trajectoryClip"

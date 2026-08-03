@@ -227,6 +227,11 @@ export class EditorBridgeClient {
                 return this.simulationRequest('/joint-targets', {
                     method: 'PUT', body: JSON.stringify({ targets: JSON.parse(String(args[1])) }),
                 });
+            case 'setActuatorControls':
+                await this.synchronizeSceneArgument(args[0]);
+                return this.simulationRequest('/actuator-controls', {
+                    method: 'PUT', body: JSON.stringify({ controls: JSON.parse(String(args[1])) }),
+                });
             case 'loadTrajectory':
                 await this.synchronizeSceneArgument(args[0]);
                 return this.simulationRequest('/trajectory', {

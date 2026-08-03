@@ -134,3 +134,82 @@ class BoundDirectActuatorAdapter:
             raise ModelSchemaMismatchError(
                 "Robot adapter received state from a different model schema"
             )
+
+
+@dataclass(frozen=True, slots=True)
+class QuadrotorAdapter:
+    """Map four normalized rotor commands and observe one vehicle body pose."""
+
+    actuator_ids: tuple[str, str, str, str]
+    body_id: str
+
+    def __init__(self, actuator_ids: Sequence[str], *, body_id: str) -> None:
+        identifiers = tuple(str(item) for item in actuator_ids)
+        if len(identifiers) != 4:
+            raise ValueError("QuadrotorAdapter requires exactly four actuator IDs")
+        if len(set(identifiers)) != 4 or any(not item for item in identifiers):
+            raise ValueError("QuadrotorAdapter actuator IDs must be non-empty and unique")
+        if not body_id:
+            raise ValueError("QuadrotorAdapter body_id must not be empty")
+        object.__setattr__(self, "actuator_ids", identifiers)
+        object.__setattr__(self, "body_id", str(body_id))
+
+    def bind(self, description: ModelDescription) -> BoundQuadrotorAdapter:
+        direct = DirectActuatorAdapter(self.actuator_ids).bind(description)
+        body_index = {item.id: index for index, item in enumerate(description.bodies)}
+        if self.body_id not in body_index:
+            raise ValueError(f"Quadrotor adapter references unknown body ID: {self.body_id}")
+        return BoundQuadrotorAdapter(
+            description=description,
+            direct=direct,
+            body_index=body_index[self.body_id],
+            body_id=self.body_id,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class BoundQuadrotorAdapter:
+    description: ModelDescription
+    direct: BoundDirectActuatorAdapter
+    body_index: int
+    body_id: str
+
+    @property
+    def action_spec(self) -> BoundedArraySpec:
+        return self.direct.action_spec
+
+    @property
+    def observation_spec(self) -> BoundedArraySpec:
+        limit = float(np.finfo(np.float32).max)
+        return BoundedArraySpec(
+            shape=(13,),
+            minimum=(
+                -limit, -limit, -limit, -1.0, -1.0, -1.0, -1.0,
+                -limit, -limit, -limit, -limit, -limit, -limit,
+            ),
+            maximum=(
+                limit, limit, limit, 1.0, 1.0, 1.0, 1.0,
+                limit, limit, limit, limit, limit, limit,
+            ),
+        )
+
+    def command(self, action: object, state: BackendState) -> ControlCommand:
+        return self.direct.command(action, state)
+
+    def observation(self, state: BackendState) -> np.ndarray:
+        self._validate_state(state)
+        return np.asarray(
+            (
+                *state.body_positions[self.body_index],
+                *state.body_quaternions[self.body_index],
+                *state.body_linear_velocities[self.body_index],
+                *state.body_angular_velocities[self.body_index],
+            ),
+            dtype=np.float32,
+        )
+
+    def _validate_state(self, state: BackendState) -> None:
+        if state.schema_hash != self.description.schema_hash:
+            raise ModelSchemaMismatchError(
+                "Quadrotor adapter received state from a different model schema"
+            )

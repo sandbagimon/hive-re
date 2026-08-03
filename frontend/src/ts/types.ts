@@ -43,7 +43,28 @@ export interface ActorProperties {
   geometry?: MeshGeometryProperties;
   import_warnings?: string[];
   mass?: number;
+  propulsion?: QuadrotorPropulsion;
   [key: string]: unknown;
+}
+
+export interface QuadrotorRotor {
+  id: string;
+  link_id: string;
+  actuator_id: string;
+  axis: Vector3;
+  direction: -1 | 1;
+  thrust_coefficient: number;
+  torque_coefficient: number;
+  min_angular_velocity: number;
+  max_angular_velocity: number;
+}
+
+export interface QuadrotorPropulsion {
+  type: 'quadrotor';
+  model: 'quadratic';
+  command_mode: 'angular_velocity';
+  body_link_id: string;
+  rotors: [QuadrotorRotor, QuadrotorRotor, QuadrotorRotor, QuadrotorRotor];
 }
 
 export interface Actor {
@@ -192,6 +213,8 @@ export interface AssetMetadata {
   type: ActorType;
   primitive?: PrimitiveType;
   source_format?: 'openusd';
+  license?: string;
+  source_url?: string;
   default_transform?: Transform;
   default_properties?: ActorProperties;
   robotics?: RoboticsModel;
