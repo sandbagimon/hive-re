@@ -20,6 +20,10 @@ SimLab backend (independent Python deployment)
 +-- Transport-neutral Python Application Service
     +-- Project IO / OpenUSD Import / Validation / MJCF Export
     +-- MuJoCo Session + Joint Control / Trajectory / Recording
+
+Optional MCP adapter (independent process)
++-- stdio or Streamable HTTP
++-- calls only the versioned `/api/v1` REST boundary
 ```
 
 ## Installation
@@ -51,6 +55,18 @@ In a separate terminal, run the frontend:
 ```bash
 ./start_frontend.sh
 ```
+
+For an MCP client, install the optional dependency and start the independent adapter in another
+terminal (or configure the client to launch this command over stdio):
+
+```bash
+.venv/bin/python -m pip install -e '.[mcp]'
+./start_mcp.sh
+```
+
+For Remote SSH, use `./start_mcp.sh --transport streamable-http --host 127.0.0.1 --port 8766`
+and forward port `8766`. See [`docs/MCP_INTEGRATION.md`](docs/MCP_INTEGRATION.md) for client
+configuration, all tools/resources, authentication, and the deployment boundary.
 
 Then open `http://127.0.0.1:5173`. For a production-like build use `npm run build` followed by `npm run preview:frontend`, which serves `frontend/dist` at `http://127.0.0.1:4173`. Deployment-specific API and WebSocket addresses are read from `simlab-config.json`, so the static bundle does not need to share a host or release cycle with Python.
 

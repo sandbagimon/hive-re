@@ -24,6 +24,7 @@ httpx>=0.28
 ruff>=0.5
 mypy>=1.10
 grpcio-tools>=1.81.1,<2
+mcp>=2,<3
 
 # Install SimLab itself from this checkout.
 -e .

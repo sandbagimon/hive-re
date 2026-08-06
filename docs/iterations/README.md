@@ -112,3 +112,4 @@ YYYY-MM-DD-短标题.md
 - [2026-08-04 Incremental Viewport Scene Reconciliation](2026-08-04-incremental-viewport-reconciliation.md)
 - [2026-08-05 Physical Drone Payload Delivery](2026-08-05-physical-drone-delivery.md)
 - [2026-08-05 USDZ PBR Material Fidelity](2026-08-05-usdz-pbr-material-fidelity.md)
+- [2026-08-06 MCP REST Adapter](2026-08-06-mcp-rest-adapter.md)

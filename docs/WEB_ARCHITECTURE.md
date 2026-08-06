@@ -15,6 +15,11 @@ The frontend is static content and may be hosted by a CDN, object storage, Vite 
 
 The optional Qt application is only a web client. It loads `SIMLAB_FRONTEND_URL` (or `--frontend-url`) over HTTP(S); it does not register QWebChannel objects, start an API, receive a project filesystem root, or execute business logic.
 
+The optional `simlab-mcp` process is also an external client adapter. It translates stdio or
+Streamable HTTP MCP requests into the same authenticated `/api/v1` resources. It does not import
+the resource manager or simulation engine, and high-frequency state remains on WebSocket/gRPC.
+See [`MCP_INTEGRATION.md`](MCP_INTEGRATION.md).
+
 ## Runtime configuration
 
 The frontend reads `simlab-config.json` relative to its deployed `index.html` with caching disabled:

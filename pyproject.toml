@@ -33,6 +33,10 @@ remote = [
   "grpcio>=1.81.1,<2",
   "protobuf>=6.33.5,<7",
 ]
+mcp = [
+  "httpx>=0.28,<1",
+  "mcp>=2,<3",
+]
 geospatial = [
   "fsspec[http]>=2024.6",
   "pyarrow>=15",
@@ -48,6 +52,7 @@ dev = [
   "grpcio>=1.81.1,<2",
   "grpcio-tools>=1.81.1,<2",
   "protobuf>=6.33.5,<7",
+  "mcp>=2,<3",
 ]
 
 [project.scripts]
@@ -55,6 +60,7 @@ simlab = "simlab.app:main"
 simlab-web = "simlab.web_server:main"
 simlab-api = "simlab.web_server:main"
 simlab-algorithm-server = "simlab.simulation.grpc_backend:main"
+simlab-mcp = "simlab.mcp.server:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
