@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "format": "openusd",
+  "source": "assets/imported/openusd_sea_65c0de78e0/source/sea.usdz",
+  "source_name": "sea.usdz",
+  "dependencies": [
+    "assets/imported/openusd_sea_65c0de78e0/source/textures/color_121212.hdr",
+    "assets/imported/openusd_sea_65c0de78e0/source/textures/texture_pbr_20250901.png",
+    "assets/imported/openusd_sea_65c0de78e0/source/textures/texture_pbr_20250901_metallic.png",
+    "assets/imported/openusd_sea_65c0de78e0/source/textures/texture_pbr_20250901_normal.png",
+    "assets/imported/openusd_sea_65c0de78e0/source/textures/texture_pbr_20250901_roughness.png"
+  ],
+  "visual_cache": "assets/imported/openusd_sea_65c0de78e0/visual.json",
+  "collision_mesh": "assets/imported/openusd_sea_65c0de78e0/collision.obj",
+  "mesh_count": 1,
+  "vertex_count": 150000,
+  "triangle_count": 50000,
+  "collision_vertex_count": 150000,
+  "collision_triangle_count": 50000,
+  "dedicated_collision": false,
+  "point_instance_count": 0,
+  "native_primitive_count": 0,
+  "source_prim_paths": [
+    "/root/node_0/node_0"
+  ],
+  "collision_prim_paths": [
+    "/root/node_0/node_0"
+  ],
+  "base_color_texture": "assets/imported/openusd_sea_65c0de78e0/source/textures/texture_pbr_20250901.png",
+  "normal_texture": "assets/imported/openusd_sea_65c0de78e0/source/textures/texture_pbr_20250901_normal.png",
+  "roughness_texture": "assets/imported/openusd_sea_65c0de78e0/source/textures/texture_pbr_20250901_roughness.png",
+  "metallic_texture": "assets/imported/openusd_sea_65c0de78e0/source/textures/texture_pbr_20250901_metallic.png",
+  "roughness": null,
+  "metalness": null,
+  "bounds": {
+    "min": [
+      -0.4155679941177368,
+      -0.4129010093832423,
+      5.158676381962411e-08
+    ],
+    "max": [
+      0.40030598640441895,
+      0.4049460039067694,
+      0.3425720465622957
+    ]
+  },
+  "warnings": [
+    "No UsdPhysics collision geometry was found; collision falls back to the visual mesh.",
+    "No UsdPhysics rigid body was found; imported actor defaults to Static."
+  ]
+}

@@ -68,6 +68,8 @@
         },
         "joints": { "type": "array" },
         "actuators": { "type": "array" },
+        "attachments": { "type": "array" },
+        "delivery_tasks": { "type": "array" },
         "sensors": {
           "type": "array",
           "items": {
@@ -164,7 +166,7 @@
           "additionalProperties": false
         }
       },
-      "required": ["time", "actors", "links", "joints", "actuators", "sensors", "trajectory", "recording", "controller"],
+      "required": ["time", "actors", "links", "joints", "actuators", "attachments", "delivery_tasks", "sensors", "trajectory", "recording", "controller"],
       "additionalProperties": false
     }
   },
@@ -190,6 +192,7 @@
         "resetSimulation",
         "setJointTargets",
         "setActuatorControls",
+        "setAttachmentCommands",
         "loadTrajectory",
         "playTrajectory",
         "pauseTrajectory",

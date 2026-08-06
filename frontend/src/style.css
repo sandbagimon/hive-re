@@ -62,6 +62,25 @@ button:hover, button:focus-visible { border-color: #6f91bd; background: #303947;
 button:disabled { cursor: default; opacity: 0.42; }
 button.primary { border-color: #4d8e78; background: #276a57; }
 
+.command-link {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  padding: 5px 9px;
+  border: 1px solid #3a4350;
+  border-radius: 5px;
+  background: #252c35;
+  color: inherit;
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.command-link:hover, .command-link:focus-visible {
+  border-color: #6f91bd;
+  background: #303947;
+  outline: none;
+}
+
 #simulation-badge {
   padding: 5px 8px;
   border: 1px solid #46515e;

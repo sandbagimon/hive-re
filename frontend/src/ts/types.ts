@@ -44,6 +44,7 @@ export interface ActorProperties {
   import_warnings?: string[];
   mass?: number;
   propulsion?: QuadrotorPropulsion;
+  visual_style?: 'shipping_package';
   [key: string]: unknown;
 }
 
@@ -74,6 +75,46 @@ export interface Actor {
   asset_id: string;
   transform: Transform;
   properties: ActorProperties;
+}
+
+export interface Attachment {
+  id: string;
+  type: 'connect' | 'weld';
+  parent_body_id: string;
+  child_body_id: string;
+  parent_anchor: Vector3;
+  child_anchor: Vector3;
+  initially_active: boolean;
+  capture_distance: number;
+  capture_speed: number;
+  capture_duration: number;
+  require_contact: boolean;
+  contact_probe_radius: number;
+  gripper?: VacuumGripper;
+  solref: [number, number];
+  solimp: [number, number, number, number, number];
+}
+
+export interface VacuumGripper {
+  type: 'four_cup_vacuum';
+  plate_half_extents: Vector3;
+  cup_offset: [number, number];
+  cup_radius: number;
+  cup_height: number;
+  mount_radius: number;
+  mount_length: number;
+}
+
+export interface DeliveryTask {
+  id: string;
+  type: 'aerial_delivery';
+  attachment_id: string;
+  payload_body_id: string;
+  pickup_position: Vector3;
+  dropoff_position: Vector3;
+  position_tolerance: number;
+  settle_speed: number;
+  settle_duration: number;
 }
 
 export interface RoboticsModel {
@@ -200,6 +241,8 @@ export interface Scene {
   actors: Actor[];
   robotics?: RoboticsModel;
   trajectories?: SceneTrajectory[];
+  attachments?: Attachment[];
+  delivery_tasks?: DeliveryTask[];
   simulation_config: {
     timestep: number;
     duration: number;
@@ -238,6 +281,27 @@ export interface ActuatorSimulationState {
   id: string;
   ctrl: number;
   force: number;
+}
+
+export interface AttachmentSimulationState {
+  id: string;
+  status: 'inactive' | 'pending' | 'active';
+  active: boolean;
+  requested_active: boolean;
+  eligible: boolean;
+  contact: boolean;
+  distance: number;
+  relative_speed: number;
+}
+
+export interface DeliveryTaskSimulationState {
+  id: string;
+  status: 'waiting_pickup' | 'in_transit' | 'released' | 'settling' | 'completed';
+  attachment_id: string;
+  payload_body_id: string;
+  distance_to_dropoff: number;
+  payload_speed: number;
+  stable_time: number;
 }
 
 export interface JointStateSensorSample {
@@ -333,6 +397,8 @@ export interface SimulationState {
   links: LinkSimulationState[];
   joints: JointSimulationState[];
   actuators: ActuatorSimulationState[];
+  attachments: AttachmentSimulationState[];
+  delivery_tasks: DeliveryTaskSimulationState[];
   sensors: SensorSample[];
   trajectory: TrajectorySimulationState;
   recording: RecordingSimulationState;
@@ -387,6 +453,14 @@ export interface VisualGeometryPayload {
   uvs?: number[] | null;
   base_color_texture?: string | null;
   base_color_texture_url?: string | null;
+  normal_texture?: string | null;
+  normal_texture_url?: string | null;
+  roughness_texture?: string | null;
+  roughness_texture_url?: string | null;
+  metallic_texture?: string | null;
+  metallic_texture_url?: string | null;
+  roughness?: number | null;
+  metalness?: number | null;
 }
 
 export interface SimLabEditorAutomation {

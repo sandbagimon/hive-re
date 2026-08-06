@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
@@ -27,6 +28,21 @@ def _float_list(value: Any, length: int, field_name: str) -> list[float]:
 
 def _optional_float(value: Any) -> float | None:
     return None if value is None else float(value)
+
+
+def _optional_limit(value: Any) -> float | None:
+    """Normalize an omitted or unbounded joint limit to ``None``.
+
+    OpenUSD commonly represents continuous joint limits as +/- infinity. JSON
+    has no representation for infinity, and ``None`` already means unbounded
+    in the shared robotics contract.
+    """
+    if value is None:
+        return None
+    result = float(value)
+    if math.isnan(result):
+        raise ValueError("Joint limits cannot be NaN")
+    return result if math.isfinite(result) else None
 
 
 NoiseValue = float | list[float]
@@ -312,10 +328,10 @@ class JointLimits:
     velocity: float | None = None
 
     def __post_init__(self) -> None:
-        self.lower = _optional_float(self.lower)
-        self.upper = _optional_float(self.upper)
-        self.effort = _optional_float(self.effort)
-        self.velocity = _optional_float(self.velocity)
+        self.lower = _optional_limit(self.lower)
+        self.upper = _optional_limit(self.upper)
+        self.effort = _optional_limit(self.effort)
+        self.velocity = _optional_limit(self.velocity)
 
     def to_dict(self) -> dict[str, float | None]:
         return {

@@ -103,6 +103,13 @@ def test_robot_mesh_visual_gets_a_single_viewport_bundle(tmp_path: Path) -> None
 def test_robot_mesh_collider_gets_a_mujoco_collision_cache(tmp_path: Path) -> None:
     result = import_openusd_asset(MESH_COLLIDER_FIXTURE, tmp_path)
     assert result.robotics_model is not None
+    root_link = result.robotics_model.articulations[0].links[0]
+    assert root_link.inertial is not None
+    assert root_link.inertial.center_of_mass == [0.0, 0.0, 0.0]
+    assert any(
+        issue.code == "usd.center_of_mass_defaulted"
+        for issue in result.report.issues
+    )
     colliders = [
         collider
         for articulation in result.robotics_model.articulations

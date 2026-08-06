@@ -26,6 +26,16 @@ def test_save_and_load_scene_json(tmp_path) -> None:
     assert loaded.actors[0].asset_id == "primitive_box"
 
 
+def test_save_scene_rejects_non_standard_json_numbers(tmp_path) -> None:
+    scene = Scene(
+        name="Invalid numeric payload",
+        simulation_config={"timestep": float("nan")},
+    )
+
+    with pytest.raises(ValueError, match="Out of range float values"):
+        save_scene(tmp_path / "scene.json", scene)
+
+
 def test_load_rejects_duplicate_actor_ids(tmp_path) -> None:
     path = tmp_path / "scene.json"
     path.write_text(

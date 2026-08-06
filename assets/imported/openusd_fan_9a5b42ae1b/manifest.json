@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "format": "openusd",
+  "source": "assets/imported/openusd_fan_9a5b42ae1b/source/fan.usdz",
+  "source_name": "fan.usdz",
+  "dependencies": [
+    "assets/imported/openusd_fan_9a5b42ae1b/source/textures/color_121212.hdr",
+    "assets/imported/openusd_fan_9a5b42ae1b/source/textures/texture_pbr_20250901.png",
+    "assets/imported/openusd_fan_9a5b42ae1b/source/textures/texture_pbr_20250901_metallic.png",
+    "assets/imported/openusd_fan_9a5b42ae1b/source/textures/texture_pbr_20250901_normal.png",
+    "assets/imported/openusd_fan_9a5b42ae1b/source/textures/texture_pbr_20250901_roughness.png"
+  ],
+  "visual_cache": "assets/imported/openusd_fan_9a5b42ae1b/visual.json",
+  "collision_mesh": "assets/imported/openusd_fan_9a5b42ae1b/collision.obj",
+  "mesh_count": 1,
+  "vertex_count": 147396,
+  "triangle_count": 49132,
+  "collision_vertex_count": 147396,
+  "collision_triangle_count": 49132,
+  "dedicated_collision": false,
+  "point_instance_count": 0,
+  "native_primitive_count": 0,
+  "source_prim_paths": [
+    "/root/node_0/node_0"
+  ],
+  "collision_prim_paths": [
+    "/root/node_0/node_0"
+  ],
+  "base_color_texture": "assets/imported/openusd_fan_9a5b42ae1b/source/textures/texture_pbr_20250901.png",
+  "normal_texture": "assets/imported/openusd_fan_9a5b42ae1b/source/textures/texture_pbr_20250901_normal.png",
+  "roughness_texture": "assets/imported/openusd_fan_9a5b42ae1b/source/textures/texture_pbr_20250901_roughness.png",
+  "metallic_texture": "assets/imported/openusd_fan_9a5b42ae1b/source/textures/texture_pbr_20250901_metallic.png",
+  "roughness": null,
+  "metalness": null,
+  "bounds": {
+    "min": [
+      -0.34508100152015686,
+      -0.11937590468421748,
+      7.407848737233301e-09
+    ],
+    "max": [
+      0.37037599086761475,
+      0.12496201923431963,
+      0.9581239912746541
+    ]
+  },
+  "warnings": [
+    "No UsdPhysics collision geometry was found; collision falls back to the visual mesh.",
+    "No UsdPhysics rigid body was found; imported actor defaults to Static."
+  ]
+}

@@ -37,6 +37,9 @@
   可视化预转后执行两秒平滑起飞，使用高度/垂直速度反馈在高一米处制动悬停。
 - Three.js Viewport 根据仿真时间、Rotor Control 和旋向积分纯视觉旋翼相位；显示转速按比例降低
   以避免浏览器采样混叠，不参与物理计算。
+- 修复浏览器保存场景中的项目级 `art_*` 引用跨项目失效：加载场景时按稳定 `asset_id` 将
+  Actor 和 Robotics 内的资源字段重绑定到当前项目缓存，避免旧 Artifact ID 被误当成路径并触发
+  `Imported asset path must be inside assets/imported`。
 
 ## 接口边界
 
@@ -61,7 +64,7 @@
 - REST 真实资源流程：创建 Project、添加 Iris、创建 Simulation、写入 4 个 named controls、Step
   和状态返回全部通过。
 - 本地 Gym `QuadrotorAdapter`、Body Velocity State 和远程 gRPC 序列化路径通过。
-- Python 全量：249 passed、3 skipped；本轮坐标修复相关测试：38 passed；OpenUSD importer：
+- Python 全量：250 passed、3 skipped；本轮坐标修复相关测试：38 passed；OpenUSD importer：
   12 passed。
 - 前端模块测试：Store、Simulation、Trajectory、Kinematics、Geometry Bundle、Vite Runtime Config
   全部通过。

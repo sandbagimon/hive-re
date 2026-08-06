@@ -33,6 +33,9 @@ const toolbar = requiredElement<HTMLElement>('#viewport-toolbar');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setClearColor(0x171a1f, 1);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
 
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x171a1f, 18, 60);
@@ -90,17 +93,62 @@ transformControls.addEventListener('mouseUp', () => {
 const grid = new THREE.GridHelper(20, 20, 0x4a5568, 0x2d3748);
 grid.rotation.x = Math.PI / 2;
 scene.add(grid);
-scene.add(new THREE.AxesHelper(2));
+const axes = new THREE.AxesHelper(2);
+scene.add(axes);
 
 const ambient = new THREE.HemisphereLight(0xffffff, 0x20242b, 1.6);
 scene.add(ambient);
 
-const keyLight = new THREE.DirectionalLight(0xffffff, 1.3);
+const keyLight = new THREE.DirectionalLight(0xfff1d6, 1.3);
 keyLight.position.set(4, -5, 8);
 scene.add(keyLight);
 
+const fillLight = new THREE.DirectionalLight(0x8ab8e6, 0.28);
+fillLight.position.set(-5, 3, 4);
+scene.add(fillLight);
+
+const citySky = new THREE.Mesh(
+  new THREE.SphereGeometry(1, 32, 16),
+  new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    depthWrite: false,
+    uniforms: {
+      horizonColor: { value: new THREE.Color(0xd9e7ee) },
+      zenithColor: { value: new THREE.Color(0x4f8fc4) },
+      sunColor: { value: new THREE.Color(0xffdca3) },
+    },
+    vertexShader: `
+      varying vec3 vSkyDirection;
+      void main() {
+        vSkyDirection = normalize(position);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vSkyDirection;
+      uniform vec3 horizonColor;
+      uniform vec3 zenithColor;
+      uniform vec3 sunColor;
+      void main() {
+        float skyMix = pow(vSkyDirection.z * 0.5 + 0.5, 0.58);
+        vec3 color = mix(horizonColor, zenithColor, skyMix);
+        vec3 sunDirection = normalize(vec3(-0.45, 0.30, 0.72));
+        float sun = smoothstep(0.996, 0.9992, dot(vSkyDirection, sunDirection));
+        color += sunColor * sun * 1.25;
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `,
+  }),
+);
+citySky.visible = false;
+citySky.frustumCulled = false;
+citySky.renderOrder = -100;
+scene.add(citySky);
+
 const actorGroup = new THREE.Group();
 scene.add(actorGroup);
+const attachmentGroup = new THREE.Group();
+scene.add(attachmentGroup);
 
 const selectionOutline = new THREE.BoxHelper(new THREE.Object3D(), 0xffd166);
 selectionOutline.visible = false;
@@ -113,6 +161,15 @@ const pointer = new THREE.Vector2();
 const actorMeshes = new Map<string, any>();
 const robotLinkGroups = new Map<string, any>();
 const rotorAnimationStates = new Map<string, RotorAnimationState>();
+const actorRenderSignatures = new Map<string, string>();
+const actorLoadRevisions = new Map<string, number>();
+const attachmentVisuals = new Map<string, {
+  line: any;
+  parentMarker: any;
+  childMarker: any;
+  indicator: any;
+}>();
+let attachmentRenderSignature = '';
 let selectedActorId: string | null = null;
 let selectedLinkId: string | null = null;
 let currentScene: Scene = {
@@ -124,7 +181,7 @@ let currentScene: Scene = {
 };
 let simulationState: SimulationState | null = null;
 let colliderDebugVisible = false;
-let sceneRevision = 0;
+let cityEnvironmentVisible = false;
 const focusBox = new THREE.Box3();
 const focusSphere = new THREE.Sphere();
 const viewDirections: Record<CameraView, any> = {
@@ -133,6 +190,7 @@ const viewDirections: Record<CameraView, any> = {
   right: new THREE.Vector3(1, 0, 0),
   top: new THREE.Vector3(0, 0, 1),
 };
+const largeEnvironmentViewDirection = new THREE.Vector3(1, -1, 1.05).normalize();
 const materialVisuals: Record<string, { roughness: number; metalness: number }> = {
   default: { roughness: 0.55, metalness: 0.04 },
   rubber: { roughness: 0.86, metalness: 0 },
@@ -140,6 +198,43 @@ const materialVisuals: Record<string, { roughness: number; metalness: number }> 
   metal: { roughness: 0.24, metalness: 0.82 },
   ice: { roughness: 0.12, metalness: 0.08 },
 };
+
+function isLargeEnvironment(actor: Actor): boolean {
+  const bounds = actor.properties.geometry?.bounds;
+  if (!bounds) return false;
+  return Math.max(...bounds.max.map((value, index) => value - bounds.min[index])) >= 250;
+}
+
+function updateEnvironmentAppearance(sceneData: Scene): void {
+  const wasCityEnvironmentVisible = cityEnvironmentVisible;
+  cityEnvironmentVisible = sceneData.actors.some(isLargeEnvironment);
+  canvas.dataset.environmentMode = cityEnvironmentVisible ? 'city' : 'editor';
+  grid.visible = !cityEnvironmentVisible;
+  axes.visible = !cityEnvironmentVisible;
+  citySky.visible = cityEnvironmentVisible;
+  renderer.setClearColor(cityEnvironmentVisible ? 0xb9d3e3 : 0x171a1f, 1);
+  renderer.toneMappingExposure = cityEnvironmentVisible ? 1.08 : 1.0;
+  if (scene.fog instanceof THREE.Fog) {
+    scene.fog.color.set(cityEnvironmentVisible ? 0xc4d8e2 : 0x171a1f);
+  }
+  ambient.color.set(cityEnvironmentVisible ? 0xcce5ff : 0xffffff);
+  ambient.groundColor.set(cityEnvironmentVisible ? 0x53665d : 0x20242b);
+  ambient.intensity = cityEnvironmentVisible ? 1.25 : 1.6;
+  keyLight.intensity = cityEnvironmentVisible ? 2.1 : 1.3;
+  fillLight.intensity = cityEnvironmentVisible ? 0.5 : 0.28;
+  const environmentModeChanged = cityEnvironmentVisible !== wasCityEnvironmentVisible;
+  if (scene.fog instanceof THREE.Fog && environmentModeChanged) {
+    // A large environment gets camera-dependent fog distances in frameObject(). Preserve those
+    // distances while reconciling unrelated actors; resetting them to the editor defaults would
+    // fog out a kilometre-scale scene and make it flash white after every scene edit.
+    scene.fog.near = 18;
+    scene.fog.far = 60;
+  }
+  if (scene.fog instanceof THREE.Fog) {
+    canvas.dataset.fogNear = scene.fog.near.toFixed(3);
+    canvas.dataset.fogFar = scene.fog.far.toFixed(3);
+  }
+}
 
 export function configureViewport(callbacks: {
   onActorSelected: (actorId: string | null) => void;
@@ -206,6 +301,104 @@ function geometryForActor(actor: Actor): any {
   return new THREE.BoxGeometry((size[0] ?? 0.5) * 2, (size[1] ?? 0.5) * 2, (size[2] ?? 0.5) * 2);
 }
 
+function addShippingPackageDetails(mesh: any, actor: Actor): void {
+  if (actor.properties.visual_style !== 'shipping_package') return;
+  const size = actor.properties.size ?? [0.18, 0.14, 0.11];
+  const [halfX, halfY, halfZ] = [
+    size[0] ?? 0.18,
+    size[1] ?? 0.14,
+    size[2] ?? 0.11,
+  ];
+  mesh.material.color.set(0xb5793f);
+  mesh.material.roughness = 0.82;
+  mesh.material.metalness = 0;
+
+  const addBox = (
+    dimensions: [number, number, number],
+    position: [number, number, number],
+    color: number,
+    roughness = 0.65,
+  ): any => {
+    const detail = new THREE.Mesh(
+      new THREE.BoxGeometry(...dimensions),
+      new THREE.MeshStandardMaterial({ color, roughness, metalness: 0 }),
+    );
+    detail.position.set(...position);
+    detail.userData.packageDetail = true;
+    mesh.add(detail);
+    return detail;
+  };
+
+  const tapeWidth = Math.min(halfX * 0.34, 0.065);
+  const surfaceOffset = 0.0015;
+  addBox(
+    [tapeWidth, halfY * 2 + 0.004, 0.003],
+    [0, 0, halfZ + surfaceOffset],
+    0xd7b36a,
+    0.48,
+  );
+  for (const side of [-1, 1]) {
+    addBox(
+      [tapeWidth, 0.003, halfZ * 2],
+      [0, side * (halfY + surfaceOffset), 0],
+      0xd7b36a,
+      0.48,
+    );
+  }
+
+  const strapColor = 0x263746;
+  for (const offsetY of [-halfY * 0.52, halfY * 0.52]) {
+    addBox(
+      [halfX * 2 + 0.004, 0.012, 0.004],
+      [0, offsetY, halfZ + 0.002],
+      strapColor,
+      0.58,
+    );
+    for (const side of [-1, 1]) {
+      addBox(
+        [0.003, 0.012, halfZ * 2],
+        [side * (halfX + surfaceOffset), offsetY, 0],
+        strapColor,
+        0.58,
+      );
+    }
+  }
+
+  addBox(
+    [halfX * 0.66, halfY * 0.62, 0.0025],
+    [halfX * 0.32, 0, halfZ + 0.004],
+    0xf0ede4,
+    0.9,
+  );
+  for (let index = 0; index < 7; index += 1) {
+    const width = index % 3 === 0 ? 0.004 : 0.002;
+    addBox(
+      [width, halfY * 0.36, 0.001],
+      [halfX * 0.12 + index * halfX * 0.045, 0, halfZ + 0.0055],
+      0x222222,
+      0.8,
+    );
+  }
+
+  const seamColor = 0x6f4528;
+  addBox(
+    [0.002, halfY * 2, 0.002],
+    [-halfX * 0.48, 0, halfZ + 0.003],
+    seamColor,
+    0.9,
+  );
+  for (const x of [-halfX, halfX]) {
+    for (const y of [-halfY, halfY]) {
+      addBox(
+        [0.018, 0.018, 0.018],
+        [x * 0.96, y * 0.95, halfZ * 0.92],
+        0x8e5a32,
+        0.88,
+      );
+    }
+  }
+}
+
 function geometryFromPayload(payload: VisualGeometryPayload): any {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(payload.positions, 3));
@@ -224,6 +417,49 @@ function geometryFromPayload(payload: VisualGeometryPayload): any {
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
   return geometry;
+}
+
+type MaterialTextureSlot = 'map' | 'normalMap' | 'roughnessMap' | 'metalnessMap';
+
+function visualTextureUrls(payload: VisualGeometryPayload): string[] {
+  return [
+    payload.base_color_texture_url,
+    payload.normal_texture_url,
+    payload.roughness_texture_url,
+    payload.metallic_texture_url,
+  ].filter((value): value is string => Boolean(value));
+}
+
+function loadMaterialTexture(
+  actorId: string,
+  mesh: any,
+  loadRevision: number,
+  url: string | null | undefined,
+  slot: MaterialTextureSlot,
+  colorTexture: boolean,
+  scalar?: number | null,
+): void {
+  if (!url) return;
+  new THREE.TextureLoader().load(
+    url,
+    (texture) => {
+      URL.revokeObjectURL(url);
+      if (!actorLoadIsCurrent(actorId, mesh, loadRevision)) {
+        texture.dispose();
+        return;
+      }
+      texture.colorSpace = colorTexture ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      mesh.material[slot]?.dispose();
+      mesh.material[slot] = texture;
+      if (slot === 'roughnessMap') mesh.material.roughness = scalar ?? 1;
+      if (slot === 'metalnessMap') mesh.material.metalness = scalar ?? 1;
+      mesh.material.needsUpdate = true;
+    },
+    undefined,
+    () => URL.revokeObjectURL(url),
+  );
 }
 
 function geometryFromBundle(payload: BundledGeometry): any {
@@ -289,7 +525,7 @@ function addRobotActor(
   actor: Actor,
   articulation: RobotArticulation,
   visualBundle: string | null,
-  revision: number,
+  loadRevision: number,
 ): any {
   const root = new THREE.Group();
   root.position.set(...actor.transform.position);
@@ -342,7 +578,11 @@ function addRobotActor(
       ) {
         const cachePath = visual.visual_cache;
         void visualGeometryResolver(cachePath).then((payload) => {
-          if (!payload || !mesh.parent) return;
+          if (
+            !payload
+            || !actorLoadIsCurrent(actor.id, root, loadRevision)
+            || !mesh.parent
+          ) return;
           mesh.geometry.dispose();
           mesh.geometry = geometryFromPayload(payload);
           if (payload.colors?.length === (payload.positions.length / 3) * 4) {
@@ -357,7 +597,7 @@ function addRobotActor(
   }
   if (visualBundle && bundledMeshes.size > 0) {
     void resolveGeometryBundle(visualBundle).then((bundle) => {
-      if (!bundle || revision !== sceneRevision || actorMeshes.get(actor.id) !== root) return;
+      if (!bundle || !actorLoadIsCurrent(actor.id, root, loadRevision)) return;
       for (const [geometryId, mesh] of bundledMeshes) {
         const payload = bundle.get(geometryId);
         if (!payload) continue;
@@ -442,91 +682,332 @@ function disposeObject(object: any): void {
   });
 }
 
-function clearActors(): void {
-  transformControls.detach();
-  selectionOutline.visible = false;
-  actorMeshes.clear();
-  robotLinkGroups.clear();
-  rotorAnimationStates.clear();
-  while (actorGroup.children.length > 0) {
-    const child = actorGroup.children.pop();
-    if (child) disposeObject(child);
+function nextActorLoadRevision(actorId: string): number {
+  const revision = (actorLoadRevisions.get(actorId) ?? 0) + 1;
+  actorLoadRevisions.set(actorId, revision);
+  return revision;
+}
+
+function actorLoadIsCurrent(actorId: string, object: any, revision: number): boolean {
+  return actorLoadRevisions.get(actorId) === revision && actorMeshes.get(actorId) === object;
+}
+
+function articulationForActor(actor: Actor, sceneData: Scene): RobotArticulation | null {
+  const articulationIds = actor.properties.articulation_ids as string[] | undefined;
+  return sceneData.robotics?.articulations.find(
+    (item) => articulationIds?.includes(item.id),
+  ) ?? null;
+}
+
+function actorRenderSignature(actor: Actor, sceneData: Scene): string {
+  return JSON.stringify({
+    type: actor.type,
+    assetId: actor.asset_id,
+    properties: actor.properties,
+    articulation: actor.type === 'robot' ? articulationForActor(actor, sceneData) : null,
+  });
+}
+
+function updateActorObject(object: any, actor: Actor): void {
+  object.position.set(...actor.transform.position);
+  object.rotation.set(...actor.transform.rotation);
+  object.scale.set(...actor.transform.scale);
+  object.name = actor.name;
+  object.userData.actor = actor;
+}
+
+function removeActorObject(actorId: string): void {
+  const object = actorMeshes.get(actorId);
+  if (!object) return;
+  if (transformControls.object === object) transformControls.detach();
+  object.traverse((child) => {
+    const linkId = child.userData?.linkId;
+    if (!linkId) return;
+    robotLinkGroups.delete(String(linkId));
+    rotorAnimationStates.delete(String(linkId));
+  });
+  actorGroup.remove(object);
+  actorMeshes.delete(actorId);
+  actorRenderSignatures.delete(actorId);
+  nextActorLoadRevision(actorId);
+  disposeObject(object);
+}
+
+function createActorObject(actor: Actor, sceneData: Scene): any | null {
+  const loadRevision = nextActorLoadRevision(actor.id);
+  if (actor.type === 'robot') {
+    const articulation = articulationForActor(actor, sceneData);
+    if (!articulation) return null;
+    const robot = addRobotActor(
+      actor,
+      articulation,
+      articulation.visual_bundle ?? null,
+      loadRevision,
+    );
+    actorGroup.add(robot);
+    actorMeshes.set(actor.id, robot);
+    return robot;
+  }
+  if (actor.type !== 'object') return null;
+  const mesh = new THREE.Mesh(geometryForActor(actor), materialForActor(actor));
+  updateActorObject(mesh, actor);
+  mesh.userData.actorId = actor.id;
+  addColliderDebug(mesh, actor);
+  addShippingPackageDetails(mesh, actor);
+  actorGroup.add(mesh);
+  actorMeshes.set(actor.id, mesh);
+  const cachePath = actor.properties.geometry?.visual_cache;
+  if (cachePath) {
+    void visualGeometryResolver(cachePath).then((payload) => {
+      if (!payload) return;
+      if (!actorLoadIsCurrent(actor.id, mesh, loadRevision)) {
+        for (const url of visualTextureUrls(payload)) URL.revokeObjectURL(url);
+        return;
+      }
+      mesh.geometry.dispose();
+      mesh.geometry = geometryFromPayload(payload);
+      const hasVertexColors = Boolean(payload.colors?.length);
+      mesh.material.vertexColors = hasVertexColors;
+      // Vertex colors already contain the authored USD display color. Multiplying them by the
+      // actor fallback color makes large cached environments nearly black.
+      if (hasVertexColors) mesh.material.color.set(0xffffff);
+      if (typeof payload.roughness === 'number') mesh.material.roughness = payload.roughness;
+      if (typeof payload.metalness === 'number') mesh.material.metalness = payload.metalness;
+      mesh.material.needsUpdate = true;
+      loadMaterialTexture(
+        actor.id, mesh, loadRevision, payload.base_color_texture_url, 'map', true,
+      );
+      loadMaterialTexture(
+        actor.id, mesh, loadRevision, payload.normal_texture_url, 'normalMap', false,
+      );
+      loadMaterialTexture(
+        actor.id,
+        mesh,
+        loadRevision,
+        payload.roughness_texture_url,
+        'roughnessMap',
+        false,
+        payload.roughness,
+      );
+      loadMaterialTexture(
+        actor.id,
+        mesh,
+        loadRevision,
+        payload.metallic_texture_url,
+        'metalnessMap',
+        false,
+        payload.metalness,
+      );
+      rebuildColliderDebug(mesh, actor);
+      updateSelectionOutline();
+    }).catch(() => undefined);
+  }
+  return mesh;
+}
+
+function syncAttachmentVisuals(sceneData: Scene): void {
+  const attachments = sceneData.attachments ?? [];
+  const signature = JSON.stringify(attachments);
+  if (signature === attachmentRenderSignature) return;
+  for (const visual of attachmentVisuals.values()) {
+    attachmentGroup.remove(visual.line, visual.parentMarker, visual.childMarker);
+    disposeObject(visual.line);
+    disposeObject(visual.parentMarker);
+    disposeObject(visual.childMarker);
+  }
+  attachmentVisuals.clear();
+  attachmentRenderSignature = signature;
+  for (const attachment of attachments) {
+    const line = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(),
+        new THREE.Vector3(),
+      ]),
+      new THREE.LineBasicMaterial({ color: 0xd7a72f }),
+    );
+    line.frustumCulled = false;
+    line.renderOrder = 8;
+    let parentMarker: any;
+    let indicator: any;
+    if (attachment.gripper) {
+      const gripper = attachment.gripper;
+      parentMarker = new THREE.Group();
+      const metal = new THREE.MeshStandardMaterial({
+        color: 0x34434f,
+        roughness: 0.32,
+        metalness: 0.72,
+      });
+      const rubber = new THREE.MeshStandardMaterial({
+        color: 0x171b1f,
+        roughness: 0.94,
+        metalness: 0,
+      });
+      const [plateX, plateY, plateZ] = gripper.plate_half_extents;
+      const plate = new THREE.Mesh(
+        new THREE.BoxGeometry(plateX * 2, plateY * 2, plateZ * 2),
+        metal,
+      );
+      plate.position.z = gripper.cup_height + plateZ;
+      parentMarker.add(plate);
+      const mount = new THREE.Mesh(
+        new THREE.CylinderGeometry(
+          gripper.mount_radius,
+          gripper.mount_radius,
+          gripper.mount_length,
+          20,
+        ).rotateX(Math.PI / 2),
+        metal.clone(),
+      );
+      mount.position.z = gripper.cup_height + plateZ * 2 + gripper.mount_length * 0.5;
+      parentMarker.add(mount);
+      const [cupX, cupY] = gripper.cup_offset;
+      for (const [offsetX, offsetY] of [
+        [cupX, cupY], [cupX, -cupY], [-cupX, cupY], [-cupX, -cupY],
+      ]) {
+        const cup = new THREE.Mesh(
+          new THREE.CylinderGeometry(
+            gripper.cup_radius * 0.72,
+            gripper.cup_radius,
+            gripper.cup_height,
+            24,
+          ).rotateX(Math.PI / 2),
+          rubber.clone(),
+        );
+        cup.position.set(offsetX, offsetY, gripper.cup_height * 0.5);
+        parentMarker.add(cup);
+        const lip = new THREE.Mesh(
+          new THREE.TorusGeometry(gripper.cup_radius * 0.82, 0.0025, 8, 24),
+          rubber.clone(),
+        );
+        lip.position.set(offsetX, offsetY, 0.001);
+        parentMarker.add(lip);
+      }
+      indicator = new THREE.Mesh(
+        new THREE.SphereGeometry(0.008, 14, 10),
+        new THREE.MeshStandardMaterial({
+          color: 0xf4b942,
+          emissive: 0x5a3500,
+          emissiveIntensity: 1.5,
+          roughness: 0.25,
+        }),
+      );
+      indicator.position.set(plateX * 0.72, 0, gripper.cup_height + plateZ * 2 + 0.003);
+      parentMarker.add(indicator);
+    } else {
+      parentMarker = new THREE.Mesh(
+        new THREE.SphereGeometry(Math.max(attachment.contact_probe_radius, 0.015), 12, 8),
+        new THREE.MeshBasicMaterial({ color: 0xf4b942 }),
+      );
+      indicator = parentMarker;
+    }
+    const childMarker = new THREE.Mesh(
+      new THREE.SphereGeometry(0.015, 12, 8),
+      new THREE.MeshBasicMaterial({ color: 0x4ed38a }),
+    );
+    parentMarker.renderOrder = 9;
+    childMarker.renderOrder = 9;
+    attachmentGroup.add(line, parentMarker, childMarker);
+    attachmentVisuals.set(attachment.id, { line, parentMarker, childMarker, indicator });
+  }
+  updateAttachmentVisuals();
+}
+
+function attachmentBodyObject(bodyId: string): any | null {
+  return robotLinkGroups.get(bodyId) ?? actorMeshes.get(bodyId) ?? null;
+}
+
+function updateAttachmentVisuals(): void {
+  const runtimeStates = new Map(
+    (simulationState?.attachments ?? []).map((item) => [item.id, item]),
+  );
+  const bodyOrigin = new THREE.Vector3();
+  const parentPosition = new THREE.Vector3();
+  const childPosition = new THREE.Vector3();
+  const parentQuaternion = new THREE.Quaternion();
+  for (const attachment of currentScene.attachments ?? []) {
+    const visual = attachmentVisuals.get(attachment.id);
+    const parent = attachmentBodyObject(attachment.parent_body_id);
+    const child = attachmentBodyObject(attachment.child_body_id);
+    if (!visual || !parent || !child) {
+      if (visual) {
+        visual.line.visible = false;
+        visual.parentMarker.visible = false;
+        visual.childMarker.visible = false;
+      }
+      continue;
+    }
+    parent.updateWorldMatrix(true, false);
+    child.updateWorldMatrix(true, false);
+    parent.getWorldPosition(bodyOrigin);
+    parent.getWorldQuaternion(parentQuaternion);
+    parentPosition.set(...attachment.parent_anchor).applyMatrix4(parent.matrixWorld);
+    childPosition.set(...attachment.child_anchor).applyMatrix4(child.matrixWorld);
+    const runtime = runtimeStates.get(attachment.id);
+    const connected = runtime?.active ?? attachment.initially_active;
+    const requested = runtime?.requested_active ?? false;
+    const positions = visual.line.geometry.attributes.position;
+    positions.setXYZ(0, bodyOrigin.x, bodyOrigin.y, bodyOrigin.z);
+    const endpoint = connected ? childPosition : parentPosition;
+    positions.setXYZ(1, endpoint.x, endpoint.y, endpoint.z);
+    positions.needsUpdate = true;
+    visual.line.material.color.set(connected ? 0x4ed38a : requested ? 0xf4b942 : 0x9aa5b1);
+    visual.parentMarker.position.copy(parentPosition);
+    visual.parentMarker.quaternion.copy(parentQuaternion);
+    visual.childMarker.position.copy(childPosition);
+    visual.indicator.material.color.set(
+      connected ? 0x4ed38a : requested ? 0xf4b942 : 0x75808a,
+    );
+    if (visual.indicator.material.emissive) {
+      visual.indicator.material.emissive.set(
+        connected ? 0x0c5c35 : requested ? 0x5a3500 : 0x111820,
+      );
+    }
+    visual.line.visible = true;
+    visual.parentMarker.visible = true;
+    visual.childMarker.visible = !connected;
   }
 }
 
 export function setViewportScene(sceneData: Scene): void {
-  const revision = ++sceneRevision;
+  const previousActorIds = new Set(actorMeshes.keys());
   const retainedLinkId = selectedLinkId;
   currentScene = sceneData;
-  clearActors();
-  for (const actor of currentScene.actors) {
-    if (actor.type === 'robot') {
-      const articulationIds = actor.properties.articulation_ids as string[] | undefined;
-      const articulation = currentScene.robotics?.articulations.find(
-        (item) => articulationIds?.includes(item.id),
-      );
-      if (!articulation) continue;
-      const robot = addRobotActor(
-        actor,
-        articulation,
-        articulation.visual_bundle ?? null,
-        revision,
-      );
-      actorGroup.add(robot);
-      actorMeshes.set(actor.id, robot);
-      continue;
-    }
-    if (actor.type !== 'object') continue;
-    const mesh = new THREE.Mesh(geometryForActor(actor), materialForActor(actor));
-    mesh.position.set(...actor.transform.position);
-    mesh.rotation.set(...actor.transform.rotation);
-    mesh.scale.set(...actor.transform.scale);
-    mesh.name = actor.name;
-    mesh.userData.actorId = actor.id;
-    mesh.userData.actor = actor;
-    addColliderDebug(mesh, actor);
-    actorGroup.add(mesh);
-    actorMeshes.set(actor.id, mesh);
-    const cachePath = actor.properties.geometry?.visual_cache;
-    if (cachePath) {
-      void visualGeometryResolver(cachePath).then((payload) => {
-        if (!payload) return;
-        if (revision !== sceneRevision || actorMeshes.get(actor.id) !== mesh) {
-          if (payload.base_color_texture_url) URL.revokeObjectURL(payload.base_color_texture_url);
-          return;
-        }
-        mesh.geometry.dispose();
-        mesh.geometry = geometryFromPayload(payload);
-        mesh.material.vertexColors = Boolean(payload.colors?.length);
-        mesh.material.needsUpdate = true;
-        if (payload.base_color_texture_url) {
-          const textureUrl = payload.base_color_texture_url;
-          new THREE.TextureLoader().load(
-            textureUrl,
-            (texture) => {
-              URL.revokeObjectURL(textureUrl);
-              if (revision !== sceneRevision || actorMeshes.get(actor.id) !== mesh) {
-                texture.dispose();
-                return;
-              }
-              texture.colorSpace = THREE.SRGBColorSpace;
-              mesh.material.map?.dispose();
-              mesh.material.map = texture;
-              mesh.material.needsUpdate = true;
-            },
-            undefined,
-            () => URL.revokeObjectURL(textureUrl),
-          );
-        }
-        rebuildColliderDebug(mesh, actor);
-        updateSelectionOutline();
-      });
-    }
+  updateEnvironmentAppearance(currentScene);
+  const renderableActors = currentScene.actors.filter(
+    (actor) => actor.type === 'object' || actor.type === 'robot',
+  );
+  const nextActorIds = new Set(renderableActors.map((actor) => actor.id));
+  for (const actorId of previousActorIds) {
+    if (!nextActorIds.has(actorId)) removeActorObject(actorId);
   }
+  for (const actor of renderableActors) {
+    const signature = actorRenderSignature(actor, currentScene);
+    let object = actorMeshes.get(actor.id);
+    if (object && actorRenderSignatures.get(actor.id) !== signature) {
+      removeActorObject(actor.id);
+      object = null;
+    }
+    if (!object) object = createActorObject(actor, currentScene);
+    if (!object) continue;
+    updateActorObject(object, actor);
+    actorRenderSignatures.set(actor.id, signature);
+  }
+  for (const linkId of rotorAnimationStates.keys()) {
+    if (!robotLinkGroups.has(linkId)) rotorAnimationStates.delete(linkId);
+  }
+  syncAttachmentVisuals(currentScene);
   selectViewportActor(selectedActorId, false);
   selectViewportLink(retainedLinkId);
   if (simulationState) applySimulationState(simulationState);
   updateHud();
+  const addedActors = currentScene.actors.filter((actor) => {
+    if (!actorMeshes.has(actor.id) || previousActorIds.has(actor.id)) return false;
+    return isLargeEnvironment(actor);
+  });
+  if (addedActors.length > 0) {
+    const focus = addedActors.length === 1 ? actorMeshes.get(addedActors[0].id) : actorGroup;
+    requestAnimationFrame(() => frameObject(focus, largeEnvironmentViewDirection.clone()));
+  }
 }
 
 export function updateViewportTransforms(sceneData: Scene): boolean {
@@ -578,12 +1059,21 @@ export function selectViewportLink(linkId: string | null): void {
 
 function updateSelectionMaterials(): void {
   for (const [id, object] of actorMeshes.entries()) {
+    const actor = currentScene.actors.find((item) => item.id === id);
+    const bounds = actor?.properties.geometry?.bounds;
+    const largestExtent = bounds
+      ? Math.max(...bounds.max.map((value, index) => value - bounds.min[index]))
+      : 0;
+    const largeEnvironment = largestExtent >= 250;
     object.traverse((mesh) => {
       if (!mesh.material?.emissive) return;
       const linkSelected = selectedLinkId !== null && mesh.userData.linkId === selectedLinkId;
       const actorSelected = selectedLinkId === null && id === selectedActorId;
-      mesh.material.emissive = new THREE.Color(linkSelected ? 0x9a6a16 : actorSelected ? 0x2b6cb0 : 0);
-      mesh.material.emissiveIntensity = linkSelected ? 0.65 : actorSelected ? 0.45 : 0;
+      const fillHighlight = actorSelected && !largeEnvironment;
+      mesh.material.emissive = new THREE.Color(
+        linkSelected ? 0x9a6a16 : fillHighlight ? 0x2b6cb0 : 0,
+      );
+      mesh.material.emissiveIntensity = linkSelected ? 0.65 : fillHighlight ? 0.45 : 0;
     });
   }
 }
@@ -591,8 +1081,10 @@ function updateSelectionMaterials(): void {
 function updateHud(): void {
   const selected = currentScene.actors.find((actor) => actor.id === selectedActorId);
   const simText = simulationState ? ` | sim t=${simulationState.time.toFixed(3)}` : '';
+  const deliveryTask = simulationState?.delivery_tasks?.[0];
+  const taskText = deliveryTask ? ` | task ${deliveryTask.status.replace('_', ' ')}` : '';
   requiredElement('#scene-name').textContent = currentScene.name;
-  requiredElement('#scene-stats').textContent = `${currentScene.actors.length} actors${simText}`;
+  requiredElement('#scene-stats').textContent = `${currentScene.actors.length} actors${simText}${taskText}`;
   const colliderState = selected && colliderDebugVisible
     ? ` | ${actorIsDynamic(selected) ? 'Dynamic' : 'Static'} collider`
     : '';
@@ -657,6 +1149,7 @@ export function applySimulationState(state: SimulationState | null): void {
       group.updateMatrixWorld(true);
     }
   }
+  updateAttachmentVisuals();
   updateSelectionOutline();
   updateHud();
 }
@@ -723,9 +1216,28 @@ function frameObject(object: any, direction: any = null): void {
   if (viewDirection.lengthSq() < 0.0001) viewDirection.copy(viewDirections.iso);
   const distance = Math.max(radius / Math.sin(THREE.MathUtils.degToRad(camera.fov) / 2), 0.75);
   orbitControls.target.copy(focusSphere.center);
-  camera.position.copy(focusSphere.center).add(viewDirection.multiplyScalar(distance * 1.35));
-  camera.near = Math.max(distance / 1000, 0.01);
-  camera.far = Math.max(distance * 100, 1000);
+  const framePadding = radius >= 250 ? 1.08 : 1.35;
+  camera.position.copy(focusSphere.center).add(viewDirection.multiplyScalar(distance * framePadding));
+  const cameraDistance = camera.position.distanceTo(orbitControls.target);
+  camera.near = Math.max(distance / 2000, 0.01);
+  camera.far = Math.max(cameraDistance + radius * 20, 1000);
+  // Keep the focused object fully ahead of the fog. Fixed meter-scale fog made kilometre-scale
+  // city assets disappear even after the camera itself had been framed correctly.
+  if (scene.fog instanceof THREE.Fog) {
+    scene.fog.near = Math.max(cameraDistance + radius * 1.25, 18);
+    scene.fog.far = Math.max(cameraDistance + radius * 5, 60);
+  }
+  const gridScale = Math.max((radius * 2.4) / 20, 1);
+  grid.scale.setScalar(gridScale);
+  canvas.dataset.focusRadius = radius.toFixed(3);
+  canvas.dataset.cameraDistance = cameraDistance.toFixed(3);
+  canvas.dataset.cameraFar = camera.far.toFixed(3);
+  canvas.dataset.fogNear = scene.fog instanceof THREE.Fog
+    ? scene.fog.near.toFixed(3)
+    : 'none';
+  canvas.dataset.fogFar = scene.fog instanceof THREE.Fog
+    ? scene.fog.far.toFixed(3)
+    : 'none';
   camera.updateProjectionMatrix();
   orbitControls.update();
 }
@@ -792,8 +1304,13 @@ window.addEventListener('keydown', (event) => {
 function animate(): void {
   requestAnimationFrame(animate);
   resize();
+  if (cityEnvironmentVisible) {
+    citySky.position.copy(camera.position);
+    citySky.scale.setScalar(Math.max(camera.far * 0.8, 500));
+  }
   orbitControls.update();
   updateColliderDebugMarkers();
+  updateAttachmentVisuals();
   updateSelectionOutline();
   renderer.render(scene, camera);
 }

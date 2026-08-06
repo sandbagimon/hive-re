@@ -1,0 +1,61 @@
+{
+  "name": "Shenzhen Houhai 2 km x 2 km",
+  "center_wgs84": [
+    113.91979,
+    22.526595
+  ],
+  "bbox_wgs84": [
+    113.91006483456792,
+    22.517611847158804,
+    113.9295151654321,
+    22.535578152841197
+  ],
+  "size_meters": 2000.0,
+  "overture_release": "2026-07-22.0",
+  "source_urls": {
+    "buildings": "https://overturemapswestus2.blob.core.windows.net/release/2026-07-22.0/theme=buildings/type=building/part-00377-5b2a2b8f-b32f-5488-ae40-99ae1cd7b320-c000.zstd.parquet",
+    "roads_and_water": "https://overpass.kumi.systems/api/interpreter"
+  },
+  "model": "houhai_2km.usdc",
+  "statistics": {
+    "buildings": 2703,
+    "road_surfaces": 963,
+    "water_surfaces": 8,
+    "building_style_counts": {
+      "civic_coral": 14,
+      "civic_cream": 11,
+      "glass_blue": 56,
+      "glass_slate": 51,
+      "glass_teal": 39,
+      "industrial_slate": 7,
+      "residential_blue": 104,
+      "residential_clay": 89,
+      "residential_sage": 612,
+      "residential_sand": 120,
+      "urban_cool": 566,
+      "urban_stone": 565,
+      "urban_warm": 469
+    },
+    "road_style_counts": {
+      "arterial": 72,
+      "collector": 120,
+      "local": 417,
+      "pedestrian": 339
+    },
+    "visual_meshes": 103,
+    "footprint_heuristic": 2398,
+    "num_floors": 287,
+    "authored_height": 18
+  },
+  "height_policy": {
+    "height": "use Overture height",
+    "num_floors": "num_floors * 3.2 m",
+    "missing": "9/12/18/24 m footprint-area heuristic"
+  },
+  "visual_style": {
+    "name": "Houhai daylight",
+    "building_palette_count": 13,
+    "separate_roofs": true,
+    "semantic_road_materials": true
+  }
+}

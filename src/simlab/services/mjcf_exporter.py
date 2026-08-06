@@ -27,6 +27,11 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
         "integrator",
         str(scene.simulation_config.get("integrator", "implicitfast")),
     )
+    wind = scene.simulation_config.get("wind")
+    if wind is not None:
+        option.set("wind", _format_vector(wind))
+        option.set("density", str(scene.simulation_config.get("air_density", 1.225)))
+        option.set("viscosity", str(scene.simulation_config.get("air_viscosity", 1.8e-5)))
 
     mesh_assets = ET.SubElement(root, "asset")
     mesh_names: dict[str, str] = {}
@@ -195,6 +200,144 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                     home_velocities,
                     robot_mesh_names,
                 )
+
+    if scene.attachments:
+        bodies_by_name = {
+            body.get("name"): body
+            for body in worldbody.iter("body")
+            if body.get("name")
+        }
+        equality_element = ET.SubElement(root, "equality")
+        for attachment in scene.attachments:
+            parent_body = bodies_by_name.get(_xml_name(attachment.parent_body_id))
+            child_body = bodies_by_name.get(_xml_name(attachment.child_body_id))
+            if parent_body is None or child_body is None:
+                raise ValueError(
+                    f"Attachment {attachment.id} references a body that was not exported"
+                )
+            parent_site_name, child_site_name = attachment_site_names(attachment.id)
+            ET.SubElement(
+                parent_body,
+                "site",
+                {
+                    "name": parent_site_name,
+                    "type": "sphere",
+                    "size": "0.008",
+                    "pos": _format_vector(attachment.parent_anchor),
+                    "rgba": "1 0.7 0.1 1",
+                },
+            )
+            ET.SubElement(
+                child_body,
+                "site",
+                {
+                    "name": child_site_name,
+                    "type": "sphere",
+                    "size": "0.008",
+                    "pos": _format_vector(attachment.child_anchor),
+                    "rgba": "0.2 0.9 0.5 1",
+                },
+            )
+            if attachment.gripper is not None:
+                gripper = attachment.gripper
+                cup_x, cup_y = gripper.cup_offset
+                for index, (offset_x, offset_y) in enumerate(
+                    ((cup_x, cup_y), (cup_x, -cup_y), (-cup_x, cup_y), (-cup_x, -cup_y))
+                ):
+                    cup_position = [
+                        attachment.parent_anchor[0] + offset_x,
+                        attachment.parent_anchor[1] + offset_y,
+                        attachment.parent_anchor[2] + gripper.cup_height * 0.5,
+                    ]
+                    ET.SubElement(
+                        parent_body,
+                        "geom",
+                        {
+                            "name": attachment_gripper_cup_geom_name(
+                                attachment.id, index
+                            ),
+                            "type": "cylinder",
+                            "size": _format_vector(
+                                [gripper.cup_radius, gripper.cup_height * 0.5]
+                            ),
+                            "pos": _format_vector(cup_position),
+                            "mass": "0",
+                            "friction": "1.2 0.01 0.0002",
+                            "condim": "4",
+                            "rgba": "0.08 0.1 0.12 1",
+                        },
+                    )
+                plate_position = [
+                    attachment.parent_anchor[0],
+                    attachment.parent_anchor[1],
+                    attachment.parent_anchor[2]
+                    + gripper.cup_height
+                    + gripper.plate_half_extents[2],
+                ]
+                ET.SubElement(
+                    parent_body,
+                    "geom",
+                    {
+                        "name": attachment_gripper_plate_geom_name(attachment.id),
+                        "type": "box",
+                        "size": _format_vector(gripper.plate_half_extents),
+                        "pos": _format_vector(plate_position),
+                        "mass": "0",
+                        "friction": "0.8 0.005 0.0001",
+                        "rgba": "0.12 0.16 0.2 1",
+                    },
+                )
+                mount_position = [
+                    attachment.parent_anchor[0],
+                    attachment.parent_anchor[1],
+                    attachment.parent_anchor[2]
+                    + gripper.cup_height
+                    + gripper.plate_half_extents[2] * 2
+                    + gripper.mount_length * 0.5,
+                ]
+                ET.SubElement(
+                    parent_body,
+                    "geom",
+                    {
+                        "name": attachment_gripper_mount_geom_name(attachment.id),
+                        "type": "cylinder",
+                        "size": _format_vector(
+                            [gripper.mount_radius, gripper.mount_length * 0.5]
+                        ),
+                        "pos": _format_vector(mount_position),
+                        "mass": "0",
+                        "friction": "0.8 0.005 0.0001",
+                        "rgba": "0.25 0.3 0.34 1",
+                    },
+                )
+            elif attachment.require_contact:
+                probe_position = list(attachment.parent_anchor)
+                probe_position[2] += attachment.contact_probe_radius
+                ET.SubElement(
+                    parent_body,
+                    "geom",
+                    {
+                        "name": attachment_probe_geom_name(attachment.id),
+                        "type": "sphere",
+                        "size": str(attachment.contact_probe_radius),
+                        "pos": _format_vector(probe_position),
+                        "mass": "0",
+                        "friction": "1 0.005 0.0001",
+                        "rgba": "0.95 0.65 0.08 1",
+                    },
+                )
+            ET.SubElement(
+                equality_element,
+                attachment.constraint_type,
+                {
+                    "name": attachment_constraint_name(attachment.id),
+                    "site1": parent_site_name,
+                    "site2": child_site_name,
+                    "active": "true" if attachment.initially_active else "false",
+                    "solref": _format_vector(attachment.solref),
+                    "solimp": _format_vector(attachment.solimp),
+                },
+            )
 
     if robot_contact_excludes:
         contact_element = ET.SubElement(root, "contact")
@@ -518,6 +661,32 @@ def imu_sensor_channel_names(sensor_id: str) -> tuple[str, str, str]:
         f"{sensor_name}_angular_velocity",
         f"{sensor_name}_linear_acceleration",
     )
+
+
+def attachment_constraint_name(attachment_id: str) -> str:
+    return f"{_xml_name(attachment_id)}_connect"
+
+
+def attachment_site_names(attachment_id: str) -> tuple[str, str]:
+    name = _xml_name(attachment_id)
+    return f"{name}_parent_site", f"{name}_child_site"
+
+
+def attachment_probe_geom_name(attachment_id: str) -> str:
+    return f"{_xml_name(attachment_id)}_contact_probe"
+
+
+def attachment_gripper_cup_geom_name(attachment_id: str, index: int) -> str:
+    name = _xml_name(attachment_id)
+    return f"{name}_vacuum_cup_{index}"
+
+
+def attachment_gripper_plate_geom_name(attachment_id: str) -> str:
+    return f"{_xml_name(attachment_id)}_gripper_plate"
+
+
+def attachment_gripper_mount_geom_name(attachment_id: str) -> str:
+    return f"{_xml_name(attachment_id)}_gripper_mount"
 
 
 def mujoco_name(value: str) -> str:

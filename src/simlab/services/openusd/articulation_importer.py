@@ -222,8 +222,13 @@ def _inertial(
 ) -> Inertial:
     mass_api = usd_physics.MassAPI(prim)
     mass_value = mass_api.GetMassAttr().Get()
-    mass = float(mass_value) if mass_value is not None and float(mass_value) > 0 else 1.0
-    if mass_value is None or float(mass_value) <= 0:
+    authored_mass = float(mass_value) if mass_value is not None else None
+    mass = (
+        authored_mass
+        if authored_mass is not None and math.isfinite(authored_mass) and authored_mass > 0
+        else 1.0
+    )
+    if authored_mass is None or not math.isfinite(authored_mass) or authored_mass <= 0:
         report.add(
             "warning",
             "usd.mass_defaulted",
@@ -234,10 +239,22 @@ def _inertial(
         )
     center_value = mass_api.GetCenterOfMassAttr().Get()
     center = _vector3(center_value) if center_value is not None else [0.0, 0.0, 0.0]
+    if not all(math.isfinite(component) for component in center):
+        center = [0.0, 0.0, 0.0]
+        report.add(
+            "warning",
+            "usd.center_of_mass_defaulted",
+            "Non-finite center of mass was treated as unauthored.",
+            prim_path=str(prim.GetPath()),
+            field="physics:centerOfMass",
+            fallback="center_of_mass=[0, 0, 0]",
+        )
     center = _to_z_up_vector([component * meters_per_unit for component in center], up_axis)
     diagonal_value = mass_api.GetDiagonalInertiaAttr().Get()
     diagonal = _vector3(diagonal_value) if diagonal_value is not None else None
-    if diagonal is not None and not all(value > 0 for value in diagonal):
+    if diagonal is not None and not all(
+        math.isfinite(value) and value > 0 for value in diagonal
+    ):
         diagonal = None
         report.add(
             "warning",

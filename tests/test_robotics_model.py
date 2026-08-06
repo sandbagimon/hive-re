@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from simlab.models.robotics import RoboticsModel
+from simlab.models.robotics import JointLimits, RoboticsModel
 from simlab.models.scene import Scene
 from simlab.services.project_service import validate_scene
 from simlab.services.robotics_validation import (
@@ -42,6 +42,23 @@ def test_robotics_model_round_trip_preserves_two_joint_arm() -> None:
         "position",
         "position",
     ]
+
+
+def test_unbounded_openusd_joint_limits_use_standard_json_nulls() -> None:
+    limits = JointLimits(lower=float("-inf"), upper=float("inf"))
+
+    assert limits.to_dict() == {
+        "lower": None,
+        "upper": None,
+        "effort": None,
+        "velocity": None,
+    }
+    json.dumps(limits.to_dict(), allow_nan=False)
+
+
+def test_joint_limits_reject_nan() -> None:
+    with pytest.raises(ValueError, match="cannot be NaN"):
+        JointLimits(lower=float("nan"))
 
 
 def test_v2_joint_frames_and_drive_targets_round_trip() -> None:

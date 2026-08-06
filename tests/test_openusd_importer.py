@@ -214,3 +214,105 @@ def Scope "Looks"
     assert visual["uvs"] == pytest.approx([0, 0, 1, 0, 0, 1])
     assert visual["base_color_texture"].endswith("source/albedo.png")
     assert (project / visual["base_color_texture"]).read_bytes() == texture.read_bytes()
+
+
+def test_import_preserves_usdz_packaged_pbr_textures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from pxr import Sdf, UsdUtils
+
+    source_root = tmp_path / "source"
+    texture_root = source_root / "textures"
+    texture_root.mkdir(parents=True)
+    textures = {
+        "base.png": b"base-color-texture",
+        "normal.png": b"normal-texture",
+        "roughness.png": b"roughness-texture",
+        "metallic.png": b"metallic-texture",
+    }
+    for name, content in textures.items():
+        (texture_root / name).write_bytes(content)
+    source = source_root / "asset.usda"
+    monkeypatch.setenv("TMPDIR", str(tmp_path))
+    source.write_text(
+        '''#usda 1.0
+(
+    defaultPrim = "Asset"
+)
+def Xform "Asset"
+{
+    def Mesh "Triangle"
+    {
+        int[] faceVertexCounts = [3]
+        int[] faceVertexIndices = [0, 1, 2]
+        point3f[] points = [(0, 0, 0), (1, 0, 0), (0, 1, 0)]
+        texCoord2f[] primvars:st = [(0, 0), (1, 0), (0, 1)] (
+            interpolation = "vertex"
+        )
+        rel material:binding = </Looks/Pbr>
+    }
+}
+def Scope "Looks"
+{
+    def Material "Pbr"
+    {
+        token outputs:surface.connect = </Looks/Pbr/Preview.outputs:surface>
+        def Shader "Preview"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor.connect = </Looks/Pbr/Base.outputs:rgb>
+            normal3f inputs:normal.connect = </Looks/Pbr/Normal.outputs:rgb>
+            float inputs:roughness.connect = </Looks/Pbr/Roughness.outputs:r>
+            float inputs:metallic.connect = </Looks/Pbr/Metallic.outputs:r>
+            token outputs:surface
+        }
+        def Shader "Base"
+        {
+            uniform token info:id = "UsdUVTexture"
+            asset inputs:file = @./textures/base.png@
+            float3 outputs:rgb
+        }
+        def Shader "Normal"
+        {
+            uniform token info:id = "UsdUVTexture"
+            asset inputs:file = @./textures/normal.png@
+            float3 outputs:rgb
+        }
+        def Shader "Roughness"
+        {
+            uniform token info:id = "UsdUVTexture"
+            asset inputs:file = @./textures/roughness.png@
+            float outputs:r
+        }
+        def Shader "Metallic"
+        {
+            uniform token info:id = "UsdUVTexture"
+            asset inputs:file = @./textures/metallic.png@
+            float outputs:r
+        }
+    }
+}
+''',
+        encoding="utf-8",
+    )
+    package = tmp_path / "asset.usdz"
+    assert UsdUtils.CreateNewUsdzPackage(
+        Sdf.AssetPath(str(source.resolve())), str(package)
+    )
+
+    project = tmp_path / "project"
+    result = import_openusd_asset(package, project)
+    visual = load_visual_geometry(
+        result.asset["default_properties"]["geometry"]["visual_cache"], project
+    )
+
+    for field, name in {
+        "base_color_texture": "base.png",
+        "normal_texture": "normal.png",
+        "roughness_texture": "roughness.png",
+        "metallic_texture": "metallic.png",
+    }.items():
+        cached = visual[field]
+        assert cached.endswith(f"source/textures/{name}")
+        assert (project / cached).read_bytes() == textures[name]
+    assert not any("could not be preserved" in warning for warning in result.warnings)

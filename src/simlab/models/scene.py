@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from simlab.models.actor import Actor
+from simlab.models.attachment import Attachment, DeliveryTask
 from simlab.models.robotics import RoboticsModel
 from simlab.models.trajectory import SceneTrajectory
 
@@ -18,6 +19,8 @@ class Scene:
     actors: list[Actor] = field(default_factory=list)
     robotics: RoboticsModel | None = None
     trajectories: list[SceneTrajectory] = field(default_factory=list)
+    attachments: list[Attachment] = field(default_factory=list)
+    delivery_tasks: list[DeliveryTask] = field(default_factory=list)
     simulation_config: dict[str, Any] = field(
         default_factory=lambda: {"timestep": 0.01, "duration": 1.0}
     )
@@ -34,6 +37,10 @@ class Scene:
             data["robotics"] = self.robotics.to_dict()
         if self.trajectories:
             data["trajectories"] = [item.to_dict() for item in self.trajectories]
+        if self.attachments:
+            data["attachments"] = [item.to_dict() for item in self.attachments]
+        if self.delivery_tasks:
+            data["delivery_tasks"] = [item.to_dict() for item in self.delivery_tasks]
         return data
 
     @classmethod
@@ -50,6 +57,10 @@ class Scene:
             ),
             trajectories=[
                 SceneTrajectory.from_dict(item) for item in data.get("trajectories", [])
+            ],
+            attachments=[Attachment.from_dict(item) for item in data.get("attachments", [])],
+            delivery_tasks=[
+                DeliveryTask.from_dict(item) for item in data.get("delivery_tasks", [])
             ],
             simulation_config=dict(data.get("simulation_config", {})),
         )

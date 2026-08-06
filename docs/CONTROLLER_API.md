@@ -1,7 +1,7 @@
 # Python Controller API
 
 SimLab controllers receive an immutable snapshot before every MuJoCo physics step and may return
-joint position targets and/or named actuator controls. They never receive mutable `MjModel` or
+joint position targets, named actuator controls, and attachment requests. They never receive mutable `MjModel` or
 `MjData` objects.
 
 ```python
@@ -27,11 +27,13 @@ session.detach_controller()
 ```
 
 `ControllerObservation` contains simulation `time`, fixed `timestep`, joint `qpos/qvel`, actuator
-`ctrl/force`, and body pose/linear/angular velocity, all keyed by stable Scene IDs.
+`ctrl/force`, body pose/linear/angular velocity, and attachment eligibility/contact/distance/speed,
+all keyed by stable Scene IDs.
 `ControllerAction.position_targets` addresses
-position-driven joints, while `ControllerAction.actuator_controls` addresses actuators directly. Session
-validates both maps atomically and applies the same stable-ID lookup and range clamping used by REST and
-UI commands. One action cannot address the same actuator through both maps.
+position-driven joints, `ControllerAction.actuator_controls` addresses actuators directly, and
+`ControllerAction.attachment_commands` requests attachment activation or release. Session validates all
+maps atomically and applies the same stable-ID lookup and range clamping used by REST and UI commands.
+One action cannot address the same actuator through both actuator maps.
 
 For example, a quadrotor controller can command rotor angular velocities without importing MuJoCo:
 
@@ -48,6 +50,10 @@ return ControllerAction(
 
 The complete loadable example is
 [`examples/controllers/iris_hover.py`](../examples/controllers/iris_hover.py).
+The physical pickup-and-delivery example at
+[`examples/controllers/iris_payload_delivery.py`](../examples/controllers/iris_payload_delivery.py)
+also demonstrates contact-gated attachment commands; see
+[`DRONE_DELIVERY.md`](DRONE_DELIVERY.md).
 
 For a reusable bounded outer loop, import `JointPdConfig` and `JointPositionPdController` from
 `simlab.controllers`. It computes a qpos/qvel correction, limits each per-step position-target delta, and

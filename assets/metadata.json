@@ -539,6 +539,202 @@
           ]
         }
       }
+    },
+    {
+      "id": "openusd_houhai_2km_b463d22fff",
+      "name": "Shenzhen Houhai 2km",
+      "type": "object",
+      "source_format": "openusd",
+      "default_properties": {
+        "geometry": {
+          "kind": "mesh",
+          "source_format": "openusd",
+          "source": "assets/imported/openusd_houhai_2km_7e5a5eb3ce/source/houhai_2km.usdc",
+          "visual_cache": "assets/imported/openusd_houhai_2km_7e5a5eb3ce/visual.json",
+          "collision_mesh": "assets/imported/openusd_houhai_2km_7e5a5eb3ce/collision.obj",
+          "bounds": {
+            "min": [
+              -1000.0,
+              -1000.0,
+              -0.12000000178813934
+            ],
+            "max": [
+              1000.0,
+              1000.0,
+              300.79998779296875
+            ]
+          }
+        },
+        "rgba": [
+          0.1599999964237213,
+          0.23000000417232513,
+          0.20000000298023224,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "density",
+          "mass": 1.0,
+          "density": 1000.0,
+          "friction": [
+            0.8,
+            0.005,
+            0.0001
+          ]
+        },
+        "import_warnings": [
+          "Tessellated 1 native USD geometric primitive(s).",
+          "No UsdPhysics rigid body was found; imported actor defaults to Static."
+        ]
+      }
+    },
+    {
+      "id": "openusd_anime_test_dad6ac2df7",
+      "name": "anime_test",
+      "type": "object",
+      "source_format": "openusd",
+      "default_properties": {
+        "geometry": {
+          "kind": "mesh",
+          "source_format": "openusd",
+          "source": "assets/imported/openusd_anime_test_dad6ac2df7/source/anime_test.usdz",
+          "visual_cache": "assets/imported/openusd_anime_test_dad6ac2df7/visual.json",
+          "collision_mesh": "assets/imported/openusd_anime_test_dad6ac2df7/collision.obj",
+          "bounds": {
+            "min": [
+              -0.32419899106025696,
+              -0.3000888850212416,
+              2.3151791721090362e-08
+            ],
+            "max": [
+              0.36913999915122986,
+              0.30635503078923554,
+              1.0739660358780763
+            ]
+          }
+        },
+        "rgba": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "density",
+          "mass": 1.0,
+          "density": 1000.0,
+          "friction": [
+            0.8,
+            0.005,
+            0.0001
+          ]
+        },
+        "import_warnings": [
+          "No UsdPhysics collision geometry was found; collision falls back to the visual mesh.",
+          "No UsdPhysics rigid body was found; imported actor defaults to Static."
+        ]
+      }
+    },
+    {
+      "id": "openusd_sea_65c0de78e0",
+      "name": "sea",
+      "type": "object",
+      "source_format": "openusd",
+      "default_properties": {
+        "geometry": {
+          "kind": "mesh",
+          "source_format": "openusd",
+          "source": "assets/imported/openusd_sea_65c0de78e0/source/sea.usdz",
+          "visual_cache": "assets/imported/openusd_sea_65c0de78e0/visual.json",
+          "collision_mesh": "assets/imported/openusd_sea_65c0de78e0/collision.obj",
+          "bounds": {
+            "min": [
+              -0.4155679941177368,
+              -0.4129010093832423,
+              5.158676381962411e-08
+            ],
+            "max": [
+              0.40030598640441895,
+              0.4049460039067694,
+              0.3425720465622957
+            ]
+          }
+        },
+        "rgba": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "density",
+          "mass": 1.0,
+          "density": 1000.0,
+          "friction": [
+            0.8,
+            0.005,
+            0.0001
+          ]
+        },
+        "import_warnings": [
+          "No UsdPhysics collision geometry was found; collision falls back to the visual mesh.",
+          "No UsdPhysics rigid body was found; imported actor defaults to Static."
+        ]
+      }
+    },
+    {
+      "id": "openusd_fan_9a5b42ae1b",
+      "name": "fan",
+      "type": "object",
+      "source_format": "openusd",
+      "default_properties": {
+        "geometry": {
+          "kind": "mesh",
+          "source_format": "openusd",
+          "source": "assets/imported/openusd_fan_9a5b42ae1b/source/fan.usdz",
+          "visual_cache": "assets/imported/openusd_fan_9a5b42ae1b/visual.json",
+          "collision_mesh": "assets/imported/openusd_fan_9a5b42ae1b/collision.obj",
+          "bounds": {
+            "min": [
+              -0.34508100152015686,
+              -0.11937590468421748,
+              7.407848737233301e-09
+            ],
+            "max": [
+              0.37037599086761475,
+              0.12496201923431963,
+              0.9581239912746541
+            ]
+          }
+        },
+        "rgba": [
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "density",
+          "mass": 1.0,
+          "density": 1000.0,
+          "friction": [
+            0.8,
+            0.005,
+            0.0001
+          ]
+        },
+        "import_warnings": [
+          "No UsdPhysics collision geometry was found; collision falls back to the visual mesh.",
+          "No UsdPhysics rigid body was found; imported actor defaults to Static."
+        ]
+      }
     }
   ]
 }

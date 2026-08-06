@@ -16,6 +16,7 @@ def test_typescript_editor_assets_are_an_independent_frontend() -> None:
     assert (generated / "app.js").exists()
     assert (generated / "viewport.js").exists()
     assert Path("frontend/public/simlab-config.json").exists()
+    assert Path("frontend/public/docs/viewport-controls.html").exists()
     assert (root / "vendor" / "three.module.js").exists()
     assert (root / "vendor" / "THREE_LICENSE.txt").exists()
 
@@ -37,6 +38,8 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert 'data-command="import-openusd"' in html
     assert 'data-command="import-openusd-folder"' in html
     assert 'data-command="run"' in html
+    assert 'data-documentation="viewport-controls"' in html
+    assert 'href="./docs/viewport-controls.html"' in html
     assert 'data-simulation-speed="0.25"' in html
     assert 'id="rtf-readout"' in html
     assert "class EditorStore" in (root / "ts" / "store.ts").read_text(encoding="utf-8")
@@ -59,6 +62,13 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "getVisualGeometry" in app
     assert "getVisualGeometryBundle" in app
     assert "decodeGeometryBundle" in viewport
+    assert "normal_texture_url" in types
+    assert "roughness_texture_url" in types
+    assert "metallic_texture_url" in types
+    assert "textureArtifactUrl" in bridge
+    assert "'normalMap'" in viewport
+    assert "'roughnessMap'" in viewport
+    assert "'metalnessMap'" in viewport
     assert "new THREE.WireframeGeometry(mesh.geometry)" in viewport
     assert "onActorTransformChanged" in viewport
     assert "addRobotActor" in viewport
@@ -73,6 +83,8 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "data-rotor-stop" in app
     assert "setActuatorControls" in app
     assert "/actuator-controls" in bridge
+    assert "setAttachmentCommands" in bridge
+    assert "/attachments" in bridge
     assert "data-controller-status" in app
     assert 'data-status="fault"' in style
     assert "result.data?.state" in app
@@ -122,6 +134,30 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "exportRecordingPath" not in app
     assert "handleTrajectoryCommand" in app
     assert "updateTrajectoryRuntime" in app
+    assert "actorRenderSignatures" in viewport
+    assert "actorLoadRevisions" in viewport
+    assert "removeActorObject" in viewport
+    assert "actorLoadIsCurrent" in viewport
+    assert "syncAttachmentVisuals" in viewport
+    assert "updateAttachmentVisuals" in viewport
+    assert "addShippingPackageDetails" in viewport
+    assert "four_cup_vacuum" in types
+    assert "TorusGeometry" in viewport
+    assert "delivery_tasks" in viewport
+    assert "function clearActors" not in viewport
+    assert "sceneRevision" not in viewport
+
+
+def test_viewport_controls_document_covers_implemented_shortcuts() -> None:
+    document = Path("frontend/public/docs/viewport-controls.html").read_text(encoding="utf-8")
+
+    assert "Viewport 操作与快捷键" in document
+    assert 'href="../"' in document
+    for key in ("W", "E", "R", "F", "C", "0", "1", "3", "7"):
+        assert f"<kbd>{key}</kbd>" in document
+    assert "Ctrl" in document
+    assert "Shift" in document
+    assert "大型场景建议" in document
 
 
 def test_optional_qt_shell_is_only_an_http_client() -> None:

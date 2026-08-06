@@ -54,12 +54,30 @@ class BodyObservation:
 
 
 @dataclass(frozen=True, slots=True)
+class AttachmentObservation:
+    active: bool
+    requested_active: bool
+    eligible: bool
+    contact: bool
+    distance: float
+    relative_speed: float
+
+    def __post_init__(self) -> None:
+        if any(
+            not math.isfinite(value) or value < 0
+            for value in (self.distance, self.relative_speed)
+        ):
+            raise ValueError("Attachment observation distance and speed must be finite and >= 0")
+
+
+@dataclass(frozen=True, slots=True)
 class ControllerObservation:
     time: float
     timestep: float
     joints: Mapping[str, JointObservation]
     actuators: Mapping[str, ActuatorObservation]
     bodies: Mapping[str, BodyObservation] = field(default_factory=dict)
+    attachments: Mapping[str, AttachmentObservation] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not math.isfinite(self.time) or self.time < 0:
@@ -69,12 +87,14 @@ class ControllerObservation:
         object.__setattr__(self, "joints", MappingProxyType(dict(self.joints)))
         object.__setattr__(self, "actuators", MappingProxyType(dict(self.actuators)))
         object.__setattr__(self, "bodies", MappingProxyType(dict(self.bodies)))
+        object.__setattr__(self, "attachments", MappingProxyType(dict(self.attachments)))
 
 
 @dataclass(frozen=True, slots=True)
 class ControllerAction:
     position_targets: Mapping[str, float] = field(default_factory=dict)
     actuator_controls: Mapping[str, float] = field(default_factory=dict)
+    attachment_commands: Mapping[str, bool] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         targets = {str(joint_id): float(value) for joint_id, value in self.position_targets.items()}
@@ -90,8 +110,19 @@ class ControllerAction:
             raise ValueError("Controller action actuator IDs must not be empty")
         if any(not math.isfinite(value) for value in controls.values()):
             raise ValueError("Controller actuator controls must be finite")
+        commands: dict[str, bool] = {}
+        for attachment_id, active in self.attachment_commands.items():
+            identifier = str(attachment_id)
+            if not identifier:
+                raise ValueError("Controller attachment IDs must not be empty")
+            if not isinstance(active, bool):
+                raise ValueError(
+                    f"Controller attachment command must be boolean: {identifier}"
+                )
+            commands[identifier] = active
         object.__setattr__(self, "position_targets", MappingProxyType(targets))
         object.__setattr__(self, "actuator_controls", MappingProxyType(controls))
+        object.__setattr__(self, "attachment_commands", MappingProxyType(commands))
 
 
 class StepController(Protocol):

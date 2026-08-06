@@ -44,12 +44,45 @@ OpenAPI is published at `/api/v1/openapi.json`; interactive documentation is at 
 The v1 API uses explicit resources rather than method-name RPC:
 
 - `projects`: create a project, update its canonical scene, list assets, import an OpenUSD multipart directory/USDZ/safe ZIP bundle, run preflight, and create MJCF artifacts.
-- `simulations`: create an isolated runtime for one project, control run/pause/step/reset/speed, targets, trajectories, recording, and an optional trusted controller.
+- `simulations`: create an isolated runtime for one project, control run/pause/step/reset/speed, targets,
+  contact-gated attachments, trajectories, recording, and an optional trusted controller.
 - `artifacts`: opaque `art_...` references for imported cache data and downloadable MJCF/recording output.
 
 IDs (`prj_...`, `sim_...`, `art_...`) cross the network. Absolute or project-relative server filesystem paths do not. Browser Open/Save and controller/OpenUSD input use upload content; output uses authenticated artifact downloads. The old `/api/rpc/{method}`, `/api/health`, and server path operations are not exposed by the backend.
 
+Browser-saved catalog scenes may contain project-scoped `art_...` references. On Open, the backend
+uses each actor's stable `asset_id` to rebind Actor and Robotics resource fields to the current project's
+catalog cache before validation or MJCF generation. Custom uploaded assets that are not present in the
+new project's catalog still need to be uploaded again or distributed as an asset package.
+
 Each simulation owns its own `WebApplication`, MuJoCo session, and immutable scene snapshot. Updating a project does not mutate or stop an existing simulation. A later explicit Run/Step against an edited scene replaces the client simulation with a new resource created from the latest project revision. Creating a second browser client creates separate project and simulation IDs, so editor or runtime state cannot overwrite another client.
+
+`PUT /api/v1/simulations/{id}/attachments` accepts an atomic stable-ID-to-boolean command map.
+Attachment and delivery-task state travels back in ordinary REST snapshots and versioned WebSocket
+events; the browser never evaluates capture eligibility or mission completion locally.
+
+## Viewport scene reconciliation
+
+The authoring store remains the source of truth, while the Three.js scene is a retained rendering
+projection rather than a disposable copy. `setViewportScene` reconciles renderable actors by stable
+actor ID:
+
+- unchanged actors keep the same `Object3D`, geometry, material, texture, selection, and transform
+  control attachment;
+- new actors allocate only their own render objects and request only their own imported geometry;
+- removed actors invalidate only their pending loads and dispose only their GPU resources;
+- render-relevant property or articulation changes rebuild only the affected actor;
+- transform-only updates use the in-place transform path and do not rebuild geometry.
+
+Large-environment camera framing also owns the distance-dependent fog range. Incremental edits keep
+that range intact while the environment mode is unchanged; only entering or leaving the large-scene
+mode restores the default editor fog. This prevents kilometre-scale maps from being hidden behind
+near-field fog when an unrelated asset is added.
+
+Asynchronous OpenUSD loads use a per-actor revision. A response may update an actor only when both
+the actor revision and its current `Object3D` still match, so editing an unrelated actor neither
+cancels nor restarts that request. Browser acceptance tests assert that adding a primitive after an
+OpenUSD mesh does not issue a second geometry request for the existing mesh.
 
 ## WebSocket recovery
 

@@ -6,7 +6,7 @@ import os
 import re
 import shutil
 import tempfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from simlab.services.openusd.import_report import ImportReport
@@ -68,6 +68,15 @@ def copy_openusd_dependencies(
     copied: dict[str, Path] = {}
     dependencies: list[Path] = []
     for dependency_value in report.resolved_dependencies:
+        packaged = _copy_packaged_dependency(
+            dependency_value,
+            source_path,
+            cache_source_dir,
+            report,
+        )
+        if packaged is not None:
+            copied[dependency_value] = packaged
+            continue
         dependency = Path(dependency_value)
         if not dependency.is_absolute():
             dependency = (source_path.parent / dependency).resolve()
@@ -93,3 +102,55 @@ def copy_openusd_dependencies(
         atomic_copy(dependency, destination)
         copied[str(dependency.resolve())] = destination
     return copied
+
+
+def _copy_packaged_dependency(
+    dependency_value: str,
+    source_path: Path,
+    cache_source_dir: Path,
+    report: ImportReport,
+) -> Path | None:
+    """Materialize a dependency stored inside the imported USDZ package."""
+
+    try:
+        from pxr import Ar
+    except ImportError:
+        return None
+    if not Ar.IsPackageRelativePath(dependency_value):
+        return None
+    package_value, member_value = Ar.SplitPackageRelativePathOuter(dependency_value)
+    package_path = Path(package_value).resolve()
+    if package_path != source_path.resolve():
+        report.add(
+            "error",
+            "usd.package_dependency_outside_source",
+            f"Packaged dependency is outside the imported USDZ: {dependency_value}",
+            field="asset_path",
+        )
+        return None
+    member = PurePosixPath(member_value.replace("\\", "/"))
+    if (
+        not member.parts
+        or member.is_absolute()
+        or ".." in member.parts
+        or ":" in member.parts[0]
+    ):
+        report.add(
+            "error",
+            "usd.package_dependency_unsafe",
+            f"Packaged dependency has an unsafe path: {dependency_value}",
+            field="asset_path",
+        )
+        return None
+    asset = Ar.GetResolver().OpenAsset(Ar.ResolvedPath(dependency_value))
+    if asset is None:
+        report.add(
+            "error",
+            "usd.package_dependency_unreadable",
+            f"Packaged dependency could not be read: {dependency_value}",
+            field="asset_path",
+        )
+        return None
+    destination = cache_source_dir.joinpath(*member.parts)
+    atomic_write_bytes(destination, bytes(asset.GetBuffer()))
+    return destination

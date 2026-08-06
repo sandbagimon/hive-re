@@ -73,6 +73,7 @@ class WebApplication:
             "resetSimulation": self.reset_simulation,
             "setJointTargets": self.set_joint_targets,
             "setActuatorControls": self.set_actuator_controls,
+            "setAttachmentCommands": self.set_attachment_commands,
             "loadController": self.path_required,
             "loadControllerPath": self.load_controller_path,
             "loadControllerContent": self.load_controller_content,
@@ -309,6 +310,25 @@ class WebApplication:
         numeric = {str(key): float(value) for key, value in controls.items()}
         try:
             state = self.simulation_service.set_actuator_controls(scene, numeric)
+        except Exception as exc:
+            session = self.simulation_service.session
+            data = {"state": session.state().to_dict()} if session else None
+            return self.failure(exc, data)
+        self._publish("state", state.to_dict())
+        return self.success({"state": state.to_dict()})
+
+    def set_attachment_commands(self, scene_json: str, commands_json: str) -> dict[str, Any]:
+        scene = self._scene_from_json(scene_json)
+        commands = json.loads(commands_json)
+        if not isinstance(commands, dict):
+            raise ValueError("Attachment commands must be a JSON object")
+        typed: dict[str, bool] = {}
+        for key, value in commands.items():
+            if not isinstance(value, bool):
+                raise ValueError(f"Attachment command must be boolean: {key}")
+            typed[str(key)] = value
+        try:
+            state = self.simulation_service.set_attachment_commands(scene, typed)
         except Exception as exc:
             session = self.simulation_service.session
             data = {"state": session.state().to_dict()} if session else None

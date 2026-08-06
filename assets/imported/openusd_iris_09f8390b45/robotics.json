@@ -530,8 +530,8 @@
             1.0
           ],
           "limits": {
-            "lower": -Infinity,
-            "upper": Infinity,
+            "lower": null,
+            "upper": null,
             "effort": null,
             "velocity": null
           },
@@ -590,8 +590,8 @@
             1.0
           ],
           "limits": {
-            "lower": -Infinity,
-            "upper": Infinity,
+            "lower": null,
+            "upper": null,
             "effort": null,
             "velocity": null
           },
@@ -650,8 +650,8 @@
             1.0
           ],
           "limits": {
-            "lower": -Infinity,
-            "upper": Infinity,
+            "lower": null,
+            "upper": null,
             "effort": null,
             "velocity": null
           },
@@ -710,8 +710,8 @@
             1.0
           ],
           "limits": {
-            "lower": -Infinity,
-            "upper": Infinity,
+            "lower": null,
+            "upper": null,
             "effort": null,
             "velocity": null
           },

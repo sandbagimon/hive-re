@@ -113,19 +113,32 @@ def import_openusd_asset(source: str | Path, project_root: str | Path) -> OpenUs
             item for item in stage_result.report.issues if item.severity == "error"
         )
         raise OpenUsdImportError(issue.message, report=stage_result.report)
-    relative_texture: str | None = None
-    if extracted.base_color_texture:
-        texture_source = Path(extracted.base_color_texture)
-        if not texture_source.is_absolute():
-            texture_source = (source_path.parent / texture_source).resolve()
-        copied_texture = copied_dependencies.get(str(texture_source.resolve()))
+    def preserve_texture(texture_value: str | None, label: str) -> str | None:
+        if not texture_value:
+            return None
+        copied_texture = copied_dependencies.get(texture_value)
+        if copied_texture is None:
+            texture_source = Path(texture_value)
+            if not texture_source.is_absolute():
+                texture_source = (source_path.parent / texture_source).resolve()
+            copied_texture = copied_dependencies.get(str(texture_source.resolve()))
         if copied_texture is not None:
-            relative_texture = copied_texture.relative_to(root).as_posix()
-        else:
-            warnings.append(
-                "The authored base-color texture could not be preserved; "
-                "the viewport will use the material color."
-            )
+            return copied_texture.relative_to(root).as_posix()
+        warnings.append(
+            f"The authored {label} texture could not be preserved; "
+            "the viewport will use a scalar material fallback."
+        )
+        return None
+
+    material = extracted.material
+    relative_texture = preserve_texture(material.base_color_texture, "base-color")
+    relative_normal_texture = preserve_texture(material.normal_texture, "normal")
+    relative_roughness_texture = preserve_texture(
+        material.roughness_texture, "roughness"
+    )
+    relative_metallic_texture = preserve_texture(
+        material.metallic_texture, "metallic"
+    )
 
     visual_path = cache_dir / "visual.json"
     collision_path = cache_dir / "collision.obj"
@@ -139,6 +152,11 @@ def import_openusd_asset(source: str | Path, project_root: str | Path) -> OpenUs
                 "colors": extracted.visual.colors,
                 "uvs": extracted.visual.uvs,
                 "base_color_texture": relative_texture,
+                "normal_texture": relative_normal_texture,
+                "roughness_texture": relative_roughness_texture,
+                "metallic_texture": relative_metallic_texture,
+                "roughness": material.roughness,
+                "metalness": material.metalness,
             },
             separators=(",", ":"),
         ),
@@ -176,6 +194,11 @@ def import_openusd_asset(source: str | Path, project_root: str | Path) -> OpenUs
         "source_prim_paths": extracted.visual.source_prim_paths,
         "collision_prim_paths": extracted.collision.source_prim_paths,
         "base_color_texture": relative_texture,
+        "normal_texture": relative_normal_texture,
+        "roughness_texture": relative_roughness_texture,
+        "metallic_texture": relative_metallic_texture,
+        "roughness": material.roughness,
+        "metalness": material.metalness,
         "bounds": bounds,
         "warnings": warnings,
     }
@@ -226,6 +249,11 @@ def load_visual_geometry(cache_path: str, project_root: str | Path) -> dict[str,
     colors = payload.get("colors")
     uvs = payload.get("uvs")
     base_color_texture = payload.get("base_color_texture")
+    normal_texture = payload.get("normal_texture")
+    roughness_texture = payload.get("roughness_texture")
+    metallic_texture = payload.get("metallic_texture")
+    roughness = payload.get("roughness")
+    metalness = payload.get("metalness")
     if not isinstance(positions, list) or not isinstance(indices, list):
         raise OpenUsdImportError(f"Visual cache is invalid: {cache_path}")
     _validate_mesh_data(positions, indices)
@@ -245,14 +273,28 @@ def load_visual_geometry(cache_path: str, project_root: str | Path) -> dict[str,
         )
         if not valid_uvs:
             raise OpenUsdImportError(f"Visual cache UVs are invalid: {cache_path}")
-    if base_color_texture is not None and not isinstance(base_color_texture, str):
-        raise OpenUsdImportError(f"Visual cache texture is invalid: {cache_path}")
+    for texture in (
+        base_color_texture,
+        normal_texture,
+        roughness_texture,
+        metallic_texture,
+    ):
+        if texture is not None and not isinstance(texture, str):
+            raise OpenUsdImportError(f"Visual cache texture is invalid: {cache_path}")
+    for scalar in (roughness, metalness):
+        if scalar is not None and not _finite_number(scalar):
+            raise OpenUsdImportError(f"Visual cache material is invalid: {cache_path}")
     return {
         "positions": positions,
         "indices": indices,
         "colors": colors,
         "uvs": uvs,
         "base_color_texture": base_color_texture,
+        "normal_texture": normal_texture,
+        "roughness_texture": roughness_texture,
+        "metallic_texture": metallic_texture,
+        "roughness": roughness,
+        "metalness": metalness,
     }
 
 

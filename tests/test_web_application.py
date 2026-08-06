@@ -8,9 +8,11 @@ import httpx
 import pytest
 
 from simlab.models.actor import Actor
+from simlab.models.attachment import Attachment
 from simlab.models.robotics import RoboticsModel, Sensor
 from simlab.models.scene import Scene
 from simlab.models.transform import Transform
+from simlab.resources import ResourceManager
 from simlab.services.project_service import load_scene
 from simlab.web_application import WebApplication
 from simlab.web_server import create_app
@@ -184,6 +186,9 @@ def Scope "Looks"
         {
             uniform token info:id = "UsdPreviewSurface"
             color3f inputs:diffuseColor.connect = </Looks/Textured/Texture.outputs:rgb>
+            normal3f inputs:normal.connect = </Looks/Textured/Normal.outputs:rgb>
+            float inputs:roughness.connect = </Looks/Textured/Roughness.outputs:r>
+            float inputs:metallic.connect = </Looks/Textured/Metallic.outputs:r>
             token outputs:surface
         }
         def Shader "Texture"
@@ -192,10 +197,33 @@ def Scope "Looks"
             asset inputs:file = @albedo.png@
             float3 outputs:rgb
         }
+        def Shader "Normal"
+        {
+            uniform token info:id = "UsdUVTexture"
+            asset inputs:file = @normal.png@
+            float3 outputs:rgb
+        }
+        def Shader "Roughness"
+        {
+            uniform token info:id = "UsdUVTexture"
+            asset inputs:file = @roughness.png@
+            float outputs:r
+        }
+        def Shader "Metallic"
+        {
+            uniform token info:id = "UsdUVTexture"
+            asset inputs:file = @metallic.png@
+            float outputs:r
+        }
     }
 }
 '''
-    texture = b"simlab-png-test"
+    textures = {
+        "base_color_texture": ("albedo.png", b"simlab-base-color"),
+        "normal_texture": ("normal.png", b"simlab-normal"),
+        "roughness_texture": ("roughness.png", b"simlab-roughness"),
+        "metallic_texture": ("metallic.png", b"simlab-metallic"),
+    }
     app = create_app(tmp_path, seed_assets=Path.cwd() / "assets")
     try:
         project_id = create_api_project(app)
@@ -204,9 +232,10 @@ def Scope "Looks"
             "POST",
             f"/api/v1/projects/{project_id}/assets/openusd",
             data={"entry": "textured.usda"},
-            files=[
-                ("files", ("textured.usda", source, "application/octet-stream")),
-                ("files", ("albedo.png", texture, "image/png")),
+            files=[("files", ("textured.usda", source, "application/octet-stream"))]
+            + [
+                ("files", (filename, content, "image/png"))
+                for filename, content in textures.values()
             ],
         )
         visual_artifact = imported.json()["asset"]["default_properties"]["geometry"][
@@ -217,17 +246,24 @@ def Scope "Looks"
             "GET",
             f"/api/v1/projects/{project_id}/geometry/{visual_artifact}",
         )
-        texture_artifact = geometry.json()["base_color_texture"]
-        downloaded = request(app, "GET", f"/api/v1/artifacts/{texture_artifact}")
+        texture_artifacts = {
+            field: geometry.json()[field]
+            for field in textures
+        }
+        downloaded = {
+            field: request(app, "GET", f"/api/v1/artifacts/{artifact}")
+            for field, artifact in texture_artifacts.items()
+        }
     finally:
         app.state.resources.close()
 
     assert imported.status_code == 201, imported.text
     assert geometry.status_code == 200, geometry.text
     assert geometry.json()["uvs"] == pytest.approx([0, 0, 1, 0, 0, 1])
-    assert texture_artifact.startswith("art_")
-    assert downloaded.headers["content-type"] == "image/png"
-    assert downloaded.content == texture
+    for field, artifact in texture_artifacts.items():
+        assert artifact.startswith("art_")
+        assert downloaded[field].headers["content-type"] == "image/png"
+        assert downloaded[field].content == textures[field][1]
 
 
 def request(app: object, method: str, path: str, **kwargs: object) -> httpx.Response:
@@ -421,6 +457,137 @@ def test_api_applies_named_quadrotor_actuator_controls(tmp_path: Path) -> None:
     ] == pytest.approx([700.0] * 4)
     assert stepped.status_code == 200, stepped.text
     assert stepped.json()["data"]["state"]["time"] == pytest.approx(0.002)
+
+
+def test_api_activates_and_releases_contact_gated_attachment(tmp_path: Path) -> None:
+    pytest.importorskip("mujoco")
+
+    def box(
+        actor_id: str,
+        position: list[float],
+        size: list[float],
+        *,
+        dynamic: bool,
+    ) -> Actor:
+        return Actor(
+            id=actor_id,
+            name=actor_id,
+            type="object",
+            asset_id="primitive_box",
+            transform=Transform(position=position),
+            properties={
+                "primitive": "box",
+                "size": size,
+                "physics": {
+                    "dynamic": dynamic,
+                    "mass_mode": "mass",
+                    "mass": 1.0,
+                },
+            },
+        )
+
+    scene = Scene(
+        name="Attachment API",
+        actors=[
+            box("carrier", [0.0, 0.0, 0.39], [0.1, 0.1, 0.1], dynamic=True),
+            box("payload", [0.0, 0.0, 0.2], [0.15, 0.15, 0.1], dynamic=True),
+            box("ground", [0.0, 0.0, -0.05], [2.0, 2.0, 0.05], dynamic=False),
+        ],
+        attachments=[
+            Attachment(
+                id="payload_hook",
+                parent_body_id="carrier",
+                child_body_id="payload",
+                parent_anchor=(0.0, 0.0, -0.1),
+                child_anchor=(0.0, 0.0, 0.1),
+                capture_distance=0.03,
+                capture_speed=0.2,
+                capture_duration=0.0,
+                require_contact=True,
+            )
+        ],
+        simulation_config={"timestep": 0.002, "duration": 1.0},
+    )
+    app = create_app(tmp_path, seed_assets=Path.cwd() / "assets")
+    try:
+        project_id = create_api_project(app, "Attachment API")
+        updated = request(
+            app,
+            "PUT",
+            f"/api/v1/projects/{project_id}/scene",
+            json=scene.to_dict(),
+        )
+        simulation_id = request(
+            app,
+            "POST",
+            "/api/v1/simulations",
+            json={"project_id": project_id},
+        ).json()["id"]
+        attached = request(
+            app,
+            "PUT",
+            f"/api/v1/simulations/{simulation_id}/attachments",
+            json={"commands": {"payload_hook": True}},
+        )
+        released = request(
+            app,
+            "PUT",
+            f"/api/v1/simulations/{simulation_id}/attachments",
+            json={"commands": {"payload_hook": False}},
+        )
+    finally:
+        app.state.resources.close()
+
+    assert updated.status_code == 200, updated.text
+    assert attached.status_code == 200, attached.text
+    assert attached.json()["data"]["state"]["attachments"][0]["active"] is True
+    assert released.status_code == 200, released.text
+    assert released.json()["data"]["state"]["attachments"][0]["active"] is False
+
+
+def test_catalog_robot_scene_rebinds_resources_when_opened_in_new_project(
+    tmp_path: Path,
+) -> None:
+    manager = ResourceManager(tmp_path, Path.cwd() / "assets")
+    try:
+        first = manager.create_project("Iris Source")
+        iris = next(
+            item
+            for item in manager.assets(first.id)
+            if item["id"] == "openusd_iris_09f8390b45"
+        )
+        scene = Scene(
+            name="Portable Iris",
+            actors=[
+                Actor(
+                    id="actor_iris",
+                    name="Iris",
+                    type="robot",
+                    asset_id=iris["id"],
+                    transform=Transform(position=[0.0, 0.0, 1.0]),
+                    properties=iris["default_properties"],
+                )
+            ],
+            robotics=RoboticsModel.from_dict(iris["robotics"]),
+        )
+        saved = manager.update_scene(first.id, scene.to_dict()).scene
+        old_collision = saved["robotics"]["articulations"][0]["links"][0][
+            "colliders"
+        ][0]["collision_mesh"]
+
+        second = manager.create_project("Iris Destination")
+        reopened = manager.update_scene(second.id, saved)
+        new_collision = reopened.scene["robotics"]["articulations"][0]["links"][0][
+            "colliders"
+        ][0]["collision_mesh"]
+        exported, _ = manager.export_mjcf(second.id)
+    finally:
+        manager.close()
+
+    assert old_collision.startswith("art_")
+    assert new_collision.startswith("art_")
+    assert new_collision != old_collision
+    assert "<mujoco" in exported["content"]
 
 
 def test_project_edits_do_not_mutate_or_stop_simulation_snapshot(tmp_path: Path) -> None:

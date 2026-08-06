@@ -7,12 +7,14 @@ from typing import Any, cast
 
 import numpy as np
 
+from simlab.models.attachment import Attachment
 from simlab.models.recording import JointStateRecording
 from simlab.models.scene import Scene
 from simlab.models.trajectory import JointTrajectory
 from simlab.services.contact_sensors import ContactSensorSample, ContactSensorScheduler
 from simlab.services.controller_runtime import (
     ActuatorObservation,
+    AttachmentObservation,
     BodyObservation,
     ControllerObservation,
     ControllerRunner,
@@ -26,7 +28,12 @@ from simlab.services.joint_state_sensors import (
     JointStateSensorSample,
     JointStateSensorScheduler,
 )
-from simlab.services.mjcf_exporter import export_scene_to_mjcf, imu_sensor_channel_names
+from simlab.services.mjcf_exporter import (
+    attachment_constraint_name,
+    attachment_site_names,
+    export_scene_to_mjcf,
+    imu_sensor_channel_names,
+)
 from simlab.services.mujoco_contact_adapter import MujocoContactAggregator
 from simlab.services.quadrotor_dynamics import quadrotor_models_from_scene
 from simlab.services.trajectory_player import (
@@ -76,6 +83,62 @@ class ActuatorSimulationState:
 
     def to_dict(self) -> dict[str, Any]:
         return {"id": self.actuator_id, "ctrl": self.ctrl, "force": self.force}
+
+
+@dataclass(frozen=True, slots=True)
+class AttachmentSimulationState:
+    attachment_id: str
+    status: str
+    active: bool
+    requested_active: bool
+    eligible: bool
+    contact: bool
+    distance: float
+    relative_speed: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.attachment_id,
+            "status": self.status,
+            "active": self.active,
+            "requested_active": self.requested_active,
+            "eligible": self.eligible,
+            "contact": self.contact,
+            "distance": self.distance,
+            "relative_speed": self.relative_speed,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class DeliveryTaskSimulationState:
+    task_id: str
+    status: str
+    attachment_id: str
+    payload_body_id: str
+    distance_to_dropoff: float
+    payload_speed: float
+    stable_time: float
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.task_id,
+            "status": self.status,
+            "attachment_id": self.attachment_id,
+            "payload_body_id": self.payload_body_id,
+            "distance_to_dropoff": self.distance_to_dropoff,
+            "payload_speed": self.payload_speed,
+            "stable_time": self.stable_time,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class _AttachmentBinding:
+    definition: Attachment
+    equality_id: int
+    parent_site_id: int
+    child_site_id: int
+    parent_body_id: int
+    child_body_id: int
 
 
 @dataclass(slots=True)
@@ -143,6 +206,8 @@ class SimulationState:
     links: list[LinkSimulationState] = field(default_factory=list)
     joints: list[JointSimulationState] = field(default_factory=list)
     actuators: list[ActuatorSimulationState] = field(default_factory=list)
+    attachments: list[AttachmentSimulationState] = field(default_factory=list)
+    delivery_tasks: list[DeliveryTaskSimulationState] = field(default_factory=list)
     sensors: list[JointStateSensorSample | ImuSensorSample | ContactSensorSample] = field(
         default_factory=list
     )
@@ -165,6 +230,8 @@ class SimulationState:
             "links": [link.to_dict() for link in self.links],
             "joints": [joint.to_dict() for joint in self.joints],
             "actuators": [actuator.to_dict() for actuator in self.actuators],
+            "attachments": [attachment.to_dict() for attachment in self.attachments],
+            "delivery_tasks": [task.to_dict() for task in self.delivery_tasks],
             "sensors": [sensor.to_dict() for sensor in self.sensors],
             "controller": self.controller.to_dict(),
             "trajectory": self.trajectory.to_dict(),
@@ -196,6 +263,14 @@ class MuJoCoSimulationSession:
         self.data = mujoco.MjData(self.model)
         self._body_ids = self._map_actor_bodies(scene)
         self._link_ids, self._joint_ids, self._actuator_ids = self._map_robotics(scene)
+        self._attachment_bindings = self._map_attachments(scene)
+        self._attachment_requests = {
+            item.id: item.initially_active for item in scene.attachments
+        }
+        self._attachment_eligible_since: dict[str, float] = {}
+        self._delivery_picked = {item.id: False for item in scene.delivery_tasks}
+        self._delivery_settle_since: dict[str, float] = {}
+        self._delivery_completed = {item.id: False for item in scene.delivery_tasks}
         self._joint_position_actuators = self._map_joint_position_actuators(scene)
         self._quadrotor_models = quadrotor_models_from_scene(scene)
         self._validate_quadrotor_bindings()
@@ -253,11 +328,13 @@ class MuJoCoSimulationSession:
         for _ in range(max(steps, 1)):
             self._apply_trajectory_target()
             self._apply_python_controller()
+            self._update_attachment_constraints()
             self._apply_control_watchdog()
             self._apply_quadrotor_forces()
             self._mujoco.mj_step(self.model, self.data)
             self._apply_trajectory_target()
             self._physics_step_index += 1
+            self._update_delivery_tasks()
             emitted_sensors = self._joint_state_sensors.capture(
                 self._physics_step_index,
                 float(self.data.time),
@@ -346,6 +423,17 @@ class MuJoCoSimulationSession:
             self._controller_message = str(exc)
             raise
         self._apply_actuator_control_updates(updates)
+        return self.state()
+
+    def set_attachment_commands(self, commands: dict[str, bool]) -> SimulationState:
+        """Request runtime attachment activation without exposing MuJoCo equality indexes."""
+
+        if self._controller_runner.attached:
+            raise RuntimeError("Detach the Python controller before setting attachment commands")
+        updates = self._validate_attachment_commands(commands)
+        self._apply_attachment_command_updates(updates)
+        self._update_attachment_constraints()
+        self._mujoco.mj_forward(self.model, self.data)
         return self.state()
 
     def load_joint_trajectory(self, trajectory: JointTrajectory) -> SimulationState:
@@ -466,6 +554,8 @@ class MuJoCoSimulationSession:
             links=link_states,
             joints=joint_states,
             actuators=actuator_states,
+            attachments=self._attachment_states(),
+            delivery_tasks=self._delivery_task_states(),
             sensors=[
                 *self._joint_state_sensors.latest_samples,
                 *self._imu_sensors.latest_samples,
@@ -527,12 +617,49 @@ class MuJoCoSimulationSession:
                     actuators[actuator.id] = identifier
         return links, joints, actuators
 
+    def _map_attachments(self, scene: Scene) -> dict[str, _AttachmentBinding]:
+        bindings: dict[str, _AttachmentBinding] = {}
+        body_ids = {**self._body_ids, **self._link_ids}
+        for attachment in scene.attachments:
+            equality_id = self._mujoco.mj_name2id(
+                self.model,
+                self._mujoco.mjtObj.mjOBJ_EQUALITY,
+                attachment_constraint_name(attachment.id),
+            )
+            parent_site_name, child_site_name = attachment_site_names(attachment.id)
+            parent_site_id = self._mujoco.mj_name2id(
+                self.model, self._mujoco.mjtObj.mjOBJ_SITE, parent_site_name
+            )
+            child_site_id = self._mujoco.mj_name2id(
+                self.model, self._mujoco.mjtObj.mjOBJ_SITE, child_site_name
+            )
+            parent_body_id = body_ids.get(attachment.parent_body_id, -1)
+            child_body_id = body_ids.get(attachment.child_body_id, -1)
+            if min(
+                equality_id,
+                parent_site_id,
+                child_site_id,
+                parent_body_id,
+                child_body_id,
+            ) < 0:
+                raise ValueError(f"Attachment was not exported to MuJoCo: {attachment.id}")
+            bindings[attachment.id] = _AttachmentBinding(
+                definition=attachment,
+                equality_id=equality_id,
+                parent_site_id=parent_site_id,
+                child_site_id=child_site_id,
+                parent_body_id=parent_body_id,
+                child_body_id=child_body_id,
+            )
+        return bindings
+
     def _reset_to_home(self) -> None:
         key_id = self._mujoco.mj_name2id(self.model, self._mujoco.mjtObj.mjOBJ_KEY, "home")
         if key_id >= 0:
             self._mujoco.mj_resetDataKeyframe(self.model, self.data, key_id)
         else:
             self._mujoco.mj_resetData(self.model, self.data)
+        self._reset_attachments()
         self._controller_status = "ready"
         self._controller_message = None
         self._last_command_time = None
@@ -571,6 +698,16 @@ class MuJoCoSimulationSession:
             updates.append((mujoco_id, value))
         return updates
 
+    def _validate_attachment_commands(self, commands: dict[str, bool]) -> list[tuple[str, bool]]:
+        updates: list[tuple[str, bool]] = []
+        for attachment_id, active in commands.items():
+            if attachment_id not in self._attachment_bindings:
+                raise ValueError(f"Unknown attachment: {attachment_id}")
+            if not isinstance(active, bool):
+                raise ValueError(f"Attachment command must be boolean: {attachment_id}")
+            updates.append((attachment_id, active))
+        return updates
+
     def _apply_control_watchdog(self) -> None:
         if (
             self._controller_runner.attached
@@ -594,6 +731,193 @@ class MuJoCoSimulationSession:
             self._controller_status = "active"
             self._controller_message = None
             self._last_command_time = float(self.data.time)
+
+    def _apply_attachment_command_updates(self, updates: list[tuple[str, bool]]) -> None:
+        for attachment_id, active in updates:
+            self._attachment_requests[attachment_id] = active
+            if active:
+                continue
+            binding = self._attachment_bindings[attachment_id]
+            self.data.eq_active[binding.equality_id] = False
+            self._attachment_eligible_since.pop(attachment_id, None)
+
+    def _reset_attachments(self) -> None:
+        self._attachment_eligible_since.clear()
+        for task_id in self._delivery_picked:
+            self._delivery_picked[task_id] = False
+            self._delivery_completed[task_id] = False
+        self._delivery_settle_since.clear()
+        for attachment_id, binding in self._attachment_bindings.items():
+            active = binding.definition.initially_active
+            self._attachment_requests[attachment_id] = active
+            self.data.eq_active[binding.equality_id] = active
+
+    def _update_attachment_constraints(self) -> None:
+        now = float(self.data.time)
+        for attachment_id, binding in self._attachment_bindings.items():
+            if not self._attachment_requests[attachment_id]:
+                self.data.eq_active[binding.equality_id] = False
+                self._attachment_eligible_since.pop(attachment_id, None)
+                continue
+            if bool(self.data.eq_active[binding.equality_id]):
+                continue
+            observation = self._attachment_observation(binding)
+            if not observation.eligible:
+                self._attachment_eligible_since.pop(attachment_id, None)
+                continue
+            eligible_since = self._attachment_eligible_since.setdefault(attachment_id, now)
+            if now - eligible_since + 1e-12 >= binding.definition.capture_duration:
+                self.data.eq_active[binding.equality_id] = True
+                self._attachment_eligible_since.pop(attachment_id, None)
+
+    def _attachment_observation(self, binding: _AttachmentBinding) -> AttachmentObservation:
+        parent_position = self.data.site_xpos[binding.parent_site_id]
+        child_position = self.data.site_xpos[binding.child_site_id]
+        distance = float(np.linalg.norm(parent_position - child_position))
+        parent_velocity = self._object_velocity(
+            self._mujoco.mjtObj.mjOBJ_SITE, binding.parent_site_id
+        )
+        child_velocity = self._object_velocity(
+            self._mujoco.mjtObj.mjOBJ_SITE, binding.child_site_id
+        )
+        relative_speed = float(np.linalg.norm(parent_velocity - child_velocity))
+        contact = self._bodies_in_contact(binding.parent_body_id, binding.child_body_id)
+        definition = binding.definition
+        eligible = (
+            distance <= definition.capture_distance
+            and relative_speed <= definition.capture_speed
+            and (contact or not definition.require_contact)
+        )
+        return AttachmentObservation(
+            active=bool(self.data.eq_active[binding.equality_id]),
+            requested_active=self._attachment_requests[binding.definition.id],
+            eligible=eligible,
+            contact=contact,
+            distance=distance,
+            relative_speed=relative_speed,
+        )
+
+    def _attachment_observations(self) -> dict[str, AttachmentObservation]:
+        return {
+            attachment_id: self._attachment_observation(binding)
+            for attachment_id, binding in self._attachment_bindings.items()
+        }
+
+    def _attachment_states(self) -> list[AttachmentSimulationState]:
+        result: list[AttachmentSimulationState] = []
+        for attachment_id, observation in self._attachment_observations().items():
+            status = (
+                "active"
+                if observation.active
+                else "pending"
+                if observation.requested_active
+                else "inactive"
+            )
+            result.append(
+                AttachmentSimulationState(
+                    attachment_id=attachment_id,
+                    status=status,
+                    active=observation.active,
+                    requested_active=observation.requested_active,
+                    eligible=observation.eligible,
+                    contact=observation.contact,
+                    distance=observation.distance,
+                    relative_speed=observation.relative_speed,
+                )
+            )
+        return result
+
+    def _bodies_in_contact(self, first_body_id: int, second_body_id: int) -> bool:
+        expected = {first_body_id, second_body_id}
+        for index in range(int(self.data.ncon)):
+            contact = self.data.contact[index]
+            bodies = {
+                int(self.model.geom_bodyid[int(contact.geom1)]),
+                int(self.model.geom_bodyid[int(contact.geom2)]),
+            }
+            if bodies == expected:
+                return True
+        return False
+
+    def _object_velocity(self, object_type: Any, object_id: int) -> np.ndarray[Any, Any]:
+        velocity = np.zeros(6, dtype=np.float64)
+        self._mujoco.mj_objectVelocity(
+            self.model,
+            self.data,
+            object_type,
+            object_id,
+            velocity,
+            0,
+        )
+        return velocity[3:]
+
+    def _update_delivery_tasks(self) -> None:
+        now = float(self.data.time)
+        body_ids = {**self._body_ids, **self._link_ids}
+        for task in self.scene.delivery_tasks:
+            binding = self._attachment_bindings[task.attachment_id]
+            if bool(self.data.eq_active[binding.equality_id]):
+                self._delivery_picked[task.id] = True
+                self._delivery_settle_since.pop(task.id, None)
+                continue
+            if not self._delivery_picked[task.id] or self._delivery_completed[task.id]:
+                continue
+            body_id = body_ids[task.payload_body_id]
+            distance = float(
+                np.linalg.norm(self.data.xpos[body_id] - np.asarray(task.dropoff_position))
+            )
+            speed = float(
+                np.linalg.norm(
+                    self._object_velocity(self._mujoco.mjtObj.mjOBJ_BODY, body_id)
+                )
+            )
+            if distance > task.position_tolerance or speed > task.settle_speed:
+                self._delivery_settle_since.pop(task.id, None)
+                continue
+            settled_since = self._delivery_settle_since.setdefault(task.id, now)
+            if now - settled_since + 1e-12 >= task.settle_duration:
+                self._delivery_completed[task.id] = True
+
+    def _delivery_task_states(self) -> list[DeliveryTaskSimulationState]:
+        body_ids = {**self._body_ids, **self._link_ids}
+        now = float(self.data.time)
+        result: list[DeliveryTaskSimulationState] = []
+        for task in self.scene.delivery_tasks:
+            binding = self._attachment_bindings[task.attachment_id]
+            active = bool(self.data.eq_active[binding.equality_id])
+            body_id = body_ids[task.payload_body_id]
+            distance = float(
+                np.linalg.norm(self.data.xpos[body_id] - np.asarray(task.dropoff_position))
+            )
+            speed = float(
+                np.linalg.norm(
+                    self._object_velocity(self._mujoco.mjtObj.mjOBJ_BODY, body_id)
+                )
+            )
+            settled_since = self._delivery_settle_since.get(task.id)
+            stable_time = max(0.0, now - settled_since) if settled_since is not None else 0.0
+            if self._delivery_completed[task.id]:
+                status = "completed"
+            elif active:
+                status = "in_transit"
+            elif settled_since is not None:
+                status = "settling"
+            elif self._delivery_picked[task.id]:
+                status = "released"
+            else:
+                status = "waiting_pickup"
+            result.append(
+                DeliveryTaskSimulationState(
+                    task_id=task.id,
+                    status=status,
+                    attachment_id=task.attachment_id,
+                    payload_body_id=task.payload_body_id,
+                    distance_to_dropoff=distance,
+                    payload_speed=speed,
+                    stable_time=stable_time,
+                )
+            )
+        return result
 
     def _apply_trajectory_target(self) -> None:
         if self._trajectory_player.status != "playing":
@@ -654,6 +978,7 @@ class MuJoCoSimulationSession:
             joints=joints,
             actuators=actuators,
             bodies=bodies,
+            attachments=self._attachment_observations(),
         )
 
     def _joint_kinematics(self) -> dict[str, JointKinematics]:
@@ -742,6 +1067,9 @@ class MuJoCoSimulationSession:
             try:
                 updates = self._validate_joint_position_targets(dict(action.position_targets))
                 direct_updates = self._validate_actuator_controls(dict(action.actuator_controls))
+                attachment_updates = self._validate_attachment_commands(
+                    dict(action.attachment_commands)
+                )
                 mapped_ids = {identifier for identifier, _ in updates}
                 duplicate_ids = mapped_ids & {identifier for identifier, _ in direct_updates}
                 if duplicate_ids:
@@ -759,6 +1087,7 @@ class MuJoCoSimulationSession:
                 self._controller_runner.fail(f"Controller action rejected: {exc}")
             else:
                 self._apply_actuator_control_updates([*updates, *direct_updates])
+                self._apply_attachment_command_updates(attachment_updates)
         self._sync_python_controller_state()
 
     def _validate_quadrotor_bindings(self) -> None:

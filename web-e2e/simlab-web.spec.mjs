@@ -20,6 +20,22 @@ async function configureApi(page) {
   });
 }
 
+test('frontend opens the built-in viewport shortcut guide', async ({ page }) => {
+  await configureApi(page);
+  await page.goto('/');
+
+  const guidePromise = page.waitForEvent('popup');
+  await page.locator('[data-documentation="viewport-controls"]').click();
+  const guide = await guidePromise;
+
+  await expect(guide).toHaveURL(/\/docs\/viewport-controls\.html$/);
+  await expect(guide.getByRole('heading', { level: 1, name: 'Viewport 操作与快捷键' }))
+    .toBeVisible();
+  await expect(guide.locator('body')).toContainText('大型场景建议');
+  await expect(guide.locator('body')).toContainText('Ctrl');
+  await guide.close();
+});
+
 test('browser opens, simulates, saves, and exports without Qt', async ({ page }) => {
   await configureApi(page);
   await page.goto('/');
@@ -79,6 +95,65 @@ test('asset library loads the high-quality Franka robot meshes', async ({ page }
   await page.waitForTimeout(500);
 });
 
+test('kilometre-scale Houhai asset is clearly framed with authored colors', async ({ page }, testInfo) => {
+  await configureApi(page);
+  let geometryResponses = 0;
+  page.on('response', (response) => {
+    if (response.ok() && response.url().includes('/geometry/')) geometryResponses += 1;
+  });
+  await page.goto('/');
+  const houhai = page.locator('[data-asset-id="openusd_houhai_2km_b463d22fff"]');
+  await expect(houhai).toContainText('Shenzhen Houhai 2km', { timeout: 10_000 });
+  await houhai.click();
+
+  await expect(page.locator('#scene-tree')).toContainText('Shenzhen Houhai 2km');
+  await expect.poll(() => geometryResponses, { timeout: 20_000 }).toBe(1);
+  await expect(page.locator('#viewport')).toHaveAttribute('data-environment-mode', 'city');
+  await expect.poll(async () => page.locator('#viewport').evaluate((canvas) => ({
+    radius: Number(canvas.dataset.focusRadius),
+    distance: Number(canvas.dataset.cameraDistance),
+    far: Number(canvas.dataset.cameraFar),
+    fogNear: Number(canvas.dataset.fogNear),
+    fogFar: Number(canvas.dataset.fogFar),
+  }))).toMatchObject({
+    radius: expect.any(Number),
+    distance: expect.any(Number),
+    far: expect.any(Number),
+    fogNear: expect.any(Number),
+    fogFar: expect.any(Number),
+  });
+  const camera = await page.locator('#viewport').evaluate((canvas) => ({
+    radius: Number(canvas.dataset.focusRadius),
+    distance: Number(canvas.dataset.cameraDistance),
+    far: Number(canvas.dataset.cameraFar),
+    fogNear: Number(canvas.dataset.fogNear),
+    fogFar: Number(canvas.dataset.fogFar),
+  }));
+  expect(camera.radius).toBeGreaterThan(1_000);
+  expect(camera.distance).toBeGreaterThan(camera.radius * 2);
+  expect(camera.far).toBeGreaterThan(camera.distance + camera.radius);
+  expect(camera.fogNear).toBeGreaterThan(camera.distance + camera.radius);
+  await page.locator('#viewport').click({ position: { x: 24, y: 460 } });
+  await expect(page.locator('#selection')).toContainText('Selected: None');
+  await page.locator('#viewport').screenshot({
+    path: testInfo.outputPath('houhai-viewport.png'),
+  });
+
+  await page.locator('[data-asset-id="primitive_box"]').click();
+  await expect(page.locator('#actor-count')).toHaveText('2');
+  await page.waitForTimeout(500);
+  const fogAfterAddingAsset = await page.locator('#viewport').evaluate((canvas) => ({
+    near: Number(canvas.dataset.fogNear),
+    far: Number(canvas.dataset.fogFar),
+  }));
+  expect(fogAfterAddingAsset.near).toBeCloseTo(camera.fogNear, 3);
+  expect(fogAfterAddingAsset.far).toBeCloseTo(camera.fogFar, 3);
+  expect(geometryResponses).toBe(1);
+  await page.locator('#viewport').screenshot({
+    path: testInfo.outputPath('houhai-after-adding-asset.png'),
+  });
+});
+
 test('Iris controller takes off and settles into hover', async ({ page }) => {
   await configureApi(page);
   await page.goto('/');
@@ -108,6 +183,50 @@ test('Iris controller takes off and settles into hover', async ({ page }) => {
   expect(runtime.simulationState.controller.step_count).toBeGreaterThan(500);
   await expect(page.locator('[data-rotor-control="actuator_iris_rotor_0"]').last())
     .toHaveValue(/641\./);
+});
+
+test('Iris physically picks up and delivers a payload from A to B', async ({ page }, testInfo) => {
+  test.setTimeout(65_000);
+  await configureApi(page);
+  await page.goto('/');
+  await expect(page.locator('#asset-list')).toContainText('Pegasus Iris Quadcopter', {
+    timeout: 10_000,
+  });
+
+  const openChooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await (await openChooser).setFiles('examples/drone_delivery/scene.json');
+  await expect(page.locator('#project-label')).toContainText('Iris A-to-B Physical Delivery');
+  await expect(page.locator('#scene-tree')).toContainText('Pickup A');
+  await expect(page.locator('#scene-tree')).toContainText('Dropoff B');
+
+  await page.locator('[data-actor-row]').filter({ hasText: 'Pegasus Iris Quadcopter' }).click();
+  page.once('dialog', (dialog) => dialog.accept());
+  const controllerChooser = page.waitForEvent('filechooser');
+  await page.locator('[data-controller-command="load"]').click();
+  await (await controllerChooser).setFiles('examples/controllers/iris_payload_delivery.py');
+  await expect(page.locator('[data-controller-name]'))
+    .toHaveText('Iris Physical Payload Delivery');
+
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await page.locator('[data-simulation-speed="2"]').click();
+  await expect.poll(async () => {
+    const state = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
+    return state.simulationState?.delivery_tasks?.[0]?.status ?? 'missing';
+  }, { timeout: 45_000, intervals: [250, 500, 1000] }).toBe('completed');
+
+  const runtime = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
+  const payload = runtime.simulationState.actors.find((item) => item.id === 'actor_003');
+  expect(runtime.simulationState.attachments[0].active).toBe(false);
+  expect(payload.position[0]).toBeCloseTo(4, 1);
+  expect(payload.position[1]).toBeCloseTo(3, 1);
+  expect(payload.position[2]).toBeCloseTo(0.16, 1);
+  await expect(page.locator('#scene-stats')).toContainText('task completed');
+  await page.locator('[data-action="frame"]').click();
+  await page.waitForTimeout(500);
+  await page.locator('#viewport').screenshot({
+    path: testInfo.outputPath('drone-delivery-complete.png'),
+  });
 });
 
 test('frontend recovers shared assets when the API starts after the page', async ({ page }) => {
@@ -214,6 +333,38 @@ test('moving a cached OpenUSD actor does not reload its visual geometry', async 
   }).toBe(1);
   await page.waitForTimeout(500);
   expect(geometryRequests).toBe(1);
+});
+
+test('adding an actor does not rebuild existing OpenUSD actors', async ({ page }) => {
+  await configureApi(page);
+  let geometryRequests = 0;
+  const geometryUrls = [];
+  page.on('request', (request) => {
+    if (request.method() === 'GET' && request.url().includes('/geometry/')) {
+      geometryRequests += 1;
+      geometryUrls.push(request.url());
+    }
+  });
+  await page.goto('/');
+  await expect(page.locator('#asset-list')).toContainText('Vehicle_Hanger_Adjust', {
+    timeout: 10_000,
+  });
+
+  const initialGeometry = page.waitForResponse((response) => (
+    response.request().method() === 'GET' && response.url().includes('/geometry/')
+  ));
+  await page.locator('[data-asset-id="openusd_vehicle_hanger_adjust_454a0d18a9"]').click();
+  expect((await initialGeometry).ok()).toBe(true);
+  await expect.poll(() => geometryRequests).toBe(1);
+
+  await page.locator('[data-asset-id="primitive_box"]').click();
+  await expect(page.locator('#actor-count')).toHaveText('2');
+  await expect(page.locator('#scene-tree')).toContainText('Vehicle_Hanger_Adjust');
+  await expect(page.locator('#scene-tree')).toContainText('Box');
+  await expect(page.locator('[data-actor-row].selected')).toContainText('Box');
+  await page.waitForTimeout(500);
+
+  expect(geometryRequests, geometryUrls.join('\n')).toBe(1);
 });
 
 test('scene editing stays independent from a running simulation', async ({ page }) => {

@@ -7,7 +7,7 @@ type BridgeMethod =
   | 'validateProjectContent' | 'exportMjcf' | 'preflight'
   | 'runSimulation' | 'pauseSimulation' | 'setSimulationSpeed'
   | 'stepSimulation' | 'resetSimulation' | 'discardSimulation'
-  | 'setJointTargets' | 'setActuatorControls'
+  | 'setJointTargets' | 'setActuatorControls' | 'setAttachmentCommands'
   | 'loadController' | 'reloadController' | 'detachController'
   | 'loadTrajectory' | 'playTrajectory' | 'pauseTrajectory' | 'stopTrajectory'
   | 'startRecording' | 'stopRecording' | 'getRecording'
@@ -262,6 +262,11 @@ export class EditorBridgeClient {
         return this.simulationRequest<T>('/actuator-controls', {
           method: 'PUT', body: JSON.stringify({ controls: JSON.parse(String(args[1])) }),
         });
+      case 'setAttachmentCommands':
+        await this.synchronizeSceneArgument(args[0]);
+        return this.simulationRequest<T>('/attachments', {
+          method: 'PUT', body: JSON.stringify({ commands: JSON.parse(String(args[1])) }),
+        });
       case 'loadTrajectory':
         await this.synchronizeSceneArgument(args[0]);
         return this.simulationRequest<T>('/trajectory', {
@@ -338,14 +343,25 @@ export class EditorBridgeClient {
     const payload = await this.request<Record<string, unknown>>(this.projectPath(
       `/geometry/${encodeURIComponent(artifactId)}`,
     ));
-    const textureArtifact = payload.base_color_texture;
-    if (typeof textureArtifact === 'string' && textureArtifact.startsWith('art_')) {
-      const response = await this.requestResponse(
-        `/api/v1/artifacts/${encodeURIComponent(textureArtifact)}`,
-      );
-      payload.base_color_texture_url = URL.createObjectURL(await response.blob());
-    }
+    const [baseColor, normal, roughness, metallic] = await Promise.all([
+      this.textureArtifactUrl(payload.base_color_texture),
+      this.textureArtifactUrl(payload.normal_texture),
+      this.textureArtifactUrl(payload.roughness_texture),
+      this.textureArtifactUrl(payload.metallic_texture),
+    ]);
+    if (baseColor) payload.base_color_texture_url = baseColor;
+    if (normal) payload.normal_texture_url = normal;
+    if (roughness) payload.roughness_texture_url = roughness;
+    if (metallic) payload.metallic_texture_url = metallic;
     return this.success<T>(payload);
+  }
+
+  private async textureArtifactUrl(value: unknown): Promise<string | null> {
+    if (typeof value !== 'string' || !value.startsWith('art_')) return null;
+    const response = await this.requestResponse(
+      `/api/v1/artifacts/${encodeURIComponent(value)}`,
+    );
+    return URL.createObjectURL(await response.blob());
   }
 
   private async getVisualGeometryBundle<T>(artifactId: string): Promise<RpcResult<T>> {

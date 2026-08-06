@@ -58,6 +58,7 @@ OpenUSD Stage composition
               v
 项目内可迁移缓存
   - source dependencies
+  - USDZ package-member PBR textures
   - visual.json（单刚体与旧机器人兼容）
   - visual-<content-hash>.simbin（机器人批量几何）
   - collision.obj
@@ -86,8 +87,10 @@ Asset metadata + opaque artifact IDs
 
 - `primvars:displayColor` 和 `displayOpacity`；
 - 绑定的 `UsdPreviewSurface` diffuse color 和 opacity；
-- 连接到 `UsdUVTexture` 的首个 base-color texture；
-- 纹理作为鉴权 Artifact 下载并应用到 Three.js 材质；
+- 连接到 `UsdUVTexture` 的 base-color、normal、roughness 和 metallic texture；
+- USDZ 包成员路径会通过 OpenUSD Resolver 安全读取并物化到项目缓存；
+- 四类纹理分别作为鉴权 Artifact 下载并应用到 Three.js `MeshStandardMaterial`；
+- base-color 使用 sRGB，normal/roughness/metallic 使用线性数据色彩空间；
 - 缺失纹理或 MDL 时回退到颜色或默认材质。
 
 ### 物理与碰撞
@@ -163,7 +166,8 @@ Three.js 和 MJCF 导出都使用这一公式。旧的 RoboticsModel v1 没有�
 
 ## 已知限制
 
-- 目前只应用第一个可解析的 base-color texture，不支持完整多材质分组和复杂 Shader Graph；
+- 普通 Mesh 目前使用首个可解析的 `UsdPreviewSurface` PBR 材质，不支持多材质几何分组和复杂 Shader Graph；
+- 资产内的 DomeLight/HDR 环境不会覆盖编辑器全局环境；
 - 不支持骨骼蒙皮、动画回放、Variants 编辑和运行时 USD Composition 编辑；
 - PointInstancer 在默认时间点展开，不保存实例语义；
 - 不提供凸分解、SDF 或自动低模碰撞生成；

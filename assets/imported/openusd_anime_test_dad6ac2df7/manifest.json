@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "format": "openusd",
+  "source": "assets/imported/openusd_anime_test_dad6ac2df7/source/anime_test.usdz",
+  "source_name": "anime_test.usdz",
+  "dependencies": [
+    "assets/imported/openusd_anime_test_dad6ac2df7/source/textures/color_121212.hdr",
+    "assets/imported/openusd_anime_test_dad6ac2df7/source/textures/texture_pbr_20250901.png",
+    "assets/imported/openusd_anime_test_dad6ac2df7/source/textures/texture_pbr_20250901_metallic.png",
+    "assets/imported/openusd_anime_test_dad6ac2df7/source/textures/texture_pbr_20250901_normal.png",
+    "assets/imported/openusd_anime_test_dad6ac2df7/source/textures/texture_pbr_20250901_roughness.png"
+  ],
+  "visual_cache": "assets/imported/openusd_anime_test_dad6ac2df7/visual.json",
+  "collision_mesh": "assets/imported/openusd_anime_test_dad6ac2df7/collision.obj",
+  "mesh_count": 1,
+  "vertex_count": 149796,
+  "triangle_count": 49932,
+  "collision_vertex_count": 149796,
+  "collision_triangle_count": 49932,
+  "dedicated_collision": false,
+  "point_instance_count": 0,
+  "native_primitive_count": 0,
+  "source_prim_paths": [
+    "/root/node_0/node_0"
+  ],
+  "collision_prim_paths": [
+    "/root/node_0/node_0"
+  ],
+  "base_color_texture": "assets/imported/openusd_anime_test_dad6ac2df7/source/textures/texture_pbr_20250901.png",
+  "normal_texture": "assets/imported/openusd_anime_test_dad6ac2df7/source/textures/texture_pbr_20250901_normal.png",
+  "roughness_texture": "assets/imported/openusd_anime_test_dad6ac2df7/source/textures/texture_pbr_20250901_roughness.png",
+  "metallic_texture": "assets/imported/openusd_anime_test_dad6ac2df7/source/textures/texture_pbr_20250901_metallic.png",
+  "roughness": null,
+  "metalness": null,
+  "bounds": {
+    "min": [
+      -0.32419899106025696,
+      -0.3000888850212416,
+      2.3151791721090362e-08
+    ],
+    "max": [
+      0.36913999915122986,
+      0.30635503078923554,
+      1.0739660358780763
+    ]
+  },
+  "warnings": [
+    "No UsdPhysics collision geometry was found; collision falls back to the visual mesh.",
+    "No UsdPhysics rigid body was found; imported actor defaults to Static."
+  ]
+}

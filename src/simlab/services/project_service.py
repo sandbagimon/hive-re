@@ -33,6 +33,51 @@ def validate_scene(scene: Scene) -> None:
     except ValueError as exc:
         raise ProjectValidationError(str(exc)) from exc
 
+    dynamic_actor_ids = {
+        actor.id
+        for actor in scene.actors
+        if actor.type == "object"
+        and (
+            not isinstance(actor.properties.get("physics"), dict)
+            or bool(actor.properties["physics"].get("dynamic", True))
+        )
+    }
+    robot_link_ids = {
+        link.id
+        for articulation in (scene.robotics.articulations if scene.robotics else [])
+        for link in articulation.links
+    }
+    attachment_body_ids = dynamic_actor_ids | robot_link_ids
+    attachment_ids = [item.id for item in scene.attachments]
+    if len(attachment_ids) != len(set(attachment_ids)):
+        raise ProjectValidationError("Attachment ids must be unique")
+    for attachment in scene.attachments:
+        for role, body_id in (
+            ("parent", attachment.parent_body_id),
+            ("child", attachment.child_body_id),
+        ):
+            if body_id not in attachment_body_ids:
+                raise ProjectValidationError(
+                    f"Attachment {attachment.id} references unknown or static {role} body "
+                    f"{body_id}"
+                )
+
+    delivery_task_ids = [item.id for item in scene.delivery_tasks]
+    if len(delivery_task_ids) != len(set(delivery_task_ids)):
+        raise ProjectValidationError("Delivery task ids must be unique")
+    attachments_by_id = {item.id: item for item in scene.attachments}
+    for task in scene.delivery_tasks:
+        task_attachment = attachments_by_id.get(task.attachment_id)
+        if task_attachment is None:
+            raise ProjectValidationError(
+                f"Delivery task {task.id} references unknown attachment {task.attachment_id}"
+            )
+        if task.payload_body_id != task_attachment.child_body_id:
+            raise ProjectValidationError(
+                f"Delivery task {task.id} payload must match attachment child body "
+                f"{task_attachment.child_body_id}"
+            )
+
     trajectory_ids = [item.id for item in scene.trajectories]
     if len(trajectory_ids) != len(set(trajectory_ids)):
         raise ProjectValidationError("Trajectory ids must be unique")
@@ -85,7 +130,10 @@ def save_scene(path: str | Path, scene: Scene) -> None:
     validate_scene(scene)
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(scene.to_dict(), indent=2) + "\n", encoding="utf-8")
+    output_path.write_text(
+        json.dumps(scene.to_dict(), indent=2, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
 
 
 def load_scene(path: str | Path) -> Scene:

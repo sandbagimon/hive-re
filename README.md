@@ -85,7 +85,11 @@ The Qt program only loads that HTTP(S) URL. It does not embed the frontend, expo
 
 The browser app opens a TypeScript editor with an asset browser, scene tree, three.js viewport, property inspector, and console. Primitive assets can be added to the scene, downloaded as MJCF, and simulated with Run/Pause/Step/Reset controls. Scene JSON is opened and saved through native browser file workflows; OpenUSD bundles and trusted controller files are uploaded to the backend, while MJCF and recording artifacts are downloaded by the browser. The primitive asset set includes dynamic shapes plus static physics playground assets such as Ground, Table, and Ramp.
 
-The viewport is a browser WebGL view backed by vendored three.js files. It renders primitive actors, supports orbit camera controls, click selection, selection outline, translate/rotate/scale gizmos, frame selected, and front/right/top/isometric camera shortcuts. During simulation, MuJoCo body poses arrive over WebSocket and are applied without modifying the authoring transforms.
+The viewport is a browser WebGL view backed by vendored three.js files. It renders primitive actors, supports orbit camera controls, click selection, selection outline, translate/rotate/scale gizmos, frame selected, and front/right/top/isometric camera shortcuts. Authoring-scene updates are reconciled by actor ID: unchanged Three.js objects and their GPU resources survive additions and deletions, while only a changed actor is rebuilt. During simulation, MuJoCo body poses arrive over WebSocket and are applied without modifying the authoring transforms.
+
+Kilometre-scale environments automatically use a daylight sky, color-managed lighting, adaptive fog, and semantic authored colors while retaining a separate simplified collision mesh. The bundled Shenzhen Houhai scene uses deterministic building wall/roof palettes and road classes without adding visual-only detail to MuJoCo.
+
+Open **Shortcuts** in the frontend command bar for the built-in controls guide, or see [`docs/VIEWPORT_CONTROLS.md`](docs/VIEWPORT_CONTROLS.md) for the complete mouse, keyboard, camera, and collider-debug reference.
 
 The TypeScript Editor Store owns scene authoring state, selection, dirty tracking, and undo/redo. Python receives canonical scene resources for validation, export, preflight, and simulation; browser and server filesystem paths never cross the public API.
 
@@ -93,7 +97,7 @@ See [`docs/MODULAR_DEVELOPMENT.md`](docs/MODULAR_DEVELOPMENT.md) for module boun
 
 Use **Import USD** for a self-contained `.usd`, `.usda`, `.usdc`, `.usdz`, or safe ZIP package. Use **Import USD Folder** for a composed asset with sublayers, payloads, references, or textures; relative directory paths are preserved through multipart upload. The importer resolves stage transforms, converts stage units and Y-up coordinates to SimLab's meter/Z-up convention, triangulates meshes and native geometric primitives, expands PointInstancer instances at the default time, and registers a relocatable project cache. See [`docs/OPENUSD_IMPORT.md`](docs/OPENUSD_IMPORT.md) for the supported subset and package rules.
 
-OpenUSD physics values are imported when authored, including rigid-body state, mass/density, and basic friction. Dedicated `PhysicsCollisionAPI` geometry is preferred; otherwise import emits a warning and falls back to the visual mesh. Display colors, a bound `UsdPreviewSurface` base color/opacity, UVs, and the first base-color texture are carried into the Three.js viewport. Robot visuals are cached as one content-addressed typed-array geometry bundle with precomputed normals and browser cache headers, while legacy per-mesh JSON remains readable. The generated project cache also contains OBJ collision meshes. Export and simulation convert that asset to MuJoCo mesh geoms, so the default runtime does not require MuJoCo's experimental native USD decoder.
+OpenUSD physics values are imported when authored, including rigid-body state, mass/density, and basic friction. Dedicated `PhysicsCollisionAPI` geometry is preferred; otherwise import emits a warning and falls back to the visual mesh. Display colors, bound `UsdPreviewSurface` base color/opacity, UVs, and base-color, normal, roughness, and metallic textures are carried into the Three.js viewport. USDZ package-member textures are materialized into the relocatable project cache and served as authenticated artifacts. Robot visuals are cached as one content-addressed typed-array geometry bundle with precomputed normals and browser cache headers, while legacy per-mesh JSON remains readable. The generated project cache also contains OBJ collision meshes. Export and simulation convert that asset to MuJoCo mesh geoms, so the default runtime does not require MuJoCo's experimental native USD decoder.
 
 OpenUSD articulations are imported as robot actors with independent links, colliders, inertial properties, revolute joints, and position drives. The Scene Tree and viewport preserve the robot hierarchy; joint targets, jog controls, and editable keyframe trajectories drive the generated MuJoCo articulation while live link poses and joint feedback remain separate from authoring transforms.
 
@@ -104,6 +108,10 @@ The command bar provides 0.25x, 0.5x, 1x, and 2x simulation-speed controls plus 
 Python controllers can attach to a MuJoCo session through an immutable per-step observation/action API. Controller exceptions and deadline overruns are isolated as runtime faults without stopping physics; manual targets, trajectory playback, and Python controllers are explicit mutually exclusive control sources. See [`docs/CONTROLLER_API.md`](docs/CONTROLLER_API.md).
 
 Quadrotors use named rotor actuators and an engine-neutral quadratic thrust profile. The bundled Pegasus Iris can be driven through Python Controller, REST/Bridge, Gymnasium, or the existing gRPC data plane. See [`docs/QUADROTOR_CONTROL.md`](docs/QUADROTOR_CONTROL.md).
+
+The bundled Iris A→B delivery scene performs a real MuJoCo pickup: a cascaded flight controller approaches
+the payload, a contact/proximity/speed-gated attachment carries its physical mass, and a task monitor only
+completes after the released payload settles at B. See [`docs/DRONE_DELIVERY.md`](docs/DRONE_DELIVERY.md).
 
 Training algorithms use a separate Gymnasium data plane. `SimLabEnv` composes an engine-neutral backend contract, a robot adapter, and a task, and can switch between an in-process `MujocoBackend` and an atomic gRPC backend without changing task or algorithm code. Install `.[algorithm]` for local training or `.[algorithm,remote]` for gRPC. See [`docs/ALGORITHM_BACKEND_DECOUPLING.md`](docs/ALGORITHM_BACKEND_DECOUPLING.md).
 
@@ -137,7 +145,7 @@ The tests cover the scene model, project save/load behavior, scene service actor
 ## Current Limitations
 
 - OpenUSD articulation import currently supports the documented fixed/revolute/position-drive subset; advanced joints, sensors, animation, and arbitrary USD physics extensions are reported as unsupported.
-- OpenUSD import supports dedicated collision prims, native geometric primitives, default-time PointInstancer expansion, and a basic `UsdPreviewSurface` color/texture path. Multiple material groups, complex shader graphs, convex decomposition, skeletal animation, and editable variants are not yet supported.
+- OpenUSD import supports dedicated collision prims, native geometric primitives, default-time PointInstancer expansion, and the common single-material `UsdPreviewSurface` PBR texture path. Multiple material groups, complex shader graphs, convex decomposition, skeletal animation, and editable variants are not yet supported.
 - The viewport supports primitive and imported mesh editing with live MuJoCo pose playback, but it is not a full MuJoCo-native renderer.
 - Trajectory playback, fixed-step recording, and real-time-factor controls are available; recording decimation and streaming output are not yet supported.
 - Viewport editing tools do not yet include snapping or advanced transform constraints.

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Viewport 操作与快捷键 · SimLab</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        background: #111419;
+        color: #e6edf3;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #111419; line-height: 1.6; }
+      a { color: #75cdb0; }
+      code, kbd { font-family: "Cascadia Mono", Consolas, monospace; }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px max(20px, calc((100vw - 960px) / 2));
+        border-bottom: 1px solid #303640;
+        background: rgba(26, 31, 38, 0.96);
+        backdrop-filter: blur(10px);
+      }
+      .topbar strong { letter-spacing: 0.03em; }
+      .back-link { text-decoration: none; }
+      main { width: min(960px, calc(100% - 32px)); margin: 0 auto; padding: 48px 0 72px; }
+      h1 { margin: 0 0 8px; font-size: clamp(28px, 5vw, 44px); line-height: 1.15; }
+      h2 { margin: 44px 0 14px; font-size: 22px; }
+      p { color: #b7c1cd; }
+      .lead { max-width: 720px; margin-bottom: 30px; font-size: 17px; }
+      .callout {
+        padding: 14px 16px;
+        border: 1px solid #315e52;
+        border-left: 4px solid #59b698;
+        border-radius: 7px;
+        background: #16231f;
+        color: #d7eee6;
+      }
+      .table-wrap { overflow-x: auto; border: 1px solid #303640; border-radius: 8px; }
+      table { width: 100%; border-collapse: collapse; background: #171b21; }
+      th, td { padding: 12px 14px; border-bottom: 1px solid #303640; text-align: left; vertical-align: top; }
+      tr:last-child td { border-bottom: 0; }
+      th { background: #1d232b; color: #91a0af; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+      td:first-child { width: 180px; white-space: nowrap; }
+      kbd {
+        display: inline-block;
+        min-width: 28px;
+        margin: 0 2px;
+        padding: 2px 7px;
+        border: 1px solid #4a5665;
+        border-bottom-width: 2px;
+        border-radius: 5px;
+        background: #252c35;
+        color: #f1f5f9;
+        font-size: 12px;
+        text-align: center;
+      }
+      .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .card { padding: 16px; border: 1px solid #303640; border-radius: 8px; background: #171b21; }
+      .card h3 { margin: 0 0 6px; font-size: 15px; }
+      .card p { margin: 0; font-size: 14px; }
+      .swatch { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 50%; }
+      .dynamic { background: #f5a449; }
+      .static { background: #4ecdc4; }
+      .center { background: #ffd166; }
+      footer { margin-top: 48px; color: #73808e; font-size: 12px; }
+      @media (max-width: 640px) {
+        main { padding-top: 32px; }
+        .cards { grid-template-columns: 1fr; }
+        td:first-child { width: auto; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <strong>SimLab Docs</strong>
+      <a class="back-link" href="../">← 返回编辑器</a>
+    </header>
+    <main>
+      <h1>Viewport 操作与快捷键</h1>
+      <p class="lead">这份速查表覆盖场景选择、相机导航、变换工具、视角切换、碰撞体调试以及项目编辑操作。</p>
+
+      <div class="callout">
+        Viewport 快捷键在光标位于输入框、下拉框或多行文本框时不会触发，避免编辑属性时误操作场景。
+      </div>
+
+      <h2>鼠标操作</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>操作</th><th>结果</th></tr></thead>
+          <tbody>
+            <tr><td>左键点击物体</td><td>选中物体并显示高亮；点击空白区域会取消选择。</td></tr>
+            <tr><td>左键拖动空白区域</td><td>绕当前相机焦点旋转视角。</td></tr>
+            <tr><td>滚轮 / 中键拖动</td><td>拉近或拉远视角。</td></tr>
+            <tr><td>右键拖动</td><td>平移相机焦点。</td></tr>
+            <tr><td>拖动变换手柄</td><td>沿选定轴移动、旋转或缩放物体；松开后物体仍保持选中。</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Viewport 快捷键</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>快捷键</th><th>工具栏</th><th>功能</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>W</kbd></td><td>↔</td><td>切换到移动工具。</td></tr>
+            <tr><td><kbd>E</kbd></td><td>↻</td><td>切换到旋转工具。</td></tr>
+            <tr><td><kbd>R</kbd></td><td>⤢</td><td>切换到缩放工具。</td></tr>
+            <tr><td><kbd>F</kbd></td><td>⌗</td><td>聚焦选中的 link 或物体；未选中时框选整个场景。</td></tr>
+            <tr><td><kbd>C</kbd></td><td>◇</td><td>显示或隐藏碰撞体与质心调试图层。</td></tr>
+            <tr><td><kbd>0</kbd></td><td>◆</td><td>等轴测视图。</td></tr>
+            <tr><td><kbd>1</kbd></td><td>▤</td><td>前视图。</td></tr>
+            <tr><td><kbd>3</kbd></td><td>◧</td><td>右视图。</td></tr>
+            <tr><td><kbd>7</kbd></td><td>▣</td><td>顶视图。</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>项目编辑快捷键</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>快捷键</th><th>功能</th></tr></thead>
+          <tbody>
+            <tr><td><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Z</kbd></td><td>撤销上一步场景编辑。</td></tr>
+            <tr><td><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd></td><td>重做。</td></tr>
+            <tr><td><kbd>Ctrl</kbd> + <kbd>Y</kbd></td><td>重做（Windows / Linux 习惯键位）。</td></tr>
+            <tr><td><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>S</kbd></td><td>保存场景 JSON。</td></tr>
+            <tr><td><kbd>Ctrl</kbd> / <kbd>⌘</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd></td><td>另存场景 JSON。</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>调试图层</h2>
+      <div class="cards">
+        <article class="card"><h3><span class="swatch dynamic"></span>Dynamic</h3><p>橙色线框表示动态碰撞体。</p></article>
+        <article class="card"><h3><span class="swatch static"></span>Static</h3><p>青色线框表示静态碰撞体。</p></article>
+        <article class="card"><h3><span class="swatch center"></span>Center of mass</h3><p>黄色标记表示物体质心。</p></article>
+        <article class="card"><h3>仿真状态</h3><p>仿真会话运行或暂停时，运行时位姿与编辑状态分离，变换手柄不会修改 authoring transform。</p></article>
+      </div>
+
+      <h2>大型场景建议</h2>
+      <p>加入公里级场景后，Viewport 会自动调整相机距离、裁剪面、雾效和网格尺度。看不清或迷失视角时，先按 <kbd>F</kbd> 重新框选，再用 <kbd>7</kbd> 查看道路与水域平面，或用 <kbd>0</kbd> 返回等轴测视图。</p>
+
+      <footer>SimLab Viewport Controls · 2026-08-03</footer>
+    </main>
+  </body>
+</html>

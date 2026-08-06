@@ -187,7 +187,10 @@ def import_openusd_robot_asset(
     robotics_path = cache_dir / "robotics.json"
     report_path = cache_dir / "import-report.json"
     manifest_path = cache_dir / "manifest.json"
-    atomic_write_text(robotics_path, json.dumps(imported.model.to_dict(), indent=2) + "\n")
+    atomic_write_text(
+        robotics_path,
+        json.dumps(imported.model.to_dict(), indent=2, allow_nan=False) + "\n",
+    )
     atomic_write_text(report_path, json.dumps(report.to_dict(), indent=2) + "\n")
 
     relative_robotics = robotics_path.relative_to(root).as_posix()

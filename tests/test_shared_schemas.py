@@ -30,6 +30,7 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     assert "getVisualGeometry" in bridge["properties"]["rpc_methods"]["const"]
     assert "setJointTargets" in bridge["properties"]["rpc_methods"]["const"]
     assert "setActuatorControls" in bridge["properties"]["rpc_methods"]["const"]
+    assert "setAttachmentCommands" in bridge["properties"]["rpc_methods"]["const"]
     assert "loadTrajectory" in bridge["properties"]["rpc_methods"]["const"]
     assert "playTrajectory" in bridge["properties"]["rpc_methods"]["const"]
     assert "simulationStateChanged" in bridge["properties"]["events"]["const"]
@@ -38,12 +39,26 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
         "links",
         "joints",
         "actuators",
+        "attachments",
+        "delivery_tasks",
         "sensors",
         "controller",
         "trajectory",
         "recording",
     }.issubset(
         simulation_state["required"]
+    )
+    assert scene["$defs"]["attachment"]["properties"]["type"]["enum"] == [
+        "connect",
+        "weld",
+    ]
+    assert (
+        scene["$defs"]["vacuumGripper"]["properties"]["type"]["const"]
+        == "four_cup_vacuum"
+    )
+    assert (
+        scene["$defs"]["deliveryTask"]["properties"]["type"]["const"]
+        == "aerial_delivery"
     )
     sensor_variants = simulation_state["properties"]["sensors"]["items"]["oneOf"]
     assert {

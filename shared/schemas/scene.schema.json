@@ -142,6 +142,111 @@
       },
       "required": ["id", "actor_id", "trajectory"],
       "additionalProperties": false
+    },
+    "attachment": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^attachment_[A-Za-z0-9_.-]+$" },
+        "type": { "enum": ["connect", "weld"] },
+        "parent_body_id": { "type": "string", "minLength": 1 },
+        "child_body_id": { "type": "string", "minLength": 1 },
+        "parent_anchor": { "$ref": "#/$defs/vector3" },
+        "child_anchor": { "$ref": "#/$defs/vector3" },
+        "initially_active": { "type": "boolean" },
+        "capture_distance": { "type": "number", "exclusiveMinimum": 0 },
+        "capture_speed": { "type": "number", "exclusiveMinimum": 0 },
+        "capture_duration": { "type": "number", "minimum": 0 },
+        "require_contact": { "type": "boolean" },
+        "contact_probe_radius": { "type": "number", "minimum": 0 },
+        "gripper": { "$ref": "#/$defs/vacuumGripper" },
+        "solref": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "solimp": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 5,
+          "maxItems": 5
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "parent_body_id",
+        "child_body_id",
+        "parent_anchor",
+        "child_anchor",
+        "initially_active",
+        "capture_distance",
+        "capture_speed",
+        "capture_duration",
+        "require_contact",
+        "contact_probe_radius",
+        "solref",
+        "solimp"
+      ],
+      "additionalProperties": false
+    },
+    "vacuumGripper": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "four_cup_vacuum" },
+        "plate_half_extents": {
+          "type": "array",
+          "items": { "type": "number", "exclusiveMinimum": 0 },
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "cup_offset": {
+          "type": "array",
+          "items": { "type": "number", "exclusiveMinimum": 0 },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "cup_radius": { "type": "number", "exclusiveMinimum": 0 },
+        "cup_height": { "type": "number", "exclusiveMinimum": 0 },
+        "mount_radius": { "type": "number", "exclusiveMinimum": 0 },
+        "mount_length": { "type": "number", "exclusiveMinimum": 0 }
+      },
+      "required": [
+        "type",
+        "plate_half_extents",
+        "cup_offset",
+        "cup_radius",
+        "cup_height",
+        "mount_radius",
+        "mount_length"
+      ],
+      "additionalProperties": false
+    },
+    "deliveryTask": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "pattern": "^task_[A-Za-z0-9_.-]+$" },
+        "type": { "const": "aerial_delivery" },
+        "attachment_id": { "type": "string", "minLength": 1 },
+        "payload_body_id": { "type": "string", "minLength": 1 },
+        "pickup_position": { "$ref": "#/$defs/vector3" },
+        "dropoff_position": { "$ref": "#/$defs/vector3" },
+        "position_tolerance": { "type": "number", "exclusiveMinimum": 0 },
+        "settle_speed": { "type": "number", "exclusiveMinimum": 0 },
+        "settle_duration": { "type": "number", "exclusiveMinimum": 0 }
+      },
+      "required": [
+        "id",
+        "type",
+        "attachment_id",
+        "payload_body_id",
+        "pickup_position",
+        "dropoff_position",
+        "position_tolerance",
+        "settle_speed",
+        "settle_duration"
+      ],
+      "additionalProperties": false
     }
   },
   "properties": {
@@ -153,6 +258,14 @@
     "trajectories": {
       "type": "array",
       "items": { "$ref": "#/$defs/trajectoryClip" }
+    },
+    "attachments": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/attachment" }
+    },
+    "delivery_tasks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/deliveryTask" }
     },
     "simulation_config": {
       "type": "object",

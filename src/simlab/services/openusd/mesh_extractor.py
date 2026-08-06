@@ -46,7 +46,17 @@ class StageMeshExtraction:
     used_dedicated_collision: bool
     point_instance_count: int
     native_primitive_count: int
-    base_color_texture: str | None
+    material: PbrMaterialData
+
+
+@dataclass(frozen=True, slots=True)
+class PbrMaterialData:
+    base_color_texture: str | None = None
+    normal_texture: str | None = None
+    roughness_texture: str | None = None
+    metallic_texture: str | None = None
+    roughness: float | None = None
+    metalness: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,7 +89,7 @@ def extract_prim_mesh(
         [point[index] * float(local_scale[index]) for index in range(3)]
         for point in positions
     ]
-    color, _texture = _display_material(prim, UsdGeom, UsdShade)
+    color, _material = _display_material(prim, UsdGeom, UsdShade)
     output = MeshData()
     _append_geometry(
         output,
@@ -119,7 +129,8 @@ def extract_stage_meshes(stage: Any, warnings: list[str]) -> StageMeshExtraction
     visual = MeshData()
     collision = MeshData()
     native_primitive_count = 0
-    base_color_texture: str | None = None
+    pbr_material: PbrMaterialData | None = None
+    warned_multiple_materials = False
     for instance in instances:
         local_positions, local_indices, local_uvs, native = _local_geometry(
             instance.prim, UsdGeom
@@ -129,9 +140,15 @@ def extract_stage_meshes(stage: Any, warnings: list[str]) -> StageMeshExtraction
             continue
         if native:
             native_primitive_count += 1
-        color, texture = _display_material(instance.prim, UsdGeom, UsdShade)
-        if base_color_texture is None and texture is not None:
-            base_color_texture = texture
+        color, material = _display_material(instance.prim, UsdGeom, UsdShade)
+        if pbr_material is None:
+            pbr_material = material
+        elif material != pbr_material and not warned_multiple_materials:
+            warnings.append(
+                "Multiple USD materials were flattened into one viewport material; "
+                "the first material's PBR textures are used."
+            )
+            warned_multiple_materials = True
         if instance.visible:
             _append_geometry(
                 visual,
@@ -185,7 +202,7 @@ def extract_stage_meshes(stage: Any, warnings: list[str]) -> StageMeshExtraction
         used_dedicated_collision=used_dedicated_collision,
         point_instance_count=point_instance_count,
         native_primitive_count=native_primitive_count,
-        base_color_texture=base_color_texture,
+        material=pbr_material or PbrMaterialData(),
     )
 
 
@@ -491,7 +508,7 @@ def _box_indices() -> list[int]:
 
 def _display_material(
     prim: Any, usd_geom: Any, usd_shade: Any
-) -> tuple[list[float], str | None]:
+) -> tuple[list[float], PbrMaterialData]:
     colors = usd_geom.Gprim(prim).GetDisplayColorAttr().Get() or []
     opacity_values = usd_geom.Gprim(prim).GetDisplayOpacityAttr().Get() or []
     authored_color: list[float] | None = None
@@ -516,11 +533,24 @@ def _display_material(
                     opacity_input = shader.GetInput("opacity_constant")
                 diffuse = diffuse_input.Get() if diffuse_input else None
                 shader_opacity = opacity_input.Get() if opacity_input else None
-                texture_path = _connected_texture_path(
-                    diffuse_input, usd_shade
+                material_data = PbrMaterialData(
+                    base_color_texture=_connected_texture_path(
+                        diffuse_input, usd_shade
+                    ),
+                    normal_texture=_connected_texture_path(
+                        shader.GetInput("normal"), usd_shade
+                    ),
+                    roughness_texture=_connected_texture_path(
+                        shader.GetInput("roughness"), usd_shade
+                    ),
+                    metallic_texture=_connected_texture_path(
+                        shader.GetInput("metallic"), usd_shade
+                    ),
+                    roughness=_scalar_input(shader.GetInput("roughness")),
+                    metalness=_scalar_input(shader.GetInput("metallic")),
                 )
                 if authored_color is not None:
-                    return authored_color, texture_path
+                    return authored_color, material_data
                 if diffuse is not None:
                     return (
                         [
@@ -533,13 +563,20 @@ def _display_material(
                                 else 1.0
                             ),
                         ],
-                        texture_path,
+                        material_data,
                     )
-                if texture_path is not None:
-                    return [1.0, 1.0, 1.0, 1.0], texture_path
+                if material_data.base_color_texture is not None:
+                    return [1.0, 1.0, 1.0, 1.0], material_data
     except Exception:
         pass
-    return authored_color or [0.55, 0.62, 0.7, 1.0], None
+    return authored_color or [0.55, 0.62, 0.7, 1.0], PbrMaterialData()
+
+
+def _scalar_input(shader_input: Any) -> float | None:
+    if not shader_input or shader_input.GetConnectedSource():
+        return None
+    value = shader_input.Get()
+    return float(value) if value is not None else None
 
 
 def _connected_texture_path(diffuse_input: Any, usd_shade: Any) -> str | None:

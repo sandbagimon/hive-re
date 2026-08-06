@@ -95,8 +95,11 @@ same model description and action ordering. No quadrotor-only gRPC message is re
 
 ## Current fidelity boundary
 
-The first model includes quadratic thrust, rotor-position roll/pitch moments, quadratic yaw reaction
-moments, and a frontend-only slowed rotor animation. It does not yet include physical motor spool
-dynamics, propeller inflow, body drag, battery sag, ground effect, or wind. The example controller holds
-altitude but does not yet reject horizontal or attitude disturbances. Those effects can be added behind
-the same propulsion profile without changing REST, Controller, Gymnasium, or gRPC call sites.
+The model includes quadratic thrust, rotor-position roll/pitch moments, quadratic yaw reaction moments,
+MuJoCo wind configuration, and a frontend-only slowed rotor animation. The payload-delivery controller
+adds cascaded horizontal/vertical position, velocity, roll/pitch/yaw attitude feedback, mixer allocation,
+and payload-mass feed-forward. See [`DRONE_DELIVERY.md`](DRONE_DELIVERY.md).
+
+It does not yet include physical motor spool dynamics, propeller inflow, detailed body drag, battery sag,
+or ground effect. Those effects can be added behind the same propulsion profile without changing REST,
+Controller, Gymnasium, or gRPC actuator call sites.

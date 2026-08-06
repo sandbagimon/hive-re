@@ -33,6 +33,10 @@ class ActuatorControls(BaseModel):
     controls: dict[str, float]
 
 
+class AttachmentCommands(BaseModel):
+    commands: dict[str, bool]
+
+
 class TrajectoryUpload(BaseModel):
     trajectory: dict[str, Any]
 
@@ -246,6 +250,12 @@ def create_v1_router(manager: ResourceManager, access_token: str | None) -> APIR
         simulation_id: str, request: ActuatorControls
     ) -> dict[str, Any]:
         return envelope(manager.set_actuator_controls(simulation_id, request.controls))
+
+    @router.put("/simulations/{simulation_id}/attachments", dependencies=[auth])
+    async def attachment_commands(
+        simulation_id: str, request: AttachmentCommands
+    ) -> dict[str, Any]:
+        return envelope(manager.set_attachment_commands(simulation_id, request.commands))
 
     @router.put("/simulations/{simulation_id}/trajectory", dependencies=[auth])
     async def load_trajectory(

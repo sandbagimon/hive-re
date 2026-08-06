@@ -26,6 +26,9 @@ REFERENCE_FIELDS = {
     "import_report",
     "manifest",
     "base_color_texture",
+    "normal_texture",
+    "roughness_texture",
+    "metallic_texture",
 }
 
 _FICLONE = 0x40049409
@@ -56,6 +59,37 @@ class ResourceValidationError(ValueError):
     def __init__(self, message: str, data: Any = None) -> None:
         super().__init__(message)
         self.data = data
+
+
+def _rebind_reference_fields(value: Any, canonical: Any) -> Any:
+    """Replace transport-scoped resource IDs with this project's catalog refs."""
+
+    if isinstance(value, list):
+        if not isinstance(canonical, list):
+            return copy.deepcopy(value)
+        canonical_by_id = {
+            item["id"]: item
+            for item in canonical
+            if isinstance(item, dict) and isinstance(item.get("id"), str)
+        }
+        list_output: list[Any] = []
+        for index, item in enumerate(value):
+            canonical_item = canonical[index] if index < len(canonical) else None
+            if isinstance(item, dict) and isinstance(item.get("id"), str):
+                canonical_item = canonical_by_id.get(item["id"], canonical_item)
+            list_output.append(_rebind_reference_fields(item, canonical_item))
+        return list_output
+    if not isinstance(value, dict):
+        return copy.deepcopy(value)
+    canonical_dict = canonical if isinstance(canonical, dict) else {}
+    dict_output: dict[str, Any] = {}
+    for key, item in value.items():
+        canonical_item = canonical_dict.get(key)
+        if key in REFERENCE_FIELDS and isinstance(canonical_item, str):
+            dict_output[key] = canonical_item
+        else:
+            dict_output[key] = _rebind_reference_fields(item, canonical_item)
+    return dict_output
 
 
 @dataclass(slots=True)
@@ -135,7 +169,8 @@ class ResourceManager:
     def update_scene(self, project_id: str, scene: dict[str, Any]) -> ProjectResource:
         with self._lock:
             project = self.get_project(project_id)
-            external = self.externalize(project, scene)
+            rebound = self._rebind_catalog_references(project, scene)
+            external = self.externalize(project, rebound)
             hydrated = self.hydrate(project, external)
             model = Scene.from_dict(hydrated)
             validate_scene(model)
@@ -144,6 +179,88 @@ class ResourceManager:
             project.name = model.name
             project.revision += 1
             return project
+
+    def _rebind_catalog_references(
+        self, project: ProjectResource, scene: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Make a browser-saved catalog scene portable across project IDs."""
+
+        rebound = copy.deepcopy(scene)
+        actors = rebound.get("actors")
+        if not isinstance(actors, list) or not actors:
+            return rebound
+        metadata_path = project.root / "assets" / "metadata.json"
+        if not metadata_path.is_file():
+            return rebound
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        raw_assets = metadata.get("assets") if isinstance(metadata, dict) else None
+        if not isinstance(raw_assets, list):
+            return rebound
+        assets = {
+            item["id"]: item
+            for item in raw_assets
+            if isinstance(item, dict) and isinstance(item.get("id"), str)
+        }
+        canonical_articulations: dict[str, dict[str, Any]] = {}
+        for actor in actors:
+            if not isinstance(actor, dict):
+                continue
+            asset_id = actor.get("asset_id")
+            asset = assets.get(asset_id) if isinstance(asset_id, str) else None
+            if not isinstance(asset, dict):
+                continue
+            canonical_properties = asset.get("default_properties")
+            if isinstance(actor.get("properties"), dict) and isinstance(
+                canonical_properties, dict
+            ):
+                actor["properties"] = _rebind_reference_fields(
+                    actor["properties"], canonical_properties
+                )
+            robotics_cache = (
+                canonical_properties.get("robotics_cache")
+                if isinstance(canonical_properties, dict)
+                else None
+            )
+            if not isinstance(robotics_cache, str):
+                continue
+            robotics_path = (project.root / robotics_cache).resolve()
+            if not robotics_path.is_relative_to(project.root) or not robotics_path.is_file():
+                continue
+            cached_robotics = json.loads(robotics_path.read_text(encoding="utf-8"))
+            articulations = (
+                cached_robotics.get("articulations")
+                if isinstance(cached_robotics, dict)
+                else None
+            )
+            if not isinstance(articulations, list):
+                continue
+            canonical_articulations.update(
+                {
+                    item["id"]: item
+                    for item in articulations
+                    if isinstance(item, dict) and isinstance(item.get("id"), str)
+                }
+            )
+        scene_robotics = rebound.get("robotics")
+        if not isinstance(scene_robotics, dict):
+            return rebound
+        articulations = scene_robotics.get("articulations")
+        if isinstance(articulations, list):
+            rebound_articulations: list[Any] = []
+            for articulation in articulations:
+                articulation_id = (
+                    articulation.get("id") if isinstance(articulation, dict) else None
+                )
+                canonical = (
+                    canonical_articulations.get(articulation_id)
+                    if isinstance(articulation_id, str)
+                    else None
+                )
+                rebound_articulations.append(
+                    _rebind_reference_fields(articulation, canonical)
+                )
+            scene_robotics["articulations"] = rebound_articulations
+        return rebound
 
     def assets(self, project_id: str) -> list[dict[str, Any]]:
         project = self.get_project(project_id)
@@ -332,6 +449,14 @@ class ResourceManager:
         scene_json = self.simulation_scene_json(simulation_id)
         return self.call_simulation(
             simulation_id, "setActuatorControls", [scene_json, json.dumps(controls)]
+        )
+
+    def set_attachment_commands(
+        self, simulation_id: str, commands: dict[str, bool]
+    ) -> dict[str, Any]:
+        scene_json = self.simulation_scene_json(simulation_id)
+        return self.call_simulation(
+            simulation_id, "setAttachmentCommands", [scene_json, json.dumps(commands)]
         )
 
     def load_controller(
