@@ -1,6 +1,6 @@
 # SimLab Platform Module Gap Matrix
 
-评审日期：2026-07-10  
+评审日期：2026-08-07
 对标范围：SimLab 当前仓库、OrcaLab 公开资料、NVIDIA Isaac Sim 6.0 / Isaac Lab 公开资料
 
 ## 目的与口径
@@ -70,14 +70,14 @@ SimLab 当前不是单体 Qt 面板应用，主要边界已经形成：
 
 | 模块 | SimLab 当前状态 | OrcaLab 公开能力 | Isaac Sim / Lab 能力 | 主要差距与下一交付 | 优先级 |
 |---|---|---|---|---|---|
-| C1 物理传感器 | **缺失**。Robot Sensor schema 和 runtime sample 均未实现。 | 官网列出 IMU、LiDAR，并提到多类机器人传感器。 | Camera、RTX LiDAR/Radar、IMU、contact、effort 等传感器体系。 | 先做 joint state、IMU、contact/force；统一 timestamp、frame、frequency、noise 和 buffer contract。 | P0 |
+| C1 物理传感器 | **部分**。joint-state、IMU、contact 和 link-mounted rangefinder 已有统一 timestamp/frequency/noise、MuJoCo runtime、Inspector 与 typed recording；尚无扫描式 LiDAR/相机。 | 官网列出 IMU、LiDAR，并提到多类机器人传感器。 | Camera、RTX LiDAR/Radar、IMU、contact、effort 等传感器体系。 | 增加传感器 authoring、扫描式 2D/3D LiDAR、buffer contract 与 Gym/gRPC observation adapter。 | P0 |
 | C2 视觉传感器 | **缺失**。viewport 相机不是可采样的仿真 sensor。 | 官网列出 RGB、Depth。 | RTX camera、多种 annotator 和传感器模型成熟。 | three.js 离屏 camera MVP：RGB/depth/segmentation；随后评估高保真后端，不把编辑相机冒充 sensor。 | P2 |
 | C3 中间件与 ROS 2 | **缺失**。无 ROS topic/service/clock/tf bridge。 | 宣称标准化 API 和生态兼容；ROS 版本与覆盖范围未明确。 | 官方 ROS 2 bridge、simulation control、sensor 和 TF 教程齐全。 | 建立 transport-neutral adapter，再实现 ROS 2 clock、TF、joint states、commands 和 selected sensors。 | P2 |
 | C4 数据记录与标注 | **缺失**。无图像、标注或同步传感器数据集导出。 | 宣称 OpenUSD 数据集与数据采集工作流。 | Replicator、RGB/bbox/semantic/instance 等 annotators，支持常见数据格式工作流。 | 定义 episode manifest、同步时钟、state/sensor writers、2D/3D 标注 schema、COCO/KITTI adapter。 | P2 |
 | C5 Domain Randomization / Sim2Real | **缺失**。没有参数分布、随机化阶段或审计记录。 | 官网强调仿真到部署的完整流程；具体随机化 API 未公开。 | Replicator randomization、Isaac Lab events/randomization 和 sim-to-real 工作流。 | 增加可复现 randomization graph：pose、physics、material、light、sensor noise，并记录每 episode 参数。 | P2 |
 | C6 Task / Environment API | **基础闭环**。`SimLabEnv` 已有 Gymnasium spaces、seed/reset、reward、termination/truncation、Robot/Task 分层，以及本地 MuJoCo/原子 gRPC 后端切换；尚无 vectorized/MJX runtime。 | 宣称兼容主流强化学习平台。 | Isaac Lab 提供 manager-based/direct workflows、环境、任务和 wrappers。 | 增加 task registry、domain randomization、vector env、训练 runner 与 benchmark。 | P1 |
 | C7 强化学习与模仿学习 | **缺失**。无训练 runner、算法 adapter、demo buffer。 | 官网宣称强化学习训练及多机并发。 | Isaac Lab 集成 RL、imitation、motion planning 工作流和示例任务。 | 仿真平台只提供稳定 env API 与 adapters；先接一个外部 RL 库，避免自研算法框架。 | P2 |
-| C8 运动规划与导航 | **缺失**。无 IK、规划器、地图或导航接口。 | 公开概述覆盖具身智能研发，具体 planner 未确认。 | Isaac 生态含运动规划、操控和导航相关工具链。 | 在 robot/control/sensor 稳定后接外部 IK/规划库；先定义 state/command/collision-query API。 | P3 |
+| C8 运动规划与导航 | **部分**。Iris 运货示例已有膨胀栅格 A*、路线简化和 rangefinder 局部避障，但地图仍由任务配置，未形成通用导航服务。 | 公开概述覆盖具身智能研发，具体 planner 未确认。 | Isaac 生态含运动规划、操控和导航相关工具链。 | 定义 engine-neutral map/collision-query API，再增加动态障碍、重规划、SLAM/外部 planner adapter。 | P3 |
 
 ## D. 规模化、扩展与交付
 

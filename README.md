@@ -129,13 +129,18 @@ The bundled Iris A→B delivery scene performs a real MuJoCo pickup: a cascaded 
 the payload, a contact/proximity/speed-gated attachment carries its physical mass, and a task monitor only
 completes after the released payload settles at B. See [`docs/DRONE_DELIVERY.md`](docs/DRONE_DELIVERY.md).
 
+The obstacle-aware variant adds 12 fixed-rate MuJoCo rangefinders, inflated-map A* routing, and a sensor-driven
+local safety layer. The browser renders live color-coded rays and nearest clearance while the same physical
+pickup/drop-off task completes around a blocking wall. See
+[`docs/DRONE_OBSTACLE_DELIVERY.md`](docs/DRONE_OBSTACLE_DELIVERY.md).
+
 Training algorithms use a separate Gymnasium data plane. `SimLabEnv` composes an engine-neutral backend contract, a robot adapter, and a task, and can switch between an in-process `MujocoBackend` and an atomic gRPC backend without changing task or algorithm code. Install `.[algorithm]` for local training or `.[algorithm,remote]` for gRPC. See [`docs/ALGORITHM_BACKEND_DECOUPLING.md`](docs/ALGORITHM_BACKEND_DECOUPLING.md).
 
 The robot Inspector Controller section explicitly loads trusted project-local Python files, supports reload and detach, and displays callback status, step count, and execution duration. Controller code is never executed by opening a scene.
 
 `simlab.controllers.JointPositionPdController` provides a bounded qpos/qvel outer loop for MuJoCo position drives. A project-loadable two-joint example is available at [`examples/controllers/two_joint_pd.py`](examples/controllers/two_joint_pd.py).
 
-The robotics schema includes fixed-clock `joint_state` sensors, link-mounted IMUs, and collider/link-scoped contact sensors. Contact aggregation maps stable collider IDs to MuJoCo geoms, sums native contact wrenches, and publishes bounded world-frame points/normals, normal force/impulse, and tangent force with a normal directed from the scoped geometry toward the other geometry. Contact samples run inside the fixed-step simulation session, can be inspected live with their resolved link/collider scope, and can be selected for typed JSON/CSV recording alongside joint-state and IMU events. IMU orientation is `world_from_sensor` xyzw, while angular velocity and MuJoCo accelerometer output are expressed in the sensor frame. Optional per-channel bias and Gaussian white noise uses deterministic stable sensor/channel streams; Reset replays the same sequence, while sensors without noise preserve exact values. Sensor update rates are exact integer divisors of the physics rate and remain independent of UI refresh, pause gaps, and target real-time factor.
+The robotics schema includes fixed-clock `joint_state` sensors, link-mounted IMUs/rangefinders, and collider/link-scoped contact sensors. Contact aggregation maps stable collider IDs to MuJoCo geoms, sums native contact wrenches, and publishes bounded world-frame points/normals, normal force/impulse, and tangent force with a normal directed from the scoped geometry toward the other geometry. Rangefinders publish bounded distance/hit samples from native MuJoCo rays. Samples run inside the fixed-step simulation session, can be inspected live with their resolved link/collider scope, and can be selected for typed JSON/CSV recording. IMU orientation is `world_from_sensor` xyzw, while angular velocity and MuJoCo accelerometer output are expressed in the sensor frame. Optional per-channel bias and Gaussian white noise uses deterministic stable sensor/channel streams; Reset replays the same sequence, while sensors without noise preserve exact values. Sensor update rates are exact integer divisors of the physics rate and remain independent of UI refresh, pause gaps, and target real-time factor.
 
 Primitive actors expose basic physics properties in the Property Panel: Dynamic, Mass, and Friction. Dynamic actors export with MuJoCo free joints, while static actors export as fixed world geoms.
 

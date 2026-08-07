@@ -303,13 +303,13 @@ def _validate_articulation(
                         f"{sensor.sensor_type} sensor requires a joint",
                     )
                 )
-        if sensor.sensor_type == "imu":
+        if sensor.sensor_type in {"imu", "rangefinder"}:
             if sensor.link_id is None:
                 issues.append(
                     RoboticsValidationIssue(
                         "missing_sensor_link",
                         f"{sensor_path}.link_id",
-                        "imu sensor requires a link",
+                        f"{sensor.sensor_type} sensor requires a link",
                     )
                 )
             if sensor.local_transform is None:
@@ -317,7 +317,7 @@ def _validate_articulation(
                     RoboticsValidationIssue(
                         "missing_sensor_transform",
                         f"{sensor_path}.local_transform",
-                        "imu sensor requires a local transform",
+                        f"{sensor.sensor_type} sensor requires a local transform",
                     )
                 )
             elif not math.isclose(
@@ -332,9 +332,21 @@ def _validate_articulation(
                     RoboticsValidationIssue(
                         "invalid_sensor_quaternion",
                         f"{sensor_path}.local_transform.quaternion",
-                        "imu sensor local quaternion must be normalized",
+                        f"{sensor.sensor_type} sensor local quaternion must be normalized",
                     )
                 )
+        if sensor.sensor_type == "rangefinder" and (
+            sensor.max_distance is None
+            or not math.isfinite(sensor.max_distance)
+            or sensor.max_distance <= 0
+        ):
+            issues.append(
+                RoboticsValidationIssue(
+                    "invalid_rangefinder_max_distance",
+                    f"{sensor_path}.max_distance",
+                    "rangefinder sensor max_distance must be finite and greater than zero",
+                )
+            )
         if sensor.sensor_type == "contact":
             scope_count = int(sensor.link_id is not None) + int(
                 sensor.collider_id is not None
@@ -392,6 +404,7 @@ _SENSOR_NOISE_CHANNEL_DIMENSIONS = {
         "linear_acceleration": 3,
     },
     "contact": {"normal_force": 1, "tangent_force": 3},
+    "rangefinder": {"distance": 1},
 }
 
 

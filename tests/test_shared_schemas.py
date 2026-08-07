@@ -63,7 +63,7 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     sensor_variants = simulation_state["properties"]["sensors"]["items"]["oneOf"]
     assert {
         variant["properties"]["sensor_type"]["const"] for variant in sensor_variants
-    } == {"joint_state", "imu", "contact"}
+    } == {"joint_state", "imu", "contact", "rangefinder"}
     assert "startRecording" in bridge["properties"]["rpc_methods"]["const"]
     assert "exportRecording" in bridge["properties"]["rpc_methods"]["const"]
     assert "exportRecordingDialog" in bridge["properties"]["rpc_methods"]["const"]
@@ -87,6 +87,7 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
         "jointSensorState",
         "imuSensorState",
         "contactSensorState",
+        "rangefinderSensorState",
     }.issubset(
         recording["$defs"]
     )
@@ -94,7 +95,7 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     assert "sensor_types" in recording["required"]
     assert set(
         recording["properties"]["sensor_types"]["additionalProperties"]["enum"]
-    ) == {"joint_state", "imu", "contact"}
+    ) == {"joint_state", "imu", "contact", "rangefinder"}
     assert trajectory["properties"]["keyframes"]["minItems"] == 2
     assert {"link", "joint", "actuator", "sensor", "collider", "inertial"}.issubset(
         robotics["$defs"]
@@ -102,6 +103,7 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     assert "local_transform" in robotics["$defs"]["sensor"]["properties"]
     assert "collider_id" in robotics["$defs"]["sensor"]["properties"]
     assert "aggregation_mode" in robotics["$defs"]["sensor"]["properties"]
+    assert "max_distance" in robotics["$defs"]["sensor"]["properties"]
     assert "noise" in robotics["$defs"]["sensor"]["properties"]
     assert {"sensorNoise", "scalarNoiseChannel", "vectorNoiseChannel"}.issubset(
         robotics["$defs"]

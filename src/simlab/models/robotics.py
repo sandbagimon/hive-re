@@ -15,6 +15,7 @@ SensorType = Literal[
     "actuator_force",
     "contact",
     "imu",
+    "rangefinder",
 ]
 
 
@@ -498,11 +499,13 @@ class Sensor:
     aggregation_mode: ContactAggregationMode | None = None
     update_rate_hz: float | None = None
     local_transform: RigidTransform | None = None
+    max_distance: float | None = None
     noise: SensorNoise | None = None
     source_prim_path: str | None = None
 
     def __post_init__(self) -> None:
         self.update_rate_hz = _optional_float(self.update_rate_hz)
+        self.max_distance = _optional_float(self.max_distance)
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {
@@ -516,6 +519,8 @@ class Sensor:
         }
         if self.local_transform is not None:
             data["local_transform"] = self.local_transform.to_dict()
+        if self.max_distance is not None:
+            data["max_distance"] = self.max_distance
         if self.collider_id is not None:
             data["collider_id"] = self.collider_id
         if self.aggregation_mode is not None:
@@ -540,6 +545,7 @@ class Sensor:
                 if data.get("local_transform") is not None
                 else None
             ),
+            max_distance=data.get("max_distance"),
             noise=(
                 SensorNoise.from_dict(data["noise"])
                 if data.get("noise") is not None

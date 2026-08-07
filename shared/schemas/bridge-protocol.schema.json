@@ -127,6 +127,21 @@
                 },
                 "required": ["id", "sensor_type", "time", "sequence", "contact_count", "normal_force", "tangent_force", "normal_impulse", "points", "normals"],
                 "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "string" },
+                  "sensor_type": { "const": "rangefinder" },
+                  "link_id": { "type": "string" },
+                  "time": { "type": "number", "minimum": 0 },
+                  "sequence": { "type": "integer", "minimum": 0 },
+                  "distance": { "type": "number", "minimum": 0 },
+                  "max_distance": { "type": "number", "exclusiveMinimum": 0 },
+                  "hit": { "type": "boolean" }
+                },
+                "required": ["id", "sensor_type", "link_id", "time", "sequence", "distance", "max_distance", "hit"],
+                "additionalProperties": false
               }
             ]
           }

@@ -10,6 +10,7 @@ from simlab.models.recording import (
     JointRecordingState,
     JointStateRecording,
     JointStateSample,
+    RangefinderRecordingState,
     RecordingManifest,
     SensorRecordingState,
     TypedSensorRecordingState,
@@ -17,6 +18,7 @@ from simlab.models.recording import (
 from simlab.services.contact_sensors import ContactSensorSample
 from simlab.services.imu_sensors import ImuSensorSample
 from simlab.services.joint_state_sensors import JointStateSensorSample
+from simlab.services.rangefinder_sensors import RangefinderSensorSample
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -67,11 +69,12 @@ class JointStateRecorder:
         if set(selected_sensor_types) != set(selected_sensor_ids):
             raise ValueError("Recording sensor_types keys must match sensor_ids")
         if any(
-            sensor_type not in {"joint_state", "imu", "contact"}
+            sensor_type not in {"joint_state", "imu", "contact", "rangefinder"}
             for sensor_type in selected_sensor_types.values()
         ):
             raise ValueError(
-                "Recording sensor type must be 'joint_state', 'imu', or 'contact'"
+                "Recording sensor type must be 'joint_state', 'imu', 'contact', or "
+                "'rangefinder'"
             )
         if not math.isfinite(timestep) or timestep <= 0:
             raise ValueError("Recording timestep must be finite and greater than zero")
@@ -94,7 +97,10 @@ class JointStateRecorder:
         self,
         state: SimulationState,
         emitted_sensors: Sequence[
-            JointStateSensorSample | ImuSensorSample | ContactSensorSample
+            JointStateSensorSample
+            | ImuSensorSample
+            | ContactSensorSample
+            | RangefinderSensorSample
         ] = (),
     ) -> bool:
         recording = self._require_recording()
@@ -152,6 +158,8 @@ class JointStateRecorder:
                         *item.linear_acceleration,
                     )
                 )
+            elif isinstance(item, RangefinderRecordingState):
+                values.extend((item.time, item.distance, item.max_distance))
             else:
                 values.extend(
                     (
@@ -170,7 +178,12 @@ class JointStateRecorder:
 
     @staticmethod
     def _record_sensor(
-        sensor: JointStateSensorSample | ImuSensorSample | ContactSensorSample,
+        sensor: (
+            JointStateSensorSample
+            | ImuSensorSample
+            | ContactSensorSample
+            | RangefinderSensorSample
+        ),
     ) -> TypedSensorRecordingState:
         if isinstance(sensor, ContactSensorSample):
             return ContactRecordingState(
@@ -191,6 +204,15 @@ class JointStateRecorder:
                 orientation=sensor.orientation,
                 angular_velocity=sensor.angular_velocity,
                 linear_acceleration=sensor.linear_acceleration,
+            )
+        if isinstance(sensor, RangefinderSensorSample):
+            return RangefinderRecordingState(
+                link_id=sensor.link_id,
+                time=float(sensor.time),
+                sequence=int(sensor.sequence),
+                distance=float(sensor.distance),
+                max_distance=float(sensor.max_distance),
+                hit=bool(sensor.hit),
             )
         return SensorRecordingState(
             joint_id=sensor.joint_id,

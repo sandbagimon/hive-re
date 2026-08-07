@@ -11,6 +11,7 @@ from simlab.services.contact_sensors import ContactMeasurement, ContactSensorSam
 from simlab.services.imu_sensors import ImuSensorSample
 from simlab.services.joint_state_recorder import JointStateRecorder
 from simlab.services.joint_state_sensors import JointStateSensorSample
+from simlab.services.rangefinder_sensors import RangefinderSensorSample
 from simlab.services.simulation_session import (
     ActuatorSimulationState,
     JointSimulationState,
@@ -168,6 +169,47 @@ def test_recording_round_trip_exports_emitted_imu_vector_columns() -> None:
         "0.0",
         "9.5",
     ]
+
+
+def test_recording_round_trip_exports_rangefinder_columns() -> None:
+    recorder = JointStateRecorder()
+    recorder.start(
+        name="Range Run",
+        joint_ids=[],
+        actuator_ids=[],
+        sensor_ids=["front_range"],
+        sensor_types={"front_range": "rangefinder"},
+        timestep=0.01,
+        scene_version="1.0",
+        engine_version="3.3.7",
+    )
+    event = RangefinderSensorSample(
+        sensor_id="front_range",
+        link_id="body",
+        time=0.02,
+        sequence=1,
+        distance=0.75,
+        max_distance=4.0,
+        hit=True,
+    )
+
+    recorder.capture(_state(0.01))
+    recorder.capture(_state(0.02), [event])
+    recording = recorder.stop()
+    restored = JointStateRecording.from_dict(recording.to_dict())
+    rows = list(csv.reader(io.StringIO(restored.to_csv())))
+
+    assert restored.to_dict() == recording.to_dict()
+    assert rows[0][-6:] == [
+        "sensor.front_range.link_id",
+        "sensor.front_range.time",
+        "sensor.front_range.sequence",
+        "sensor.front_range.distance",
+        "sensor.front_range.max_distance",
+        "sensor.front_range.hit",
+    ]
+    assert rows[1][-6:] == [""] * 6
+    assert rows[2][-6:] == ["body", "0.02", "1", "0.75", "4.0", "1"]
 
 
 def test_recording_round_trip_exports_bounded_contact_columns() -> None:

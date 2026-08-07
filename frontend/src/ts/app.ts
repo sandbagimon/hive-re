@@ -343,7 +343,15 @@ function renderInspector(
   const selectedContactSample = selectedSensorSample?.sensor_type === 'contact'
     ? selectedSensorSample
     : undefined;
-  const sensorPayloadFields = selectedSensor?.sensor_type === 'contact' ? `
+  const selectedRangefinderSample = selectedSensorSample?.sensor_type === 'rangefinder'
+    ? selectedSensorSample
+    : undefined;
+  const sensorPayloadFields = selectedSensor?.sensor_type === 'rangefinder' ? `
+      <div class="property-row"><label>Sequence</label><input type="text" value="${selectedRangefinderSample?.sequence ?? '—'}" disabled data-sensor-field="sequence" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Time</label><input type="text" value="${selectedRangefinderSample?.time.toFixed(3) ?? '—'}" disabled data-sensor-field="time" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Distance</label><input type="text" value="${selectedRangefinderSample?.distance.toFixed(3) ?? '—'} m" disabled data-sensor-field="distance" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Hit</label><input type="text" value="${selectedRangefinderSample ? (selectedRangefinderSample.hit ? 'yes' : 'no') : '—'}" disabled data-sensor-field="hit" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
+      <div class="property-row"><label>Max Range</label><input type="text" value="${selectedSensor.max_distance?.toFixed(2) ?? '—'} m" disabled></div>` : selectedSensor?.sensor_type === 'contact' ? `
       <div class="property-row"><label>Sequence</label><input type="text" value="${selectedContactSample?.sequence ?? '—'}" disabled data-sensor-field="sequence" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
       <div class="property-row"><label>Time</label><input type="text" value="${selectedContactSample?.time.toFixed(3) ?? '—'}" disabled data-sensor-field="time" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
       <div class="property-row"><label>Count</label><input type="text" value="${selectedContactSample?.contact_count ?? '—'}" disabled data-sensor-field="contact_count" data-runtime-sensor-id="${escapeHtml(selectedSensor.id)}"></div>
@@ -365,7 +373,7 @@ function renderInspector(
     <section class="property-group"><h3>Sensor</h3>
       <div class="property-row"><label>Name</label><input type="text" value="${escapeHtml(selectedSensor.name)}" disabled></div>
       <div class="property-row"><label>Type</label><input type="text" value="${escapeHtml(selectedSensor.sensor_type)}" disabled></div>
-      <div class="property-row"><label>${selectedSensor.sensor_type === 'contact' ? 'Scope' : selectedSensor.sensor_type === 'imu' ? 'Link' : 'Joint'}</label><input type="text" value="${escapeHtml(selectedSensor.sensor_type === 'contact' ? sensorCollider?.name ?? sensorLink?.name ?? selectedSensor.collider_id ?? selectedSensor.link_id ?? '—' : selectedSensor.sensor_type === 'imu' ? sensorLink?.name ?? selectedSensor.link_id ?? '—' : sensorJoint?.name ?? selectedSensor.joint_id ?? '—')}" disabled data-sensor-scope></div>
+      <div class="property-row"><label>${selectedSensor.sensor_type === 'contact' ? 'Scope' : ['imu', 'rangefinder'].includes(selectedSensor.sensor_type) ? 'Link' : 'Joint'}</label><input type="text" value="${escapeHtml(selectedSensor.sensor_type === 'contact' ? sensorCollider?.name ?? sensorLink?.name ?? selectedSensor.collider_id ?? selectedSensor.link_id ?? '—' : ['imu', 'rangefinder'].includes(selectedSensor.sensor_type) ? sensorLink?.name ?? selectedSensor.link_id ?? '—' : sensorJoint?.name ?? selectedSensor.joint_id ?? '—')}" disabled data-sensor-scope></div>
       <div class="property-row"><label>Rate</label><input type="text" value="${selectedSensor.update_rate_hz === null ? 'Physics rate' : `${selectedSensor.update_rate_hz} Hz`}" disabled></div>
       ${sensorPayloadFields}
     </section>` : selectedJoint ? `
@@ -535,6 +543,10 @@ function updateRuntimeInspector(simulationState: SimulationState | null): void {
         input.value = sensor.points[0]?.map((value) => value.toFixed(3)).join(', ') ?? '—';
       } else if (sensor.sensor_type === 'contact' && field === 'first_normal') {
         input.value = sensor.normals[0]?.map((value) => value.toFixed(3)).join(', ') ?? '—';
+      } else if (sensor.sensor_type === 'rangefinder' && field === 'distance') {
+        input.value = `${sensor.distance.toFixed(3)} m`;
+      } else if (sensor.sensor_type === 'rangefinder' && field === 'hit') {
+        input.value = sensor.hit ? 'yes' : 'no';
       }
     }
   }
@@ -989,7 +1001,7 @@ function updateTrajectoryRuntime(simulationState: SimulationState | null): void 
 function ensureRecordingDraft(actor: Actor, scene: Scene): RecordingDraftState {
   const bindings = positionJointBindings(actor, scene);
   const sensors = robotSensors(actor, scene).filter(
-    (sensor) => ['joint_state', 'imu', 'contact'].includes(sensor.sensor_type),
+    (sensor) => ['joint_state', 'imu', 'contact', 'rangefinder'].includes(sensor.sensor_type),
   );
   const signature = JSON.stringify([
     bindings.map(({ joint }) => joint.id),
@@ -1013,7 +1025,7 @@ function sensorsForRecording(
   draft: RecordingDraftState,
 ): string[] {
   return robotSensors(actor, scene)
-    .filter((sensor) => ['joint_state', 'imu', 'contact'].includes(sensor.sensor_type))
+    .filter((sensor) => ['joint_state', 'imu', 'contact', 'rangefinder'].includes(sensor.sensor_type))
     .filter((sensor) => draft.selectedSensorIds.has(sensor.id))
     .map((sensor) => sensor.id);
 }
@@ -1029,7 +1041,7 @@ function renderRecordingPanel(
   const draft = ensureRecordingDraft(actor, scene);
   const bindings = positionJointBindings(actor, scene);
   const sensors = robotSensors(actor, scene).filter(
-    (sensor) => ['joint_state', 'imu', 'contact'].includes(sensor.sensor_type),
+    (sensor) => ['joint_state', 'imu', 'contact', 'rangefinder'].includes(sensor.sensor_type),
   );
   const controls = element('recording-controls');
   controls.innerHTML = `

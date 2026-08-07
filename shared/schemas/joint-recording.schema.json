@@ -72,11 +72,26 @@
       "required": ["sensor_type", "time", "sequence", "contact_count", "normal_force", "normal_impulse", "tangent_force", "points", "normals"],
       "additionalProperties": false
     },
+    "rangefinderSensorState": {
+      "type": "object",
+      "properties": {
+        "sensor_type": { "const": "rangefinder" },
+        "link_id": { "type": "string", "minLength": 1 },
+        "time": { "type": "number", "minimum": 0 },
+        "sequence": { "type": "integer", "minimum": 0 },
+        "distance": { "type": "number", "minimum": 0 },
+        "max_distance": { "type": "number", "exclusiveMinimum": 0 },
+        "hit": { "type": "boolean" }
+      },
+      "required": ["sensor_type", "link_id", "time", "sequence", "distance", "max_distance", "hit"],
+      "additionalProperties": false
+    },
     "sensorState": {
       "oneOf": [
         { "$ref": "#/$defs/jointSensorState" },
         { "$ref": "#/$defs/imuSensorState" },
-        { "$ref": "#/$defs/contactSensorState" }
+        { "$ref": "#/$defs/contactSensorState" },
+        { "$ref": "#/$defs/rangefinderSensorState" }
       ]
     },
     "sample": {
@@ -120,7 +135,7 @@
     "sensor_ids": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
     "sensor_types": {
       "type": "object",
-      "additionalProperties": { "enum": ["joint_state", "imu", "contact"] }
+      "additionalProperties": { "enum": ["joint_state", "imu", "contact", "rangefinder"] }
     },
     "limit_reached": { "type": "boolean" },
     "samples": { "type": "array", "items": { "$ref": "#/$defs/sample" } }

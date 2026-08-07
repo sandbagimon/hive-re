@@ -96,6 +96,7 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
     ET.SubElement(worldbody, "light", {"name": "key_light", "pos": "0 0 4"})
     robot_actuators: list[tuple[str, Any, float]] = []
     robot_imu_sensors: list[tuple[Sensor, str]] = []
+    robot_rangefinder_sensors: list[tuple[Sensor, str]] = []
     robot_contact_excludes: list[tuple[str, str]] = []
     home_positions: list[float] = []
     home_velocities: list[float] = []
@@ -195,6 +196,7 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                     selected_articulation,
                     robot_actuators,
                     robot_imu_sensors,
+                    robot_rangefinder_sensors,
                     robot_contact_excludes,
                     home_positions,
                     home_velocities,
@@ -376,7 +378,7 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                 ET.SubElement(actuator_element, "velocity", attrs)
             else:
                 ET.SubElement(actuator_element, "motor", attrs)
-    if robot_imu_sensors:
+    if robot_imu_sensors or robot_rangefinder_sensors:
         sensor_element = ET.SubElement(root, "sensor")
         for sensor, site_name in robot_imu_sensors:
             orientation_name, angular_velocity_name, linear_acceleration_name = (
@@ -400,6 +402,12 @@ def scene_to_mjcf_xml(scene: Scene, *, asset_root: str | Path | None = None) -> 
                 sensor_element,
                 "accelerometer",
                 {"name": linear_acceleration_name, "site": site_name},
+            )
+        for sensor, site_name in robot_rangefinder_sensors:
+            ET.SubElement(
+                sensor_element,
+                "rangefinder",
+                {"name": rangefinder_sensor_name(sensor.id), "site": site_name},
             )
     if home_positions:
         keyframe = ET.SubElement(root, "keyframe")
@@ -491,6 +499,7 @@ def _append_articulation(
     articulation: Articulation,
     exported_actuators: list[tuple[str, Any, float]],
     exported_imu_sensors: list[tuple[Sensor, str]],
+    exported_rangefinder_sensors: list[tuple[Sensor, str]],
     contact_excludes: list[tuple[str, str]],
     home_positions: list[float],
     home_velocities: list[float],
@@ -509,9 +518,12 @@ def _append_articulation(
 
     joint_names: dict[str, str] = {}
     imu_sensors_by_link: dict[str, list[Sensor]] = {}
+    rangefinder_sensors_by_link: dict[str, list[Sensor]] = {}
     for sensor in articulation.sensors:
         if sensor.sensor_type == "imu" and sensor.link_id is not None:
             imu_sensors_by_link.setdefault(sensor.link_id, []).append(sensor)
+        elif sensor.sensor_type == "rangefinder" and sensor.link_id is not None:
+            rangefinder_sensors_by_link.setdefault(sensor.link_id, []).append(sensor)
 
     def append_link(parent_body: Any, link: Link) -> None:
         body = ET.SubElement(
@@ -595,6 +607,25 @@ def _append_articulation(
                 },
             )
             exported_imu_sensors.append((sensor, site_name))
+        for sensor in rangefinder_sensors_by_link.get(link.id, []):
+            if sensor.local_transform is None:
+                raise ValueError(f"Rangefinder sensor requires local_transform: {sensor.id}")
+            site_name = f"{_xml_name(sensor.id)}_site"
+            ET.SubElement(
+                body,
+                "site",
+                {
+                    "name": site_name,
+                    "pos": _format_vector(sensor.local_transform.position),
+                    "quat": _format_vector(
+                        _mujoco_quaternion(sensor.local_transform.quaternion)
+                    ),
+                    "type": "sphere",
+                    "size": "0.004",
+                    "rgba": "0.95 0.65 0.15 0.8",
+                },
+            )
+            exported_rangefinder_sensors.append((sensor, site_name))
         for child in children[link.id]:
             append_link(body, child)
 
@@ -661,6 +692,10 @@ def imu_sensor_channel_names(sensor_id: str) -> tuple[str, str, str]:
         f"{sensor_name}_angular_velocity",
         f"{sensor_name}_linear_acceleration",
     )
+
+
+def rangefinder_sensor_name(sensor_id: str) -> str:
+    return f"{_xml_name(sensor_id)}_distance"
 
 
 def attachment_constraint_name(attachment_id: str) -> str:

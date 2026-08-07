@@ -121,9 +121,33 @@ class ContactRecordingState:
         }
 
 
-RecordingSensorType = Literal["joint_state", "imu", "contact"]
+@dataclass(frozen=True, slots=True)
+class RangefinderRecordingState:
+    link_id: str
+    time: float
+    sequence: int
+    distance: float
+    max_distance: float
+    hit: bool
+
+    def to_dict(self) -> dict[str, str | int | float | bool]:
+        return {
+            "sensor_type": "rangefinder",
+            "link_id": self.link_id,
+            "time": self.time,
+            "sequence": self.sequence,
+            "distance": self.distance,
+            "max_distance": self.max_distance,
+            "hit": self.hit,
+        }
+
+
+RecordingSensorType = Literal["joint_state", "imu", "contact", "rangefinder"]
 TypedSensorRecordingState = (
-    SensorRecordingState | ImuRecordingState | ContactRecordingState
+    SensorRecordingState
+    | ImuRecordingState
+    | ContactRecordingState
+    | RangefinderRecordingState
 )
 
 
@@ -152,6 +176,15 @@ def _sensor_state_from_dict(data: dict[str, Any]) -> TypedSensorRecordingState:
             tangent_force=_vector3(data["tangent_force"]),
             points=tuple(_vector3(point) for point in data["points"]),
             normals=tuple(_vector3(normal) for normal in data["normals"]),
+        )
+    if sensor_type == "rangefinder":
+        return RangefinderRecordingState(
+            link_id=str(data["link_id"]),
+            time=float(data["time"]),
+            sequence=int(data["sequence"]),
+            distance=float(data["distance"]),
+            max_distance=float(data["max_distance"]),
+            hit=bool(data["hit"]),
         )
     if sensor_type != "joint_state":
         raise ValueError(f"Unsupported recording sensor type: {sensor_type}")
@@ -276,6 +309,8 @@ class JointStateRecording:
                 header.extend(_imu_csv_columns(sensor_id))
             elif sensor_type == "contact":
                 header.extend(_contact_csv_columns(sensor_id))
+            elif sensor_type == "rangefinder":
+                header.extend(_rangefinder_csv_columns(sensor_id))
             else:
                 header.extend(_joint_sensor_csv_columns(sensor_id))
         writer.writerow(header)
@@ -291,9 +326,12 @@ class JointStateRecording:
                 sensor_state = sample.sensors.get(sensor_id)
                 sensor_type = self.sensor_types.get(sensor_id, "joint_state")
                 if sensor_state is None:
-                    column_count = {"joint_state": 5, "imu": 13, "contact": 56}[
-                        sensor_type
-                    ]
+                    column_count = {
+                        "joint_state": 5,
+                        "imu": 13,
+                        "contact": 56,
+                        "rangefinder": 6,
+                    }[sensor_type]
                     row.extend([""] * column_count)
                     continue
                 if sensor_type == "imu" and isinstance(sensor_state, ImuRecordingState):
@@ -330,6 +368,19 @@ class JointStateRecording:
                             )
                         else:
                             row.extend([""] * 6)
+                elif sensor_type == "rangefinder" and isinstance(
+                    sensor_state, RangefinderRecordingState
+                ):
+                    row.extend(
+                        [
+                            sensor_state.link_id,
+                            sensor_state.time,
+                            sensor_state.sequence,
+                            sensor_state.distance,
+                            sensor_state.max_distance,
+                            int(sensor_state.hit),
+                        ]
+                    )
                 elif sensor_type == "joint_state" and isinstance(
                     sensor_state, SensorRecordingState
                 ):
@@ -374,6 +425,18 @@ def _imu_csv_columns(sensor_id: str) -> list[str]:
         f"{prefix}.linear_acceleration.x",
         f"{prefix}.linear_acceleration.y",
         f"{prefix}.linear_acceleration.z",
+    ]
+
+
+def _rangefinder_csv_columns(sensor_id: str) -> list[str]:
+    prefix = f"sensor.{sensor_id}"
+    return [
+        f"{prefix}.link_id",
+        f"{prefix}.time",
+        f"{prefix}.sequence",
+        f"{prefix}.distance",
+        f"{prefix}.max_distance",
+        f"{prefix}.hit",
     ]
 
 

@@ -71,6 +71,23 @@ class AttachmentObservation:
 
 
 @dataclass(frozen=True, slots=True)
+class RangefinderObservation:
+    distance: float
+    max_distance: float
+    hit: bool
+
+    def __post_init__(self) -> None:
+        if (
+            not math.isfinite(self.distance)
+            or not math.isfinite(self.max_distance)
+            or self.distance < 0
+            or self.max_distance <= 0
+            or self.distance > self.max_distance
+        ):
+            raise ValueError("Rangefinder observation distance bounds are invalid")
+
+
+@dataclass(frozen=True, slots=True)
 class ControllerObservation:
     time: float
     timestep: float
@@ -78,6 +95,7 @@ class ControllerObservation:
     actuators: Mapping[str, ActuatorObservation]
     bodies: Mapping[str, BodyObservation] = field(default_factory=dict)
     attachments: Mapping[str, AttachmentObservation] = field(default_factory=dict)
+    rangefinders: Mapping[str, RangefinderObservation] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not math.isfinite(self.time) or self.time < 0:
@@ -88,6 +106,7 @@ class ControllerObservation:
         object.__setattr__(self, "actuators", MappingProxyType(dict(self.actuators)))
         object.__setattr__(self, "bodies", MappingProxyType(dict(self.bodies)))
         object.__setattr__(self, "attachments", MappingProxyType(dict(self.attachments)))
+        object.__setattr__(self, "rangefinders", MappingProxyType(dict(self.rangefinders)))
 
 
 @dataclass(frozen=True, slots=True)

@@ -11,6 +11,7 @@ from simlab.services.controller_runtime import (
     ControllerObservation,
     ControllerRunner,
     JointObservation,
+    RangefinderObservation,
 )
 
 
@@ -28,6 +29,9 @@ def _observation(time: float = 0.0) -> ControllerObservation:
                 angular_velocity=(0.0, 0.0, 0.0),
             )
         },
+        rangefinders={
+            "front": RangefinderObservation(distance=1.2, max_distance=4.0, hit=True)
+        },
     )
 
 
@@ -41,6 +45,8 @@ def test_controller_observation_and_action_are_immutable() -> None:
         action.position_targets["shoulder"] = 0.0  # type: ignore[index]
     with pytest.raises(TypeError):
         observation.bodies["other"] = observation.bodies["actor_robot"]  # type: ignore[index]
+    with pytest.raises(TypeError):
+        observation.rangefinders["rear"] = observation.rangefinders["front"]  # type: ignore[index]
     with pytest.raises(FrozenInstanceError):
         observation.time = 1.0  # type: ignore[misc]
 

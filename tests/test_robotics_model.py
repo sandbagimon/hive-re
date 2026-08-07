@@ -151,6 +151,44 @@ def test_imu_sensor_rejects_dangling_link_and_invalid_quaternion() -> None:
     )
 
 
+def test_rangefinder_round_trip_requires_pose_link_and_positive_range() -> None:
+    data = fixture_data()
+    rangefinder = {
+        "id": "sensor_forearm_range",
+        "name": "Forearm Range",
+        "sensor_type": "rangefinder",
+        "link_id": "link_forearm",
+        "joint_id": None,
+        "update_rate_hz": 50.0,
+        "local_transform": {
+            "position": [0.0, 0.0, 0.25],
+            "quaternion": [0.0, 0.0, 0.0, 1.0],
+        },
+        "max_distance": 4.0,
+        "noise": {
+            "seed": 12,
+            "channels": {
+                "distance": {"bias": 0.0, "standard_deviation": 0.005}
+            },
+        },
+        "source_prim_path": None,
+    }
+    data["articulations"][0]["sensors"].append(rangefinder)
+
+    restored = RoboticsModel.from_dict(data)
+
+    assert restored.to_dict() == data
+    assert restored.articulations[0].sensors[-1].max_distance == 4.0
+
+    rangefinder["max_distance"] = 0.0
+    with pytest.raises(RoboticsValidationError) as exc_info:
+        RoboticsModel.from_dict(data)
+    assert any(
+        issue.code in {"schema.exclusiveMinimum", "invalid_rangefinder_max_distance"}
+        for issue in exc_info.value.issues
+    )
+
+
 def test_contact_sensor_round_trip_preserves_collider_scope() -> None:
     data = fixture_data()
     contact = {

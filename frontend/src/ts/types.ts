@@ -218,6 +218,7 @@ export interface RobotSensor {
     position: [number, number, number];
     quaternion: [number, number, number, number];
   };
+  max_distance?: number;
   noise?: {
     seed: number;
     channels: Partial<Record<
@@ -227,7 +228,8 @@ export interface RobotSensor {
       | 'angular_velocity'
       | 'linear_acceleration'
       | 'normal_force'
-      | 'tangent_force',
+      | 'tangent_force'
+      | 'distance',
       { bias: number | Vector3; standard_deviation: number | Vector3 }
     >>;
   };
@@ -338,7 +340,22 @@ export interface ContactSensorSample {
   normals: [number, number, number][];
 }
 
-export type SensorSample = JointStateSensorSample | ImuSensorSample | ContactSensorSample;
+export interface RangefinderSensorSample {
+  id: string;
+  sensor_type: 'rangefinder';
+  link_id: string;
+  time: number;
+  sequence: number;
+  distance: number;
+  max_distance: number;
+  hit: boolean;
+}
+
+export type SensorSample =
+  | JointStateSensorSample
+  | ImuSensorSample
+  | ContactSensorSample
+  | RangefinderSensorSample;
 
 export interface ControllerSimulationState {
   status: 'ready' | 'active' | 'timed_out' | 'fault';

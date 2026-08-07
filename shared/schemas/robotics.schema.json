@@ -247,7 +247,8 @@
             "angular_velocity": { "$ref": "#/$defs/vectorNoiseChannel" },
             "linear_acceleration": { "$ref": "#/$defs/vectorNoiseChannel" },
             "normal_force": { "$ref": "#/$defs/scalarNoiseChannel" },
-            "tangent_force": { "$ref": "#/$defs/vectorNoiseChannel" }
+            "tangent_force": { "$ref": "#/$defs/vectorNoiseChannel" },
+            "distance": { "$ref": "#/$defs/scalarNoiseChannel" }
           },
           "additionalProperties": false
         }
@@ -261,7 +262,7 @@
         "id": { "$ref": "#/$defs/id" },
         "name": { "type": "string", "minLength": 1 },
         "sensor_type": {
-          "enum": ["joint_state", "joint_position", "joint_velocity", "actuator_force", "contact", "imu"]
+          "enum": ["joint_state", "joint_position", "joint_velocity", "actuator_force", "contact", "imu", "rangefinder"]
         },
         "link_id": { "type": ["string", "null"] },
         "joint_id": { "type": ["string", "null"] },
@@ -269,6 +270,7 @@
         "aggregation_mode": { "const": "sum" },
         "update_rate_hz": { "type": ["number", "null"], "exclusiveMinimum": 0 },
         "local_transform": { "$ref": "#/$defs/transform" },
+        "max_distance": { "type": "number", "exclusiveMinimum": 0 },
         "noise": { "$ref": "#/$defs/sensorNoise" },
         "source_prim_path": { "type": ["string", "null"] }
       },

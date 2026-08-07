@@ -12,6 +12,8 @@ import {
 import type {
   Actor,
   RobotArticulation,
+  RobotSensor,
+  RangefinderSensorSample,
   RobotVisualGeometry,
   Scene,
   SimulationState,
@@ -149,6 +151,10 @@ const actorGroup = new THREE.Group();
 scene.add(actorGroup);
 const attachmentGroup = new THREE.Group();
 scene.add(attachmentGroup);
+const rangefinderGroup = new THREE.Group();
+scene.add(rangefinderGroup);
+const navigationGroup = new THREE.Group();
+scene.add(navigationGroup);
 
 const selectionOutline = new THREE.BoxHelper(new THREE.Object3D(), 0xffd166);
 selectionOutline.visible = false;
@@ -170,6 +176,9 @@ const attachmentVisuals = new Map<string, {
   indicator: any;
 }>();
 let attachmentRenderSignature = '';
+const rangefinderVisuals = new Map<string, { line: any; sensor: RobotSensor }>();
+let rangefinderRenderSignature = '';
+let navigationRenderSignature = '';
 let selectedActorId: string | null = null;
 let selectedLinkId: string | null = null;
 let currentScene: Scene = {
@@ -968,6 +977,120 @@ function updateAttachmentVisuals(): void {
   }
 }
 
+function syncRangefinderVisuals(sceneData: Scene): void {
+  const sensors = (sceneData.robotics?.articulations ?? [])
+    .flatMap((articulation) => articulation.sensors)
+    .filter((sensor) => sensor.sensor_type === 'rangefinder');
+  const signature = JSON.stringify(sensors);
+  if (signature === rangefinderRenderSignature) return;
+  for (const visual of rangefinderVisuals.values()) {
+    rangefinderGroup.remove(visual.line);
+    disposeObject(visual.line);
+  }
+  rangefinderVisuals.clear();
+  rangefinderRenderSignature = signature;
+  for (const sensor of sensors) {
+    const line = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(),
+        new THREE.Vector3(0, 0, sensor.max_distance ?? 1),
+      ]),
+      new THREE.LineBasicMaterial({
+        color: 0x73808c,
+        transparent: true,
+        opacity: 0.72,
+        depthTest: false,
+      }),
+    );
+    line.visible = false;
+    line.frustumCulled = false;
+    line.renderOrder = 7;
+    rangefinderGroup.add(line);
+    rangefinderVisuals.set(sensor.id, { line, sensor });
+  }
+}
+
+function updateRangefinderVisuals(): void {
+  const samples = new Map(
+    (simulationState?.sensors ?? [])
+      .filter((sensor) => sensor.sensor_type === 'rangefinder')
+      .map((sensor) => [sensor.id, sensor]),
+  );
+  const origin = new THREE.Vector3();
+  const endpoint = new THREE.Vector3();
+  const direction = new THREE.Vector3();
+  const sensorQuaternion = new THREE.Quaternion();
+  const parentQuaternion = new THREE.Quaternion();
+  for (const [sensorId, visual] of rangefinderVisuals.entries()) {
+    const parent = visual.sensor.link_id
+      ? robotLinkGroups.get(visual.sensor.link_id)
+      : null;
+    const transform = visual.sensor.local_transform;
+    const sample = samples.get(sensorId);
+    if (!simulationState || !parent || !transform || !sample) {
+      visual.line.visible = false;
+      continue;
+    }
+    parent.updateWorldMatrix(true, false);
+    origin.set(...transform.position).applyMatrix4(parent.matrixWorld);
+    sensorQuaternion.set(...transform.quaternion);
+    parent.getWorldQuaternion(parentQuaternion);
+    direction.set(0, 0, 1)
+      .applyQuaternion(sensorQuaternion)
+      .applyQuaternion(parentQuaternion)
+      .normalize();
+    endpoint.copy(origin).addScaledVector(direction, sample.distance);
+    const positions = visual.line.geometry.attributes.position;
+    positions.setXYZ(0, origin.x, origin.y, origin.z);
+    positions.setXYZ(1, endpoint.x, endpoint.y, endpoint.z);
+    positions.needsUpdate = true;
+    visual.line.material.color.set(
+      !sample.hit ? 0x73808c
+        : sample.distance < 0.7 ? 0xff4d4f
+          : sample.distance < 1.5 ? 0xffbf3f : 0x43d3a5,
+    );
+    visual.line.visible = true;
+  }
+}
+
+function syncNavigationVisual(sceneData: Scene): void {
+  const navigation = sceneData.simulation_config.navigation as {
+    route?: [number, number, number][];
+  } | undefined;
+  const route = navigation?.route ?? [];
+  const signature = JSON.stringify(route);
+  if (signature === navigationRenderSignature) return;
+  for (const child of [...navigationGroup.children]) {
+    navigationGroup.remove(child);
+    disposeObject(child);
+  }
+  navigationRenderSignature = signature;
+  if (route.length < 2) return;
+  const line = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(
+      route.map((point) => new THREE.Vector3(...point)),
+    ),
+    new THREE.LineBasicMaterial({
+      color: 0x44c7f4,
+      transparent: true,
+      opacity: 0.9,
+      depthTest: false,
+    }),
+  );
+  line.renderOrder = 6;
+  line.frustumCulled = false;
+  navigationGroup.add(line);
+  for (const point of route) {
+    const marker = new THREE.Mesh(
+      new THREE.SphereGeometry(0.055, 12, 8),
+      new THREE.MeshBasicMaterial({ color: 0x44c7f4, depthTest: false }),
+    );
+    marker.position.set(...point);
+    marker.renderOrder = 6;
+    navigationGroup.add(marker);
+  }
+}
+
 export function setViewportScene(sceneData: Scene): void {
   const previousActorIds = new Set(actorMeshes.keys());
   const retainedLinkId = selectedLinkId;
@@ -996,6 +1119,8 @@ export function setViewportScene(sceneData: Scene): void {
     if (!robotLinkGroups.has(linkId)) rotorAnimationStates.delete(linkId);
   }
   syncAttachmentVisuals(currentScene);
+  syncRangefinderVisuals(currentScene);
+  syncNavigationVisual(currentScene);
   selectViewportActor(selectedActorId, false);
   selectViewportLink(retainedLinkId);
   if (simulationState) applySimulationState(simulationState);
@@ -1083,8 +1208,16 @@ function updateHud(): void {
   const simText = simulationState ? ` | sim t=${simulationState.time.toFixed(3)}` : '';
   const deliveryTask = simulationState?.delivery_tasks?.[0];
   const taskText = deliveryTask ? ` | task ${deliveryTask.status.replace('_', ' ')}` : '';
+  const nearestRange = simulationState?.sensors
+    .filter((sensor): sensor is RangefinderSensorSample => (
+      sensor.sensor_type === 'rangefinder' && sensor.hit
+    ))
+    .reduce((nearest, sensor) => Math.min(nearest, sensor.distance), Number.POSITIVE_INFINITY);
+  const rangeText = nearestRange !== undefined && Number.isFinite(nearestRange)
+    ? ` | clearance ${nearestRange.toFixed(2)} m`
+    : '';
   requiredElement('#scene-name').textContent = currentScene.name;
-  requiredElement('#scene-stats').textContent = `${currentScene.actors.length} actors${simText}${taskText}`;
+  requiredElement('#scene-stats').textContent = `${currentScene.actors.length} actors${simText}${taskText}${rangeText}`;
   const colliderState = selected && colliderDebugVisible
     ? ` | ${actorIsDynamic(selected) ? 'Dynamic' : 'Static'} collider`
     : '';
@@ -1150,6 +1283,7 @@ export function applySimulationState(state: SimulationState | null): void {
     }
   }
   updateAttachmentVisuals();
+  updateRangefinderVisuals();
   updateSelectionOutline();
   updateHud();
 }
@@ -1311,6 +1445,7 @@ function animate(): void {
   orbitControls.update();
   updateColliderDebugMarkers();
   updateAttachmentVisuals();
+  updateRangefinderVisuals();
   updateSelectionOutline();
   renderer.render(scene, camera);
 }

@@ -19,6 +19,7 @@ from simlab.services.controller_runtime import (
     ControllerObservation,
     ControllerRunner,
     JointObservation,
+    RangefinderObservation,
     StepController,
 )
 from simlab.services.imu_sensors import ImuKinematics, ImuSensorSample, ImuSensorScheduler
@@ -33,9 +34,15 @@ from simlab.services.mjcf_exporter import (
     attachment_site_names,
     export_scene_to_mjcf,
     imu_sensor_channel_names,
+    rangefinder_sensor_name,
 )
 from simlab.services.mujoco_contact_adapter import MujocoContactAggregator
 from simlab.services.quadrotor_dynamics import quadrotor_models_from_scene
+from simlab.services.rangefinder_sensors import (
+    RangefinderMeasurement,
+    RangefinderSensorSample,
+    RangefinderSensorScheduler,
+)
 from simlab.services.trajectory_player import (
     JointTrajectoryPlayer,
     TrajectoryPlaybackState,
@@ -208,9 +215,12 @@ class SimulationState:
     actuators: list[ActuatorSimulationState] = field(default_factory=list)
     attachments: list[AttachmentSimulationState] = field(default_factory=list)
     delivery_tasks: list[DeliveryTaskSimulationState] = field(default_factory=list)
-    sensors: list[JointStateSensorSample | ImuSensorSample | ContactSensorSample] = field(
-        default_factory=list
-    )
+    sensors: list[
+        JointStateSensorSample
+        | ImuSensorSample
+        | ContactSensorSample
+        | RangefinderSensorSample
+    ] = field(default_factory=list)
     controller: ControllerSimulationState = field(default_factory=ControllerSimulationState)
     trajectory: TrajectoryPlaybackState = field(
         default_factory=lambda: TrajectoryPlaybackState(
@@ -284,7 +294,7 @@ class MuJoCoSimulationSession:
         self._sensor_types = {
             sensor.id: sensor.sensor_type
             for sensor in sensor_definitions
-            if sensor.sensor_type in {"joint_state", "imu", "contact"}
+            if sensor.sensor_type in {"joint_state", "imu", "contact", "rangefinder"}
         }
         self._sensor_ids = set(self._sensor_types)
         self._joint_state_sensors = JointStateSensorScheduler(
@@ -313,6 +323,14 @@ class MuJoCoSimulationSession:
             scene.robotics,
             float(self.model.opt.timestep),
         )
+        self._rangefinder_sensor_definitions = [
+            sensor for sensor in sensor_definitions if sensor.sensor_type == "rangefinder"
+        ]
+        self._rangefinder_sensors = RangefinderSensorScheduler(
+            self._rangefinder_sensor_definitions,
+            float(self.model.opt.timestep),
+        )
+        self._rangefinder_addresses = self._map_rangefinder_sensor_channels()
         self._physics_step_index = 0
         self._controller_runner = ControllerRunner(deadline=self._read_controller_deadline(scene))
         self._control_timeout = self._read_control_timeout(scene)
@@ -350,13 +368,22 @@ class MuJoCoSimulationSession:
                 float(self.data.time),
                 self._contact_aggregator.measurements(),
             )
+            emitted_rangefinder_sensors = self._rangefinder_sensors.capture(
+                self._physics_step_index,
+                float(self.data.time),
+                self._rangefinder_measurements(),
+            )
             if self._state_recorder.active:
                 recording_sensors: list[
-                    JointStateSensorSample | ImuSensorSample | ContactSensorSample
+                    JointStateSensorSample
+                    | ImuSensorSample
+                    | ContactSensorSample
+                    | RangefinderSensorSample
                 ] = [
                     *emitted_sensors,
                     *emitted_imu_sensors,
                     *emitted_contact_sensors,
+                    *emitted_rangefinder_sensors,
                 ]
                 self._state_recorder.capture(
                     self.state(),
@@ -495,13 +522,17 @@ class MuJoCoSimulationSession:
             engine_version=str(self._mujoco.__version__),
         )
         initial_sensor_samples: list[
-            JointStateSensorSample | ImuSensorSample | ContactSensorSample
+            JointStateSensorSample
+            | ImuSensorSample
+            | ContactSensorSample
+            | RangefinderSensorSample
         ] = []
         if math.isclose(float(self.data.time), 0.0, abs_tol=1e-12):
             initial_sensor_samples = [
                 *self._joint_state_sensors.latest_samples,
                 *self._imu_sensors.latest_samples,
                 *self._contact_sensors.latest_samples,
+                *self._rangefinder_sensors.latest_samples,
             ]
         self._state_recorder.capture(self.state(), initial_sensor_samples)
         return self.state()
@@ -560,6 +591,7 @@ class MuJoCoSimulationSession:
                 *self._joint_state_sensors.latest_samples,
                 *self._imu_sensors.latest_samples,
                 *self._contact_sensors.latest_samples,
+                *self._rangefinder_sensors.latest_samples,
             ],
             controller=ControllerSimulationState(
                 status=self._controller_status,
@@ -979,6 +1011,14 @@ class MuJoCoSimulationSession:
             actuators=actuators,
             bodies=bodies,
             attachments=self._attachment_observations(),
+            rangefinders={
+                sample.sensor_id: RangefinderObservation(
+                    distance=sample.distance,
+                    max_distance=sample.max_distance,
+                    hit=sample.hit,
+                )
+                for sample in self._rangefinder_sensors.latest_samples
+            },
         )
 
     def _joint_kinematics(self) -> dict[str, JointKinematics]:
@@ -1003,6 +1043,10 @@ class MuJoCoSimulationSession:
         self._contact_sensors.reset(
             float(self.data.time),
             self._contact_aggregator.measurements(),
+        )
+        self._rangefinder_sensors.reset(
+            float(self.data.time),
+            self._rangefinder_measurements(),
         )
 
     def _map_imu_sensor_channels(self) -> dict[str, tuple[int, int, int]]:
@@ -1056,6 +1100,38 @@ class MuJoCoSimulationSession:
                     float(linear_acceleration[1]),
                     float(linear_acceleration[2]),
                 ),
+            )
+        return result
+
+    def _map_rangefinder_sensor_channels(self) -> dict[str, int]:
+        result: dict[str, int] = {}
+        for sensor in self._rangefinder_sensor_definitions:
+            name = rangefinder_sensor_name(sensor.id)
+            sensor_index = self._mujoco.mj_name2id(
+                self.model,
+                self._mujoco.mjtObj.mjOBJ_SENSOR,
+                name,
+            )
+            if sensor_index < 0:
+                raise ValueError(f"MuJoCo rangefinder channel is missing: {name}")
+            dimension = int(self.model.sensor_dim[sensor_index])
+            if dimension != 1:
+                raise ValueError(
+                    f"MuJoCo rangefinder channel {name} has dimension {dimension}; expected 1"
+                )
+            result[sensor.id] = int(self.model.sensor_adr[sensor_index])
+        return result
+
+    def _rangefinder_measurements(self) -> dict[str, RangefinderMeasurement]:
+        result: dict[str, RangefinderMeasurement] = {}
+        for sensor in self._rangefinder_sensor_definitions:
+            if sensor.max_distance is None:
+                raise ValueError(f"Rangefinder max_distance is missing: {sensor.id}")
+            raw_distance = float(self.data.sensordata[self._rangefinder_addresses[sensor.id]])
+            hit = 0.0 <= raw_distance <= sensor.max_distance
+            result[sensor.id] = RangefinderMeasurement(
+                distance=raw_distance if hit else sensor.max_distance,
+                hit=hit,
             )
         return result
 
