@@ -39,6 +39,8 @@ def test_obstacle_delivery_uses_range_data_and_completes(tmp_path: Path) -> None
     rangefinders = [sensor for sensor in sensors if sensor.sensor_type == "rangefinder"]
     assert len(rangefinders) == 12
     assert all(sensor.max_distance == 4.0 for sensor in rangefinders)
+    assert scene.simulation_config["controller_deadline"] == 0.02
+    assert scene.simulation_config["controller_reset_deadline"] == 0.2
     assert scene.simulation_config["navigation"]["route"] == [
         [x, y, 1.5] for x, y in plan_route((0.0, 0.0), (4.0, 3.0))
     ]

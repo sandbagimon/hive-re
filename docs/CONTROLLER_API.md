@@ -71,9 +71,11 @@ Controller lifecycle:
   disable later callbacks. Physics stepping continues.
 - `detach_controller()` is required before manual joint commands or trajectory playback.
 
-Set `simulation_config.controller_deadline` to a positive number of seconds to enforce a per-call
-deadline. This is elapsed-time detection, not thread preemption: an overrun is detected after the user
-callback returns, its action is discarded, and later callbacks are disabled.
+Set `simulation_config.controller_deadline` to a positive number of seconds to enforce a per-step
+deadline. Controller `reset()` is initialization work and has a separate optional
+`simulation_config.controller_reset_deadline`; when it is omitted, reset duration is not limited. These
+are elapsed-time checks, not thread preemption: an overrun is detected after the user callback returns,
+its action is discarded, and later callbacks are disabled.
 
 Project controller files define a no-argument factory:
 

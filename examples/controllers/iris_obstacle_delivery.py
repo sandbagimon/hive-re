@@ -3,7 +3,7 @@ from __future__ import annotations
 import heapq
 import math
 
-from examples.controllers.iris_payload_delivery import (
+from simlab.controllers.iris_payload_delivery import (
     ATTACHMENT_ID,
     CRUISE_HEIGHT,
     DROPOFF,

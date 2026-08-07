@@ -137,6 +137,53 @@ def test_controller_runner_disables_step_that_exceeds_deadline() -> None:
     assert "deadline exceeded" in (runner.state.message or "")
 
 
+def test_controller_runner_uses_a_separate_reset_deadline() -> None:
+    values = iter([10.0, 10.025, 20.0, 20.005])
+
+    class SlowResetController:
+        def reset(self, observation: ControllerObservation) -> None:
+            pass
+
+        def step(self, observation: ControllerObservation) -> None:
+            return None
+
+    runner = ControllerRunner(
+        deadline=0.01,
+        reset_deadline=0.05,
+        clock=lambda: next(values),
+    )
+    runner.attach(SlowResetController())
+
+    assert runner.reset(_observation()) is True
+    assert runner.step(_observation()) is None
+    assert runner.state.status == "active"
+    assert runner.state.step_count == 1
+    assert runner.state.deadline == pytest.approx(0.01)
+    assert runner.state.reset_deadline == pytest.approx(0.05)
+
+
+def test_controller_runner_faults_when_reset_exceeds_its_own_deadline() -> None:
+    values = iter([10.0, 10.025])
+
+    class SlowResetController:
+        def reset(self, observation: ControllerObservation) -> None:
+            pass
+
+        def step(self, observation: ControllerObservation) -> None:
+            return None
+
+    runner = ControllerRunner(
+        deadline=0.01,
+        reset_deadline=0.02,
+        clock=lambda: next(values),
+    )
+    runner.attach(SlowResetController())
+
+    assert runner.reset(_observation()) is False
+    assert runner.state.status == "fault"
+    assert "reset deadline exceeded" in (runner.state.message or "")
+
+
 @pytest.mark.parametrize("value", [float("nan"), float("inf")])
 def test_controller_contract_rejects_non_finite_values(value: float) -> None:
     with pytest.raises(ValueError, match="finite"):

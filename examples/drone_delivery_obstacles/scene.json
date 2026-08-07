@@ -531,6 +531,7 @@
     "air_viscosity": 1.8e-05,
     "controller_deadline": 0.02,
     "max_catch_up_steps": 32,
+    "controller_reset_deadline": 0.2,
     "navigation": {
       "route": [
         [

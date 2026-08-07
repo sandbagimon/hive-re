@@ -159,6 +159,7 @@ class ControllerSimulationState:
     step_count: int = 0
     last_duration: float | None = None
     deadline: float | None = None
+    reset_deadline: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -171,6 +172,7 @@ class ControllerSimulationState:
             "step_count": self.step_count,
             "last_duration": self.last_duration,
             "deadline": self.deadline,
+            "reset_deadline": self.reset_deadline,
         }
 
 
@@ -332,7 +334,10 @@ class MuJoCoSimulationSession:
         )
         self._rangefinder_addresses = self._map_rangefinder_sensor_channels()
         self._physics_step_index = 0
-        self._controller_runner = ControllerRunner(deadline=self._read_controller_deadline(scene))
+        self._controller_runner = ControllerRunner(
+            deadline=self._read_controller_deadline(scene),
+            reset_deadline=self._read_controller_reset_deadline(scene),
+        )
         self._control_timeout = self._read_control_timeout(scene)
         self._controller_status = "ready"
         self._controller_message: str | None = None
@@ -603,6 +608,7 @@ class MuJoCoSimulationSession:
                 step_count=self._controller_runner.state.step_count,
                 last_duration=self._controller_runner.state.last_duration,
                 deadline=self._controller_runner.state.deadline,
+                reset_deadline=self._controller_runner.state.reset_deadline,
             ),
             trajectory=self._trajectory_player.state(float(self.data.time)),
             recording=self._recording_state(),
@@ -1247,6 +1253,18 @@ class MuJoCoSimulationSession:
         value = float(raw_value)
         if not math.isfinite(value) or value <= 0:
             raise ValueError("simulation_config.controller_deadline must be finite and > 0")
+        return value
+
+    @staticmethod
+    def _read_controller_reset_deadline(scene: Scene) -> float | None:
+        raw_value = scene.simulation_config.get("controller_reset_deadline")
+        if raw_value is None:
+            return None
+        value = float(raw_value)
+        if not math.isfinite(value) or value <= 0:
+            raise ValueError(
+                "simulation_config.controller_reset_deadline must be finite and > 0"
+            )
         return value
 
     @staticmethod

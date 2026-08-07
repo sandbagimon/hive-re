@@ -64,6 +64,7 @@ def create_obstacle_delivery_scene():
         {
             "duration": 42.0,
             "wind": [0.1, -0.08, 0.0],
+            "controller_reset_deadline": 0.2,
             "navigation": {
                 "route": [
                     [x, y, 1.5] for x, y in plan_route((0.0, 0.0), (4.0, 3.0))

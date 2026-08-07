@@ -158,6 +158,7 @@ class ControllerRunnerState:
     step_count: int
     last_duration: float | None
     deadline: float | None
+    reset_deadline: float | None
 
 
 Clock = Callable[[], float]
@@ -170,11 +171,17 @@ class ControllerRunner:
         self,
         *,
         deadline: float | None = None,
+        reset_deadline: float | None = None,
         clock: Clock = time.perf_counter,
     ) -> None:
         if deadline is not None and (not math.isfinite(deadline) or deadline <= 0):
             raise ValueError("Controller deadline must be finite and > 0")
+        if reset_deadline is not None and (
+            not math.isfinite(reset_deadline) or reset_deadline <= 0
+        ):
+            raise ValueError("Controller reset deadline must be finite and > 0")
         self.deadline = deadline
+        self.reset_deadline = reset_deadline
         self.clock = clock
         self._controller: StepController | None = None
         self._name: str | None = None
@@ -200,6 +207,7 @@ class ControllerRunner:
             step_count=self._step_count,
             last_duration=self._last_duration,
             deadline=self.deadline,
+            reset_deadline=self.reset_deadline,
         )
 
     def attach(self, controller: StepController, *, name: str | None = None) -> None:
@@ -238,7 +246,11 @@ class ControllerRunner:
             return False
         duration = max(0.0, self.clock() - started)
         self._last_duration = duration
-        if self._deadline_exceeded(duration):
+        if self._deadline_exceeded(
+            duration,
+            deadline=self.reset_deadline,
+            label="Controller reset deadline",
+        ):
             return False
         self._status = "ready"
         self._message = None
@@ -259,19 +271,27 @@ class ControllerRunner:
             return None
         duration = max(0.0, self.clock() - started)
         self._last_duration = duration
-        if self._deadline_exceeded(duration):
+        if self._deadline_exceeded(
+            duration,
+            deadline=self.deadline,
+            label="Controller deadline",
+        ):
             return None
         self._step_count += 1
         self._status = "active"
         self._message = None
         return action
 
-    def _deadline_exceeded(self, duration: float) -> bool:
-        if self.deadline is None or duration <= self.deadline:
+    def _deadline_exceeded(
+        self,
+        duration: float,
+        *,
+        deadline: float | None,
+        label: str,
+    ) -> bool:
+        if deadline is None or duration <= deadline:
             return False
-        self._fault(
-            f"Controller deadline exceeded: {duration:.6f}s > {self.deadline:.6f}s"
-        )
+        self._fault(f"{label} exceeded: {duration:.6f}s > {deadline:.6f}s")
         return True
 
     def _fault(self, message: str) -> None:

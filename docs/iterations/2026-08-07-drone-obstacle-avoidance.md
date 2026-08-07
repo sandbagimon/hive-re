@@ -19,6 +19,10 @@ MuJoCo 适配器解耦，并交付可从浏览器运行的完整示例。
 - 新增 A* 障碍膨胀/路线简化、rangefinder 局部排斥与沿墙保护、原有物理抓取/释放状态机。
 - 前端 Sensor Inspector 显示 distance/hit，视口绘制 A* 路线并实时显示按安全距离着色的射线，
   HUD 显示最近 clearance。
+- 将 Controller 初始化和逐帧实时控制的截止时间分离，避免 A* 初始化在服务器瞬时负载下被误判
+  为逐帧超时；浏览器回归覆盖加载、12 路测距和起飞运行状态。
+- 将 Iris 运货基础控制器提升到 `simlab.controllers`，消除上传脚本对仓库 `examples` 包的隐式
+  依赖，确保隔离项目与安装部署环境可加载。
 
 ## 验证
 
@@ -26,6 +30,8 @@ MuJoCo 适配器解耦，并交付可从浏览器运行的完整示例。
 - 障碍配送端到端 MuJoCo 测试：15,000 physics steps 内任务 `completed`，局部避障触发，最小
   测距大于 `0.35 m`，货物落在 B 点容差内。
 - Python lint、TypeScript typecheck、frontend unit/build 验证。
+- 浏览器隔离部署回归通过：避障 Controller 加载后为 `ready`，运行后保持 `active` 并完成起飞；
+  原有无障碍 A→B 浏览器运货验收继续通过。
 
 ## 已知限制
 

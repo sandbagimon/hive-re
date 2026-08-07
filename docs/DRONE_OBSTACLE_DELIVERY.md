@@ -25,6 +25,11 @@ three.js 只显示仿真状态与射线，不参与物理或控制计算。
 3. 在 Controller 面板加载 [`examples/controllers/iris_obstacle_delivery.py`](../examples/controllers/iris_obstacle_delivery.py)。
 4. 点击 **Run**，可切换 `2x` 加速。
 
+场景为逐帧控制保留 `20 ms` 截止时间，并为包含 A* 规划的 Controller `reset()` 单独提供
+`200 ms` 初始化预算；初始化时的路径规划不会再因瞬时服务器负载误触发逐帧超时。
+通用的 Iris 抓取、轨迹和飞控逻辑位于 `simlab.controllers.iris_payload_delivery`，上传的避障
+Controller 不依赖仓库内的 `examples` Python 包，因此在远程服务器和隔离项目目录中也能加载。
+
 预期过程是预转、起飞、A 点抓取、负载爬升、绕过中央红色高墙、B 点下降释放、退离并悬停。
 HUD 最终显示 `task completed`。视口用青色显示 A* 路线，射线按距离显示为绿色、黄色或红色；HUD 同时显示当前
 最近障碍距离。选择 Scene Tree 下的任一 Range Sensor，可在 Inspector 查看实时距离、命中状态、

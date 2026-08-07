@@ -229,6 +229,59 @@ test('Iris physically picks up and delivers a payload from A to B', async ({ pag
   });
 });
 
+test('obstacle-aware Iris controller initializes and runs in the browser', async ({ page }) => {
+  test.setTimeout(45_000);
+  await configureApi(page);
+  await page.goto('/');
+  await expect(page.locator('#asset-list')).toContainText('Pegasus Iris Quadcopter', {
+    timeout: 10_000,
+  });
+
+  const openChooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await (await openChooser).setFiles('examples/drone_delivery_obstacles/scene.json');
+  await expect(page.locator('#project-label'))
+    .toContainText('Iris Obstacle-Aware Payload Delivery');
+
+  await page.locator('[data-actor-row]').filter({ hasText: 'Pegasus Iris Quadcopter' }).click();
+  page.once('dialog', (dialog) => dialog.accept());
+  const controllerResponse = page.waitForResponse((response) => (
+    response.url().endsWith('/controller')
+      && response.request().method() === 'POST'
+  ));
+  const controllerChooser = page.waitForEvent('filechooser');
+  await page.locator('[data-controller-command="load"]').click();
+  await (await controllerChooser).setFiles('examples/controllers/iris_obstacle_delivery.py');
+  const controllerResult = await controllerResponse;
+  expect(controllerResult.ok()).toBe(true);
+  const controllerPayload = await controllerResult.json();
+  expect(controllerPayload.ok, controllerPayload.error).toBe(true);
+  await expect(page.locator('[data-controller-name]'))
+    .toHaveText('Iris Obstacle-Aware Payload Delivery', { timeout: 20_000 });
+
+  const loaded = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
+  expect(loaded.simulationState.controller.status).toBe('ready');
+  expect(loaded.simulationState.controller.deadline).toBe(0.02);
+  expect(loaded.simulationState.controller.reset_deadline).toBe(0.2);
+  expect(loaded.simulationState.sensors.filter(
+    (sample) => sample.sensor_type === 'rangefinder',
+  )).toHaveLength(12);
+
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await page.locator('[data-simulation-speed="2"]').click();
+  await expect.poll(async () => {
+    const state = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
+    return state.simulationState?.time ?? 0;
+  }, { timeout: 30_000, intervals: [250, 500, 1000] }).toBeGreaterThan(3);
+
+  const runtime = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
+  expect(runtime.simulationState.controller.status).toBe('active');
+  expect(runtime.simulationState.controller.message).toBeNull();
+  expect(runtime.simulationState.controller.step_count).toBeGreaterThan(1_000);
+  expect(runtime.simulationState.actors.find((item) => item.id === 'actor_002').position[2])
+    .toBeGreaterThan(0.5);
+});
+
 test('frontend recovers shared assets when the API starts after the page', async ({ page }) => {
   await configureApi(page);
   const apiPattern = `${apiBaseUrl}/api/v1/**`;

@@ -367,6 +367,7 @@ export interface ControllerSimulationState {
   step_count: number;
   last_duration: number | null;
   deadline: number | null;
+  reset_deadline: number | null;
 }
 
 export interface TrajectorySimulationState {
