@@ -37,3 +37,6 @@
 - 在线地图是二维局部占用栅格，不包含 SLAM 定位或三维点云。
 - 观测采用 TTL 处理移动障碍，尚未估计速度或预测未来轨迹。
 - 先验静态地图仍属于任务 Controller 配置；通用 engine-neutral map/collision-query 服务尚未交付。
+
+后续画面与任务标识改进见
+[`2026-08-10-drone-scene-visual-upgrade.md`](2026-08-10-drone-scene-visual-upgrade.md)。

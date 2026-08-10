@@ -10,3 +10,11 @@ declare module '*OrbitControls.js' {
 declare module '*TransformControls.js' {
   export const TransformControls: any;
 }
+
+declare module '*GLTFLoader.js' {
+  export const GLTFLoader: any;
+}
+
+declare module '*RGBELoader.js' {
+  export const RGBELoader: any;
+}

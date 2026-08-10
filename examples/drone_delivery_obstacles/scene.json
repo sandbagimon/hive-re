@@ -28,14 +28,14 @@
       "properties": {
         "primitive": "box",
         "size": [
-          7.0,
-          6.0,
+          4.25,
+          3.25,
           0.05
         ],
         "rgba": [
-          0.5,
-          0.55,
-          0.6,
+          0.27,
+          0.34,
+          0.38,
           1.0
         ],
         "physics": {
@@ -59,7 +59,8 @@
             0.5,
             2.0
           ]
-        }
+        },
+        "visual_style": "operations_ground"
       }
     },
     {
@@ -164,7 +165,7 @@
     },
     {
       "id": "actor_003",
-      "name": "Delivery Payload",
+      "name": "Insulated Takeout Bag",
       "type": "object",
       "asset_id": "primitive_box",
       "transform": {
@@ -192,14 +193,14 @@
           0.11
         ],
         "rgba": [
-          0.71,
-          0.45,
-          0.23,
+          0.13,
+          0.14,
+          0.15,
           1.0
         ],
         "physics": {
           "dynamic": true,
-          "material": "wood",
+          "material": "rubber",
           "mass_mode": "mass",
           "mass": 0.35,
           "friction": [
@@ -219,7 +220,7 @@
             2.0
           ]
         },
-        "visual_style": "shipping_package"
+        "visual_style": "insulated_delivery_bag"
       }
     },
     {
@@ -278,7 +279,8 @@
             0.5,
             2.0
           ]
-        }
+        },
+        "visual_style": "landing_pad_pickup"
       }
     },
     {
@@ -337,7 +339,8 @@
             0.5,
             2.0
           ]
-        }
+        },
+        "visual_style": "landing_pad_dropoff"
       }
     },
     {
@@ -395,6 +398,33 @@
             0.001,
             0.5,
             2.0
+          ]
+        },
+        "visual_style": "known_obstacle",
+        "visual_model": {
+          "url": "./models/polyhaven/concrete_road_barrier_02/concrete_road_barrier_02_2k.gltf",
+          "source_url": "https://polyhaven.com/a/concrete_road_barrier_02",
+          "license": "CC0-1.0",
+          "author": "Amal Kumar",
+          "resolution": "2K",
+          "instances": [
+            {
+              "position": [
+                0.0,
+                0.0,
+                -0.6
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0.0,
+                1.5707963267948966
+              ],
+              "size": [
+                0.5,
+                1.6,
+                1.2
+              ]
+            }
           ]
         }
       }
@@ -455,6 +485,50 @@
             0.5,
             2.0
           ]
+        },
+        "visual_style": "unmapped_obstacle",
+        "visual_model": {
+          "url": "./models/polyhaven/barrel_03/barrel_03_2k.gltf",
+          "source_url": "https://polyhaven.com/a/barrel_03",
+          "license": "CC0-1.0",
+          "author": "Serhii Khromov",
+          "resolution": "2K",
+          "instances": [
+            {
+              "position": [
+                0.0,
+                0.0,
+                -0.6
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0.0,
+                0.0
+              ],
+              "size": [
+                0.44,
+                0.44,
+                1.2
+              ]
+            },
+            {
+              "position": [
+                0.0,
+                0.0,
+                0.6
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0.0,
+                0.0
+              ],
+              "size": [
+                0.44,
+                0.44,
+                1.2
+              ]
+            }
+          ]
         }
       }
     },
@@ -514,6 +588,50 @@
             0.5,
             2.0
           ]
+        },
+        "visual_style": "safety_pillar",
+        "visual_model": {
+          "url": "./models/polyhaven/barrel_03/barrel_03_2k.gltf",
+          "source_url": "https://polyhaven.com/a/barrel_03",
+          "license": "CC0-1.0",
+          "author": "Serhii Khromov",
+          "resolution": "2K",
+          "instances": [
+            {
+              "position": [
+                0.0,
+                0.0,
+                -0.45
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0.0,
+                0.0
+              ],
+              "size": [
+                0.56,
+                0.56,
+                0.9
+              ]
+            },
+            {
+              "position": [
+                0.0,
+                0.0,
+                0.45
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0.0,
+                0.0
+              ],
+              "size": [
+                0.56,
+                0.56,
+                0.9
+              ]
+            }
+          ]
         }
       }
     },
@@ -572,6 +690,50 @@
             0.001,
             0.5,
             2.0
+          ]
+        },
+        "visual_style": "safety_pillar",
+        "visual_model": {
+          "url": "./models/polyhaven/barrel_03/barrel_03_2k.gltf",
+          "source_url": "https://polyhaven.com/a/barrel_03",
+          "license": "CC0-1.0",
+          "author": "Serhii Khromov",
+          "resolution": "2K",
+          "instances": [
+            {
+              "position": [
+                0.0,
+                0.0,
+                -0.45
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0.0,
+                0.0
+              ],
+              "size": [
+                0.56,
+                0.56,
+                0.9
+              ]
+            },
+            {
+              "position": [
+                0.0,
+                0.0,
+                0.45
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0.0,
+                0.0
+              ],
+              "size": [
+                0.56,
+                0.56,
+                0.9
+              ]
+            }
           ]
         }
       }

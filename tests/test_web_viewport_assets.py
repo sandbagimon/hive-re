@@ -13,10 +13,28 @@ def test_typescript_editor_assets_are_an_independent_frontend() -> None:
     assert (root / "ts" / "viewport.ts").exists()
     assert (root / "ts" / "geometry-contract.ts").exists()
     assert (root / "ts" / "geometry-bundle.ts").exists()
+    assert (root / "ts" / "procedural-materials.ts").exists()
+    assert (root / "ts" / "pbr-model-loader.ts").exists()
+    assert (root / "ts" / "photographic-environment.ts").exists()
     assert (generated / "app.js").exists()
     assert (generated / "viewport.js").exists()
+    assert (generated / "procedural-materials.js").exists()
+    assert (generated / "pbr-model-loader.js").exists()
+    assert (generated / "photographic-environment.js").exists()
     assert Path("frontend/public/simlab-config.json").exists()
     assert Path("frontend/public/docs/viewport-controls.html").exists()
+    assert Path("frontend/public/textures/delivery-bag-oxford-albedo.png").exists()
+    assert Path(
+        "frontend/public/models/polyhaven/concrete_road_barrier_02/"
+        "concrete_road_barrier_02_2k.gltf"
+    ).exists()
+    assert Path(
+        "frontend/public/models/polyhaven/barrel_03/barrel_03_2k.gltf"
+    ).exists()
+    assert Path(
+        "frontend/public/environments/polyhaven/"
+        "abandoned_hopper_terminal_03_1k.hdr"
+    ).exists()
     assert (root / "vendor" / "three.module.js").exists()
     assert (root / "vendor" / "THREE_LICENSE.txt").exists()
 
@@ -150,6 +168,44 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "delivery_tasks" in viewport
     assert "navigationRouteRevision" in viewport
     assert "replan_count" in types
+    assert "renderer.shadowMap.enabled = true" in viewport
+    assert "THREE.PCFSoftShadowMap" in viewport
+    assert "addActorVisualDetails" in viewport
+    assert "addInsulatedDeliveryBagDetails" in viewport
+    assert "delivery-bag-oxford-albedo.png" in viewport
+    assert "roundedRectangleGeometry" in viewport
+    assert "new THREE.TubeGeometry" in viewport
+    assert "landingPadTexture" in viewport
+    assert "operationsDeckTexture" in viewport
+    assert "navigationPulse" in viewport
+    assert "ActorVisualStyle" in types
+    assert "createProceduralEnvironmentTexture" in viewport
+    assert "applyProceduralSurface" in viewport
+    assert "new THREE.MeshPhysicalMaterial" in viewport
+    assert "createFittedPbrVisual" in viewport
+    assert "addConstructionFenceExtension" in viewport
+    assert "loadPhotographicEnvironment" in viewport
+    assert "photorealObstacleStatus" in viewport
+    assert "photographicEnvironment" in viewport
+    assert "visual_model" in types
+    pbr_model_loader = (root / "ts" / "pbr-model-loader.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "GLTFLoader" in pbr_model_loader
+    assert "modelCache" in pbr_model_loader
+    assert "instance.size" in pbr_model_loader
+    photographic_environment = (
+        root / "ts" / "photographic-environment.ts"
+    ).read_text(encoding="utf-8")
+    assert "RGBELoader" in photographic_environment
+    assert "EquirectangularReflectionMapping" in photographic_environment
+    procedural_materials = (root / "ts" / "procedural-materials.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "ProceduralSurfaceKind" in procedural_materials
+    assert "material.bumpMap" in procedural_materials
+    assert "material.roughnessMap" in procedural_materials
+    assert "THREE.EquirectangularReflectionMapping" in procedural_materials
     assert "function clearActors" not in viewport
     assert "sceneRevision" not in viewport
 

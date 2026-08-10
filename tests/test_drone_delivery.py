@@ -14,9 +14,15 @@ def test_delivery_scene_is_valid_and_controller_completes_physical_transport(tmp
     pytest.importorskip("mujoco")
     scene = create_delivery_scene()
     validate_scene(scene)
+    actors = {actor.id: actor for actor in scene.actors}
     payload = next(item for item in scene.actors if item.id == "actor_003")
     attachment = scene.attachments[0]
-    assert payload.properties["visual_style"] == "shipping_package"
+    assert actors["actor_001"].properties["visual_style"] == "operations_ground"
+    assert actors["actor_004"].properties["visual_style"] == "landing_pad_pickup"
+    assert actors["actor_005"].properties["visual_style"] == "landing_pad_dropoff"
+    assert payload.name == "Insulated Takeout Bag"
+    assert payload.properties["visual_style"] == "insulated_delivery_bag"
+    assert payload.properties["physics"]["material"] == "rubber"
     assert payload.properties["physics"]["mass"] == pytest.approx(0.35)
     assert attachment.constraint_type == "weld"
     assert attachment.gripper is not None

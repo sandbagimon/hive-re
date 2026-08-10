@@ -126,13 +126,16 @@ Python controllers can attach to a MuJoCo session through an immutable per-step 
 Quadrotors use named rotor actuators and an engine-neutral quadratic thrust profile. The bundled Pegasus Iris can be driven through Python Controller, REST/Bridge, Gymnasium, or the existing gRPC data plane. See [`docs/QUADROTOR_CONTROL.md`](docs/QUADROTOR_CONTROL.md).
 
 The bundled Iris A→B delivery scene performs a real MuJoCo pickup: a cascaded flight controller approaches
-the payload, a contact/proximity/speed-gated attachment carries its physical mass, and a task monitor only
-completes after the released payload settles at B. See [`docs/DRONE_DELIVERY.md`](docs/DRONE_DELIVERY.md).
+the high-fidelity insulated takeout bag, a contact/proximity/speed-gated attachment carries its physical mass,
+and a task monitor only completes after the released payload settles at B. See
+[`docs/DRONE_DELIVERY.md`](docs/DRONE_DELIVERY.md).
 
 The obstacle-aware variant adds 12 fixed-rate MuJoCo rangefinders, a TTL-based live occupancy grid,
 frame-budgeted incremental A* replanning, safe hover/retry behavior, and a sensor-driven local safety layer.
 The browser renders live color-coded rays, navigation status, replan count, and the latest route while the
-same physical pickup/drop-off task discovers an unmapped obstacle and completes around it. See
+same physical pickup/drop-off task discovers an unmapped obstacle and completes around it. Its Web viewport
+uses CC0 2K Poly Haven glTF obstacles, photographic HDR image-based lighting, ACES tone mapping, and soft
+shadows while MuJoCo retains deterministic low-cost collision proxies. See
 [`docs/DRONE_OBSTACLE_DELIVERY.md`](docs/DRONE_OBSTACLE_DELIVERY.md).
 
 Training algorithms use a separate Gymnasium data plane. `SimLabEnv` composes an engine-neutral backend contract, a robot adapter, and a task, and can switch between an in-process `MujocoBackend` and an atomic gRPC backend without changing task or algorithm code. Install `.[algorithm]` for local training or `.[algorithm,remote]` for gRPC. See [`docs/ALGORITHM_BACKEND_DECOUPLING.md`](docs/ALGORITHM_BACKEND_DECOUPLING.md).

@@ -28,14 +28,14 @@
       "properties": {
         "primitive": "box",
         "size": [
-          7.0,
-          6.0,
+          4.25,
+          3.25,
           0.05
         ],
         "rgba": [
-          0.5,
-          0.55,
-          0.6,
+          0.27,
+          0.34,
+          0.38,
           1.0
         ],
         "physics": {
@@ -59,7 +59,8 @@
             0.5,
             2.0
           ]
-        }
+        },
+        "visual_style": "operations_ground"
       }
     },
     {
@@ -164,7 +165,7 @@
     },
     {
       "id": "actor_003",
-      "name": "Delivery Payload",
+      "name": "Insulated Takeout Bag",
       "type": "object",
       "asset_id": "primitive_box",
       "transform": {
@@ -192,14 +193,14 @@
           0.11
         ],
         "rgba": [
-          0.71,
-          0.45,
-          0.23,
+          0.13,
+          0.14,
+          0.15,
           1.0
         ],
         "physics": {
           "dynamic": true,
-          "material": "wood",
+          "material": "rubber",
           "mass_mode": "mass",
           "mass": 0.35,
           "friction": [
@@ -219,7 +220,7 @@
             2.0
           ]
         },
-        "visual_style": "shipping_package"
+        "visual_style": "insulated_delivery_bag"
       }
     },
     {
@@ -278,7 +279,8 @@
             0.5,
             2.0
           ]
-        }
+        },
+        "visual_style": "landing_pad_pickup"
       }
     },
     {
@@ -337,7 +339,8 @@
             0.5,
             2.0
           ]
-        }
+        },
+        "visual_style": "landing_pad_dropoff"
       }
     }
   ],

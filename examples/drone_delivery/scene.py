@@ -25,6 +25,7 @@ def _box(
     mass: float = 1.0,
     rgba: list[float] | None = None,
     visual_style: str | None = None,
+    physics_material: str | None = None,
 ) -> Actor:
     properties = {
         "primitive": "box",
@@ -32,7 +33,7 @@ def _box(
         "rgba": rgba or [0.5, 0.55, 0.6, 1.0],
         "physics": {
             "dynamic": dynamic,
-            "material": "wood" if dynamic else "default",
+            "material": physics_material or ("wood" if dynamic else "default"),
             "mass_mode": "mass",
             "mass": mass,
             "friction": (
@@ -88,7 +89,15 @@ def create_delivery_scene() -> Scene:
     return Scene(
         name="Iris A-to-B Physical Delivery",
         actors=[
-            _box("actor_001", "Ground", [1.0, 1.0, -0.05], [7.0, 6.0, 0.05], dynamic=False),
+            _box(
+                "actor_001",
+                "Ground",
+                [1.0, 1.0, -0.05],
+                [4.25, 3.25, 0.05],
+                dynamic=False,
+                rgba=[0.27, 0.34, 0.38, 1.0],
+                visual_style="operations_ground",
+            ),
             Actor(
                 id="actor_002",
                 name="Pegasus Iris Quadcopter",
@@ -99,13 +108,14 @@ def create_delivery_scene() -> Scene:
             ),
             _box(
                 "actor_003",
-                "Delivery Payload",
+                "Insulated Takeout Bag",
                 [0.0, 0.0, 0.16],
                 [0.18, 0.14, 0.11],
                 dynamic=True,
                 mass=0.35,
-                rgba=[0.71, 0.45, 0.23, 1.0],
-                visual_style="shipping_package",
+                rgba=[0.13, 0.14, 0.15, 1.0],
+                visual_style="insulated_delivery_bag",
+                physics_material="rubber",
             ),
             _box(
                 "actor_004",
@@ -114,6 +124,7 @@ def create_delivery_scene() -> Scene:
                 [0.75, 0.75, 0.025],
                 dynamic=False,
                 rgba=[0.18, 0.55, 0.9, 1.0],
+                visual_style="landing_pad_pickup",
             ),
             _box(
                 "actor_005",
@@ -122,6 +133,7 @@ def create_delivery_scene() -> Scene:
                 [0.75, 0.75, 0.025],
                 dynamic=False,
                 rgba=[0.2, 0.75, 0.35, 1.0],
+                visual_style="landing_pad_dropoff",
             ),
         ],
         robotics=robotics,

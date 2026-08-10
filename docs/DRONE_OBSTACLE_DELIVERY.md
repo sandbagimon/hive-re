@@ -31,11 +31,28 @@ three.js 只显示仿真状态与射线，不参与物理或控制计算。
 通用的 Iris 抓取、轨迹和飞控逻辑位于 `simlab.controllers.iris_payload_delivery`，上传的避障
 Controller 不依赖仓库内的 `examples` Python 包，因此在远程服务器和隔离项目目录中也能加载。
 
-预期过程是预转、起飞、A 点抓取、负载爬升、按先验路线绕过中央红色高墙、发现先验地图中没有
-记录的紫色柱体、悬停并实时重规划，然后绕行至 B 点下降释放。HUD 最终显示 `task completed`。
+预期过程是预转、起飞、A 点抓取、负载爬升、按先验路线绕过中央混凝土路障、发现先验地图中
+没有记录的桶形障碍、悬停并实时重规划，然后绕行至 B 点下降释放。HUD 最终显示
+`task completed`。
 视口路线在跟随时为青色、规划时为黄色、阻塞时为红色、完成时为绿色；HUD 显示最近障碍距离、
 导航状态和重规划次数。选择 Scene Tree 下的任一 Range Sensor，可在 Inspector 查看实时距离、
 命中状态、时间戳和序列号。
+
+示例的 `visual_style` 和 `visual_model` 只影响 three.js 表现，不参与 MuJoCo 碰撞：作业甲板使用带
+颜色、bump 和 roughness map 的程序化混凝土，货物使用带高清 Oxford 编织布贴图的保温外卖袋，
+A/B 起降点使用带清漆层的环氧涂层。四个障碍物使用 Poly Haven CC0 的 2K glTF/PBR 实景资产：
+中央障碍使用落地风化混凝土路障与上方金属施工围栏，未建图柱体和安全柱由锈蚀钢桶组成；其
+透明 primitive proxy
+继续负责选择、碰撞调试和 MuJoCo 物理。模型加载失败时会自动退回原有程序化障碍物，不会产生
+不可见碰撞体。
+
+编辑器使用 Poly Haven `Abandoned Hopper Terminal 03` 的 1K 摄影 HDRI 提供真实环境漫射和
+反射，并保留程序化天空作为可见背景；配合 ACES tone mapping、柔和阴影、接触阴影和 PMREM，
+实现适合实时 Web 视口的摄影级 PBR。实时路线仍使用立体线段和脉冲航点。OpenUSD 资产的作者态
+PBR 贴图继续优先，不会被 primitive 材质覆盖。资产来源、作者、许可和校验值记录在
+[`frontend/public/models/polyhaven/README.md`](../frontend/public/models/polyhaven/README.md)
+以及
+[`frontend/public/environments/polyhaven/README.md`](../frontend/public/environments/polyhaven/README.md)。
 
 ## 控制链路
 

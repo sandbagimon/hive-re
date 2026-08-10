@@ -229,8 +229,8 @@ test('Iris physically picks up and delivers a payload from A to B', async ({ pag
   });
 });
 
-test('obstacle-aware Iris controller initializes and runs in the browser', async ({ page }) => {
-  test.setTimeout(75_000);
+test('obstacle-aware Iris controller initializes and runs in the browser', async ({ page }, testInfo) => {
+  test.setTimeout(180_000);
   await configureApi(page);
   await page.goto('/');
   await expect(page.locator('#asset-list')).toContainText('Pegasus Iris Quadcopter', {
@@ -241,9 +241,46 @@ test('obstacle-aware Iris controller initializes and runs in the browser', async
   await page.getByRole('button', { name: 'Open', exact: true }).click();
   await (await openChooser).setFiles('examples/drone_delivery_obstacles/scene.json');
   await expect(page.locator('#project-label'))
-    .toContainText('Iris Obstacle-Aware Payload Delivery');
-
+    .toContainText('Iris Obstacle-Aware Payload Delivery', { timeout: 15_000 });
+  await expect(page.locator('#viewport')).toHaveAttribute('data-render-quality', 'enhanced');
+  await expect(page.locator('#viewport')).toHaveAttribute('data-shadow-mode', 'soft');
+  await expect(page.locator('#viewport'))
+    .toHaveAttribute('data-photographic-environment', 'loaded', { timeout: 20_000 });
+  await expect(page.locator('#viewport'))
+    .toHaveAttribute('data-environment-lighting', 'photographic-hdri-pmrem');
+  await expect(page.locator('#viewport'))
+    .toHaveAttribute('data-photoreal-obstacle-status', 'loaded', { timeout: 20_000 });
+  await expect(page.locator('#viewport'))
+    .toHaveAttribute('data-photoreal-obstacle-count', '4');
+  await page.locator('[data-action="frame"]').click();
+  await page.waitForTimeout(500);
+  await page.locator('#viewport').screenshot({
+    path: testInfo.outputPath('obstacle-delivery-enhanced.png'),
+  });
+  await page.locator('[data-actor-row]').filter({ hasText: 'Central Flight Barrier' }).click();
+  await page.locator('[data-action="frame"]').click();
+  await page.waitForTimeout(300);
+  await page.locator('#viewport').evaluate((canvas) => {
+    const rect = canvas.getBoundingClientRect();
+    canvas.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      clientX: rect.left + 2,
+      clientY: rect.top + 2,
+    }));
+  });
+  await page.locator('#viewport').screenshot({
+    path: testInfo.outputPath('photoreal-obstacle-closeup.png'),
+  });
+  await expect(page.locator('#viewport'))
+    .toHaveAttribute('data-delivery-bag-texture', 'loaded', { timeout: 15_000 });
+  await page.locator('[data-actor-row]').filter({ hasText: 'Insulated Takeout Bag' }).click();
+  await page.locator('[data-action="frame"]').click();
+  await page.waitForTimeout(500);
   await page.locator('[data-actor-row]').filter({ hasText: 'Pegasus Iris Quadcopter' }).click();
+  await page.locator('#viewport').screenshot({
+    path: testInfo.outputPath('insulated-takeout-bag.png'),
+  });
+
   page.once('dialog', (dialog) => dialog.accept());
   const controllerResponse = page.waitForResponse((response) => (
     response.url().endsWith('/controller')

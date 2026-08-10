@@ -232,33 +232,53 @@ h2 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; }
 .joint-target-row input[type="number"] { width: 70px; }
 .joint-state { justify-content: space-between; margin-top: 4px; }
 
-#viewport-panel { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: #171a1f; }
+#viewport-panel {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #101d29;
+}
+#viewport-panel::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-shadow: inset 0 0 90px rgba(3, 8, 13, .22);
+  content: "";
+  pointer-events: none;
+}
 #viewport { display: block; width: 100%; height: 100%; }
 #hud {
   position: absolute;
   top: 12px;
   left: 12px;
+  z-index: 2;
   min-width: 180px;
-  padding: 9px 11px;
-  border: 1px solid rgba(255,255,255,.14);
-  border-radius: 6px;
-  background: rgba(24,28,35,.84);
-  line-height: 1.45;
+  padding: 10px 12px;
+  border: 1px solid rgba(202, 229, 246, .2);
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(20,31,42,.88), rgba(17,25,34,.72));
+  box-shadow: 0 12px 32px rgba(2,8,13,.24), inset 0 1px rgba(255,255,255,.04);
+  backdrop-filter: blur(12px) saturate(1.15);
+  line-height: 1.48;
   pointer-events: none;
 }
-#scene-name { font-weight: 600; }
+#scene-name { color: #f1f7fb; font-weight: 650; letter-spacing: .01em; }
 #scene-stats, #selection { color: #aeb8c4; font-size: 12px; }
 #viewport-toolbar {
   position: absolute;
   top: 12px;
   right: 12px;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 5px;
   padding: 5px;
-  border: 1px solid rgba(255,255,255,.14);
-  border-radius: 6px;
-  background: rgba(24,28,35,.88);
+  border: 1px solid rgba(202, 229, 246, .2);
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(20,31,42,.9), rgba(17,25,34,.76));
+  box-shadow: 0 12px 32px rgba(2,8,13,.24), inset 0 1px rgba(255,255,255,.04);
+  backdrop-filter: blur(12px) saturate(1.15);
 }
 .tool-button { display: grid; width: 31px; height: 31px; min-height: 31px; place-items: center; padding: 0; font-size: 17px; }
 .tool-button.active { border-color: #ffd166; color: #ffd166; background: #443e2c; }
@@ -267,6 +287,7 @@ h2 { margin: 0; font-size: 12px; font-weight: 600; text-transform: uppercase; }
   position: absolute;
   bottom: 12px;
   left: 12px;
+  z-index: 2;
   display: flex;
   gap: 12px;
   padding: 7px 9px;

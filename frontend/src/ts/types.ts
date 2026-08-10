@@ -5,6 +5,15 @@ export type PrimitiveType = 'box' | 'sphere' | 'cylinder' | 'ellipsoid' | 'plane
 export type MaterialId = 'default' | 'rubber' | 'wood' | 'metal' | 'ice';
 export type MassMode = 'mass' | 'density';
 export type SimulationStatus = 'stopped' | 'running' | 'paused' | 'fault';
+export type ActorVisualStyle =
+  | 'shipping_package'
+  | 'insulated_delivery_bag'
+  | 'operations_ground'
+  | 'landing_pad_pickup'
+  | 'landing_pad_dropoff'
+  | 'known_obstacle'
+  | 'unmapped_obstacle'
+  | 'safety_pillar';
 
 export interface Transform {
   position: Vector3;
@@ -35,6 +44,21 @@ export interface MeshGeometryProperties {
   bounds?: { min: Vector3; max: Vector3 };
 }
 
+export interface ActorVisualModelInstance {
+  position: Vector3;
+  rotation: Vector3;
+  size: Vector3;
+}
+
+export interface ActorVisualModel {
+  url: string;
+  source_url: string;
+  license: 'CC0-1.0';
+  author: string;
+  resolution: string;
+  instances: ActorVisualModelInstance[];
+}
+
 export interface ActorProperties {
   primitive?: PrimitiveType;
   size?: number[];
@@ -44,7 +68,8 @@ export interface ActorProperties {
   import_warnings?: string[];
   mass?: number;
   propulsion?: QuadrotorPropulsion;
-  visual_style?: 'shipping_package';
+  visual_style?: ActorVisualStyle;
+  visual_model?: ActorVisualModel;
   [key: string]: unknown;
 }
 

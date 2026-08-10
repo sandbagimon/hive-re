@@ -39,7 +39,35 @@ def test_obstacle_delivery_uses_range_data_and_completes(tmp_path: Path) -> None
     rangefinders = [sensor for sensor in sensors if sensor.sensor_type == "rangefinder"]
     assert len(rangefinders) == 12
     assert all(sensor.max_distance == 4.0 for sensor in rangefinders)
-    assert any(actor.id == "actor_unmapped_pillar" for actor in scene.actors)
+    actors = {actor.id: actor for actor in scene.actors}
+    assert actors["actor_003"].name == "Insulated Takeout Bag"
+    assert (
+        actors["actor_003"].properties["visual_style"]
+        == "insulated_delivery_bag"
+    )
+    assert actors["actor_obstacle_wall"].properties["visual_style"] == "known_obstacle"
+    assert (
+        actors["actor_unmapped_pillar"].properties["visual_style"]
+        == "unmapped_obstacle"
+    )
+    barrier_visual = actors["actor_obstacle_wall"].properties["visual_model"]
+    assert barrier_visual["license"] == "CC0-1.0"
+    assert barrier_visual["source_url"].endswith("/concrete_road_barrier_02")
+    assert barrier_visual["url"].endswith("concrete_road_barrier_02_2k.gltf")
+    assert [item["size"] for item in barrier_visual["instances"]] == [
+        [0.5, 1.6, 1.2],
+    ]
+    assert actors["actor_obstacle_wall"].transform.position[2] == 1.2
+    assert actors["actor_obstacle_wall"].properties["size"] == [0.25, 0.8, 1.2]
+    for actor_id in (
+        "actor_unmapped_pillar",
+        "actor_obstacle_pillar_west",
+        "actor_obstacle_pillar_east",
+    ):
+        barrel_visual = actors[actor_id].properties["visual_model"]
+        assert barrel_visual["license"] == "CC0-1.0"
+        assert barrel_visual["source_url"].endswith("/barrel_03")
+        assert len(barrel_visual["instances"]) == 2
     assert scene.simulation_config["controller_deadline"] == 0.02
     assert scene.simulation_config["controller_reset_deadline"] == 0.2
     assert scene.simulation_config["navigation"]["route"] == [
