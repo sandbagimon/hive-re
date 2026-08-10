@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
@@ -48,6 +48,9 @@ from simlab.services.trajectory_player import (
     JointTrajectoryPlayer,
     TrajectoryPlaybackState,
 )
+
+if TYPE_CHECKING:
+    from simlab.simulation.runtime import EngineDescriptor
 
 
 class SimulationRuntimeError(RuntimeError):
@@ -390,6 +393,29 @@ class MuJoCoSimulationSession:
         mujoco.mj_forward(self.model, self.data)
         self._reset_sensors()
 
+    @property
+    def engine_descriptor(self) -> EngineDescriptor:
+        """Describe the engine without exposing MuJoCo objects to application services."""
+
+        from simlab.simulation.mujoco_descriptor import mujoco_engine_descriptor
+
+        return mujoco_engine_descriptor(str(self._mujoco.__version__))
+
+    @property
+    def timestep(self) -> float:
+        return float(self.model.opt.timestep)
+
+    @property
+    def artifact_path(self) -> Path:
+        return self.xml_path
+
+    def close(self) -> None:
+        """Release the live-session ownership boundary.
+
+        MuJoCo's Python objects are memory-owned and release their native storage when this
+        session is dropped by ``SimulationService``; there is no separate native close call.
+        """
+
     def step(self, steps: int = 1) -> SimulationState:
         for _ in range(max(steps, 1)):
             self._apply_trajectory_target()
@@ -570,6 +596,7 @@ class MuJoCoSimulationSession:
             },
             timestep=float(self.model.opt.timestep),
             scene_version=self.scene.version,
+            engine="mujoco",
             engine_version=str(self._mujoco.__version__),
         )
         initial_sensor_samples: list[

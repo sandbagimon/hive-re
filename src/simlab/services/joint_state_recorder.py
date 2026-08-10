@@ -47,6 +47,7 @@ class JointStateRecorder:
         timestep: float,
         scene_version: str,
         engine_version: str,
+        engine: str = "mujoco",
     ) -> JointStateRecording:
         if self.active:
             raise RuntimeError("Joint state recording is already active")
@@ -81,6 +82,7 @@ class JointStateRecorder:
         self.recording = JointStateRecording(
             name=name.strip(),
             manifest=RecordingManifest(
+                engine=engine,
                 engine_version=engine_version,
                 timestep=timestep,
                 scene_version=scene_version,

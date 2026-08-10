@@ -271,7 +271,57 @@
       "type": "object",
       "properties": {
         "timestep": { "type": "number", "exclusiveMinimum": 0 },
-        "duration": { "type": "number", "exclusiveMinimum": 0 }
+        "duration": { "type": "number", "exclusiveMinimum": 0 },
+        "physics_engine": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+          "deprecated": true
+        },
+        "solvers": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "primary": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+                },
+                "extensions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+                  },
+                  "uniqueItems": true
+                }
+              },
+              "required": ["primary"],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "required_capabilities": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "rigid_body",
+              "articulation",
+              "collision",
+              "constraint",
+              "external_force",
+              "ray_query",
+              "fluid",
+              "particle",
+              "deformable_body",
+              "differentiable"
+            ]
+          },
+          "uniqueItems": true
+        }
       },
       "required": ["timestep", "duration"],
       "additionalProperties": true

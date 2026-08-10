@@ -122,7 +122,7 @@
     "manifest": {
       "type": "object",
       "properties": {
-        "engine": { "const": "mujoco" },
+        "engine": { "type": "string", "minLength": 1 },
         "engine_version": { "type": "string", "minLength": 1 },
         "timestep": { "type": "number", "exclusiveMinimum": 0 },
         "scene_version": { "type": "string", "minLength": 1 }

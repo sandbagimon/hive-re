@@ -13,8 +13,12 @@ from simlab.services.controller_loader import LoadedController, ProjectControlle
 from simlab.services.controller_runtime import StepController
 from simlab.services.simulation_session import (
     ClockSimulationState,
-    MuJoCoSimulationSession,
     SimulationState,
+)
+from simlab.simulation.runtime import RuntimePreflightReport, SimulationRuntimeSession
+from simlab.simulation.runtime_registry import (
+    RuntimeBackendRegistry,
+    default_runtime_backend_registry,
 )
 
 ConsoleCallback = Callable[[str], None]
@@ -22,7 +26,7 @@ Clock = Callable[[], float]
 
 
 class SimulationService:
-    """Manage an in-process MuJoCo session for live viewport state sync."""
+    """Manage an engine-neutral live session for viewport state synchronization."""
 
     SUPPORTED_REALTIME_FACTORS = (0.25, 0.5, 1.0, 2.0)
 
@@ -33,6 +37,7 @@ class SimulationService:
         *,
         clock: Clock = time.monotonic,
         max_catch_up_steps: int = 8,
+        runtime_backends: RuntimeBackendRegistry | None = None,
     ) -> None:
         if max_catch_up_steps < 1:
             raise ValueError("max_catch_up_steps must be >= 1")
@@ -41,7 +46,8 @@ class SimulationService:
         self.clock = clock
         self.default_max_catch_up_steps = max_catch_up_steps
         self.max_catch_up_steps = max_catch_up_steps
-        self.session: MuJoCoSimulationSession | None = None
+        self.runtime_backends = runtime_backends or default_runtime_backend_registry()
+        self.session: SimulationRuntimeSession | None = None
         self.running = False
         self.target_realtime_factor = 1.0
         self._last_wall_time: float | None = None
@@ -56,13 +62,11 @@ class SimulationService:
 
     def start(self, scene: Scene) -> SimulationState:
         self.max_catch_up_steps = self._read_max_catch_up_steps(scene)
-        if self.session is None:
-            self.session = self._create_session(scene)
-            self.console(f"Loaded MuJoCo model: {self.session.xml_path}")
+        session = self._ensure_session(scene)
         self.running = True
         self._reset_clock_tracking(running=True)
         self.console("Simulation running.")
-        return self._with_clock(self.session.state())
+        return self._with_clock(session.state())
 
     def pause(self) -> None:
         if not self.session:
@@ -73,12 +77,10 @@ class SimulationService:
         self.console("Simulation paused.")
 
     def step_once(self, scene: Scene) -> SimulationState:
-        if self.session is None:
-            self.session = self._create_session(scene)
-            self.console(f"Loaded MuJoCo model: {self.session.xml_path}")
+        session = self._ensure_session(scene)
         self.running = False
         self._reset_clock_tracking()
-        state = self.session.step()
+        state = session.step()
         self.console(f"Simulation step: t={state.time:.3f}")
         return self._with_clock(state)
 
@@ -93,7 +95,7 @@ class SimulationService:
             elapsed = max(0.0, now - self._last_wall_time)
             self._last_wall_time = now
             self._rtf_wall_elapsed += elapsed
-            timestep = float(self.session.model.opt.timestep)
+            timestep = self.session.timestep
             maximum_budget = timestep * self.max_catch_up_steps
             self._time_accumulator = min(
                 self._time_accumulator + elapsed * self.target_realtime_factor,
@@ -139,30 +141,21 @@ class SimulationService:
     def set_joint_position_targets(
         self, scene: Scene, targets: dict[str, float]
     ) -> SimulationState:
-        if self.session is None:
-            self.session = self._create_session(scene)
-            self.console(f"Loaded MuJoCo model: {self.session.xml_path}")
-        state = self.session.set_joint_position_targets(targets)
+        state = self._ensure_session(scene).set_joint_position_targets(targets)
         self.console(f"Updated {len(targets)} joint target(s).")
         return self._with_clock(state)
 
     def set_actuator_controls(
         self, scene: Scene, controls: dict[str, float]
     ) -> SimulationState:
-        if self.session is None:
-            self.session = self._create_session(scene)
-            self.console(f"Loaded MuJoCo model: {self.session.xml_path}")
-        state = self.session.set_actuator_controls(controls)
+        state = self._ensure_session(scene).set_actuator_controls(controls)
         self.console(f"Updated {len(controls)} actuator control(s).")
         return self._with_clock(state)
 
     def set_attachment_commands(
         self, scene: Scene, commands: dict[str, bool]
     ) -> SimulationState:
-        if self.session is None:
-            self.session = self._create_session(scene)
-            self.console(f"Loaded MuJoCo model: {self.session.xml_path}")
-        state = self.session.set_attachment_commands(commands)
+        state = self._ensure_session(scene).set_attachment_commands(commands)
         self.console(f"Updated {len(commands)} attachment command(s).")
         return self._with_clock(state)
 
@@ -173,10 +166,7 @@ class SimulationService:
         *,
         name: str | None = None,
     ) -> SimulationState:
-        if self.session is None:
-            self.session = self._create_session(scene)
-            self.console(f"Loaded MuJoCo model: {self.session.xml_path}")
-        state = self.session.attach_controller(controller, name=name)
+        state = self._ensure_session(scene).attach_controller(controller, name=name)
         self.console(f"Attached Python controller: {name or type(controller).__name__}")
         return self._with_clock(state)
 
@@ -205,12 +195,10 @@ class SimulationService:
         scene: Scene,
         trajectory: JointTrajectory,
     ) -> SimulationState:
-        if self.session is None:
-            self.session = self._create_session(scene)
-            self.console(f"Loaded MuJoCo model: {self.session.xml_path}")
+        session = self._ensure_session(scene)
         self.running = False
         self._reset_clock_tracking()
-        state = self.session.load_joint_trajectory(trajectory)
+        state = session.load_joint_trajectory(trajectory)
         self.console(f"Loaded joint trajectory: {trajectory.name}")
         return self._with_clock(state)
 
@@ -250,10 +238,7 @@ class SimulationService:
         actuator_ids: list[str] | None = None,
         sensor_ids: list[str] | None = None,
     ) -> SimulationState:
-        if self.session is None:
-            self.session = self._create_session(scene)
-            self.console(f"Loaded MuJoCo model: {self.session.xml_path}")
-        state = self.session.start_joint_recording(
+        state = self._ensure_session(scene).start_joint_recording(
             name=name,
             joint_ids=joint_ids,
             actuator_ids=actuator_ids,
@@ -302,6 +287,8 @@ class SimulationService:
         return self._with_clock(state)
 
     def stop(self) -> None:
+        if self.session is not None:
+            self.session.close()
         self.session = None
         self.loaded_controller = None
         self.running = False
@@ -309,7 +296,7 @@ class SimulationService:
         self.console("Simulation stopped.")
 
     def _with_clock(self, state: SimulationState) -> SimulationState:
-        timestep = float(self.session.model.opt.timestep) if self.session else 0.0
+        timestep = self.session.timestep if self.session else 0.0
         actual = (
             self._rtf_simulated_elapsed / self._rtf_wall_elapsed
             if self._rtf_wall_elapsed > 0.0
@@ -334,9 +321,27 @@ class SimulationService:
         self._rtf_wall_elapsed = 0.0
         self._rtf_simulated_elapsed = 0.0
 
-    def _create_session(self, scene: Scene) -> MuJoCoSimulationSession:
-        export_path = self.project_root / "exports" / "scene.xml"
-        return MuJoCoSimulationSession(scene, export_path, asset_root=self.project_root)
+    def preflight(self, scene: Scene) -> RuntimePreflightReport:
+        return self.runtime_backends.preflight(
+            scene,
+            project_root=self.project_root,
+            artifact_directory=self.project_root / "exports",
+        )
+
+    def _ensure_session(self, scene: Scene) -> SimulationRuntimeSession:
+        if self.session is None:
+            self.session = self.runtime_backends.create_session(
+                scene,
+                project_root=self.project_root,
+                artifact_directory=self.project_root / "exports",
+            )
+            descriptor = self.session.engine_descriptor
+            artifact = self.session.artifact_path
+            suffix = f" (artifact: {artifact})" if artifact is not None else ""
+            self.console(
+                f"Loaded simulation engine: {descriptor.name} {descriptor.version}{suffix}"
+            )
+        return self.session
 
     def _read_max_catch_up_steps(self, scene: Scene) -> int:
         raw_value = scene.simulation_config.get(

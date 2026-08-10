@@ -79,9 +79,12 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     assert robotics["title"] == "SimLabRoboticsModel"
     assert trajectory["title"] == "SimLabJointTrajectory"
     assert recording["title"] == "SimLabJointStateRecording"
-    assert recording["properties"]["manifest"]["properties"]["engine"]["const"] == (
-        "mujoco"
-    )
+    assert recording["properties"]["manifest"]["properties"]["engine"] == {
+        "type": "string",
+        "minLength": 1,
+    }
+    solver_contract = scene["properties"]["simulation_config"]["properties"]["solvers"]
+    assert solver_contract["oneOf"][1]["properties"]["extensions"]["uniqueItems"]
     assert {
         "sensorState",
         "jointSensorState",

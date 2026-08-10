@@ -24,7 +24,10 @@ TypeScript editor --> FastAPI v1 API --> ResourceManager
                                      SimulationService
                                              |
                                              v
-                                   MuJoCoSimulationSession
+                                  RuntimeBackendRegistry
+                                      |           |
+                                      v           v
+                              MuJoCo adapter   engine plugins
 
 Algorithm process
        |
@@ -76,7 +79,7 @@ Infrastructure Adapters
 - 前端 `SimulationStore` 独立拥有运行状态、实时仿真帧和 Preflight/运行校验结果；场景编辑不得直接修改这些状态。
 - Project Resource 拥有后端规范化场景、项目资产和 revision。
 - Simulation Resource 拥有一次隔离的仿真运行时。
-- MuJoCo Session 拥有物理状态、仿真时间和运行时控制状态。
+- Runtime Session 拥有物理状态、仿真时间和运行时控制状态；具体引擎对象只存在于适配器内。
 - 每个算法 Environment 独占一个 Backend Session 和 episode RNG；Task 拥有 reward、
   termination 与 randomization，Backend 不拥有任务语义。
 - Artifact Resource 拥有可下载输出的元数据和内容。
@@ -294,9 +297,9 @@ AttachController
 
 - Scene Schema 校验；
 - Robotics 拓扑和引用校验；
-- Physics Preflight；
+- 引擎无关的 Physics Preflight 用例；
 - MJCF 生成；
-- MuJoCo 编译检查；
+- MuJoCo 适配器的 MJCF 编译检查，以及未来其他引擎各自的编译检查；
 - 可定位到 actor/field 的问题报告。
 
 验证模块不得修改传入的 Scene。
@@ -314,15 +317,26 @@ AttachController
 - 运行时异常隔离；
 - 状态和日志事件发布。
 
-#### MuJoCo Session
+Orchestrator 只依赖 `SimulationRuntimeSession`，不得读取 `MjModel/MjData`、Newton
+内部对象或水体求解器缓冲区。`RuntimeBackendRegistry` 根据 Scene 的
+`simulation_config.solvers` 选择主引擎，并允许外部包通过
+`simlab.runtime_backends` entry point 注册后端。
+
+#### Runtime Backend 与 Session
 
 职责：
 
-- `MjModel` 和 `MjData` 生命周期；
+- 声明引擎 ID、版本和能力集合；
+- 对 Scene 做引擎专属 Preflight；
+- 创建实现完整应用契约的隔离 Runtime Session；
 - 固定物理步进；
 - Actor/Link/Joint/Actuator 映射；
 - 读取不可变 SimulationState；
 - 接收已经验证的控制输入。
+
+当前 `MujocoRuntimeBackend` 是默认适配器，`MuJoCoSimulationSession` 是它的兼容实现。
+Newton 适配器需要实现同一契约；水体、粒子或软体求解器通过有序 `extensions` 交给能做
+双向耦合的主后端组合。无法满足能力或组合请求时必须在 Preflight 阶段报错，禁止静默降级。
 
 Session 应当组合控制、轨迹、传感器和录制组件，而不是重新实现这些组件的业务规则。
 
@@ -367,7 +381,8 @@ manual | trajectory | python-controller
 - JSON/CSV 编码；
 - Recording Artifact 创建。
 
-录制格式转换不应写入 MuJoCo Session 内部状态。
+录制格式转换不应写入具体引擎 Session 内部状态；Manifest 的 `engine` 和
+`engine_version` 来自 Runtime Session 元数据。
 
 ### 4.5 共享契约与外围适配器
 
@@ -452,6 +467,9 @@ src/simlab/
 ├─ simulation/
 │  ├─ orchestrator.py
 │  ├─ session.py
+│  ├─ runtime.py
+│  ├─ runtime_registry.py
+│  ├─ adapters/
 │  ├─ control/
 │  ├─ sensors/
 │  └─ recording/
@@ -472,7 +490,8 @@ src/simlab/
 | Application | Domain、资源接口、仿真接口 | 浏览器 DOM、FastAPI Request |
 | Domain | Python 标准库和领域内模块 | FastAPI、Qt、文件系统、MuJoCo |
 | Import/Export | Domain、受控基础设施接口 | 前端 Store、HTTP Response |
-| Simulation | Domain、控制、传感器、MuJoCo Adapter | FastAPI、Three.js、Qt |
+| Simulation Service | Domain、控制、传感器、Runtime 契约 | FastAPI、Three.js、Qt、具体引擎对象 |
+| Engine Adapter | Runtime 契约、引擎 SDK、转换器 | FastAPI、Three.js、应用资源生命周期 |
 | Persistence | Domain 序列化、受控文件根目录 | UI 和仿真调度逻辑 |
 
 建议在代码评审时把违反依赖方向视为架构问题，而不仅是代码风格问题。
@@ -505,8 +524,9 @@ POST /simulations
   -> build application/session boundary
 
 POST /simulations/{id}/run
-  -> preflight
-  -> compile MJCF
+  -> select Runtime Backend
+  -> engine-specific preflight
+  -> create Runtime Session
   -> start fixed-step clock
 
 WS /simulations/{id}/events
@@ -515,7 +535,7 @@ WS /simulations/{id}/events
   -> heartbeat and reconnect replay
 ```
 
-每个仿真实例必须拥有独立状态，不能使用进程级全局 MuJoCo Session。
+每个仿真实例必须拥有独立状态，不能使用进程级全局 Runtime Session 或引擎状态。
 
 ### 7.3 Artifact
 
@@ -570,16 +590,16 @@ npm run test:web
 
 每次提取一个面板，同时增加对应的 DOM 或纯逻辑测试。
 
-### 阶段 2：拆分仿真 Session
+### 阶段 2：拆分仿真 Session（运行时边界已完成）
 
 推荐顺序：
 
-1. 保留 `MuJoCoSimulationSession` 公共接口；
-2. 提取状态映射器；
-3. 提取 Control Source Coordinator；
-4. 提取 Sensor Runtime；
-5. 提取 Recording Runtime；
-6. Session 只保留 MuJoCo 生命周期和单步编排。
+1. 已保留 `MuJoCoSimulationSession` 公共接口；
+2. 已建立 `SimulationRuntimeSession`、能力协商、注册表和 Scene 求解器配置；
+3. 已使 `SimulationService` 与 Web Run/Step/Trajectory Preflight 不依赖 MuJoCo；
+4. 后续提取状态映射器和 Control Source Coordinator；
+5. 后续提取 Sensor/Recording Runtime，使更多引擎适配器复用业务编排；
+6. MuJoCo Session 最终只保留引擎生命周期、映射和物理单步。
 
 固定时钟、Reset 可重复性和录制确定性必须在每一步迁移后验证。
 

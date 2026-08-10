@@ -118,3 +118,4 @@ YYYY-MM-DD-短标题.md
 - [2026-08-10 Drone Scene Visual Upgrade](2026-08-10-drone-scene-visual-upgrade.md)
 - [2026-08-10 Insulated Takeout Bag](2026-08-10-insulated-takeout-bag.md)
 - [2026-08-10 Photoreal Obstacle Assets](2026-08-10-photoreal-obstacle-assets.md)
+- [2026-08-10 Physics Runtime Decoupling](2026-08-10-physics-runtime-decoupling.md)

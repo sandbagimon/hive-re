@@ -7,7 +7,6 @@ import shutil
 import threading
 import uuid
 from collections.abc import Callable, Iterable
-from dataclasses import asdict
 from pathlib import Path
 from typing import Any, BinaryIO
 
@@ -20,9 +19,11 @@ from simlab.services.openusd.upload_bundle import (
 )
 from simlab.services.openusd_importer import import_openusd_asset, load_visual_geometry
 from simlab.services.physics_materials import material_for_id
-from simlab.services.physics_validation import PhysicsPreflightReport, run_physics_preflight
+from simlab.services.physics_validation import run_physics_preflight
 from simlab.services.project_service import load_scene, save_scene, validate_scene
 from simlab.services.simulation_service import SimulationService
+from simlab.simulation.runtime import RuntimePreflightReport
+from simlab.simulation.runtime_registry import RuntimeBackendRegistry
 
 
 class WebApplication:
@@ -34,6 +35,7 @@ class WebApplication:
         *,
         background_simulation: bool = True,
         restrict_paths: bool = True,
+        runtime_backends: RuntimeBackendRegistry | None = None,
     ) -> None:
         self.project_root = project_root.resolve()
         self.current_path: Path | None = None
@@ -45,7 +47,11 @@ class WebApplication:
         self._event_sequence = 0
         self._events: list[dict[str, Any]] = []
         self._restrict_paths = restrict_paths
-        self.simulation_service = SimulationService(project_root, self._console)
+        self.simulation_service = SimulationService(
+            project_root,
+            self._console,
+            runtime_backends=runtime_backends,
+        )
         self._thread: threading.Thread | None = None
         if background_simulation:
             self._thread = threading.Thread(target=self._simulation_loop, daemon=True)
@@ -213,9 +219,7 @@ class WebApplication:
         return self.success({"scene": scene.to_dict()})
 
     def preflight(self, scene_json: str) -> dict[str, Any]:
-        report = run_physics_preflight(
-            self._scene_from_json(scene_json), asset_root=self.project_root
-        )
+        report = self.simulation_service.preflight(self._scene_from_json(scene_json))
         return self.success(self._preflight_payload(report))
 
     def export_mjcf(self, scene_json: str) -> dict[str, Any]:
@@ -238,7 +242,7 @@ class WebApplication:
 
     def run_simulation(self, scene_json: str) -> dict[str, Any]:
         scene = self._scene_from_json(scene_json)
-        report = run_physics_preflight(scene, asset_root=self.project_root)
+        report = self.simulation_service.preflight(scene)
         payload = self._preflight_payload(report)
         if not report.is_valid:
             return self.failure("Physics preflight failed", payload)
@@ -267,7 +271,7 @@ class WebApplication:
     def step_simulation(self, scene_json: str) -> dict[str, Any]:
         self._running = False
         scene = self._scene_from_json(scene_json)
-        report = run_physics_preflight(scene, asset_root=self.project_root)
+        report = self.simulation_service.preflight(scene)
         payload = self._preflight_payload(report)
         if not report.is_valid:
             return self.failure("Physics preflight failed", payload)
@@ -369,7 +373,7 @@ class WebApplication:
 
     def load_trajectory(self, scene_json: str, trajectory_json: str) -> dict[str, Any]:
         scene = self._scene_from_json(scene_json)
-        report = run_physics_preflight(scene, asset_root=self.project_root)
+        report = self.simulation_service.preflight(scene)
         payload = self._preflight_payload(report)
         if not report.is_valid:
             return self.failure("Physics preflight failed", payload)
@@ -588,8 +592,21 @@ class WebApplication:
         return resolved
 
     @staticmethod
-    def _preflight_payload(report: PhysicsPreflightReport) -> dict[str, Any]:
-        return {"valid": report.is_valid, "issues": [asdict(issue) for issue in report.issues]}
+    def _preflight_payload(report: RuntimePreflightReport) -> dict[str, Any]:
+        return {
+            "valid": report.is_valid,
+            "issues": [
+                {
+                    "severity": issue.severity,
+                    "code": issue.code,
+                    "message": issue.message,
+                    "actor_id": issue.actor_id,
+                    "actor_name": issue.actor_name,
+                    "field": issue.field,
+                }
+                for issue in report.issues
+            ],
+        }
 
     def _title(self, scene_name: str) -> str:
         dirty = "*" if self.dirty else ""

@@ -1,6 +1,6 @@
 # SimLab
 
-SimLab is a simulation-first robotics scene editor MVP. Its independently built TypeScript/three.js frontend runs in a standard browser and communicates with a separately deployed Python API over versioned HTTP resources and WebSocket events. An optional PySide6/QWebEngine program is only a web client for the same hosted frontend. Python provides OpenUSD import, MJCF export, validation, controllers, recording, sensors, and isolated MuJoCo simulation resources. It has no cloud service, login flow, online marketplace, or third-party product branding.
+SimLab is a simulation-first robotics scene editor MVP. Its independently built TypeScript/three.js frontend runs in a standard browser and communicates with a separately deployed Python API over versioned HTTP resources and WebSocket events. An optional PySide6/QWebEngine program is only a web client for the same hosted frontend. Python provides OpenUSD import, MJCF export, validation, controllers, recording, sensors, and isolated engine-neutral simulation resources with MuJoCo as the default runtime adapter. It has no cloud service, login flow, online marketplace, or third-party product branding.
 
 ## Architecture
 
@@ -19,7 +19,9 @@ SimLab backend (independent Python deployment)
 +-- Project / Simulation / Artifact Resource Manager
 +-- Transport-neutral Python Application Service
     +-- Project IO / OpenUSD Import / Validation / MJCF Export
-    +-- MuJoCo Session + Joint Control / Trajectory / Recording
+    +-- Runtime Backend Registry + engine-neutral Simulation Session
+        +-- default MuJoCo adapter
+        +-- external Newton / coupled-solver plugins
 
 Optional MCP adapter (independent process)
 +-- stdio or Streamable HTTP
@@ -109,7 +111,7 @@ Open **Shortcuts** in the frontend command bar for the built-in controls guide, 
 
 The TypeScript Editor Store owns scene authoring state, selection, dirty tracking, and undo/redo. Python receives canonical scene resources for validation, export, preflight, and simulation; browser and server filesystem paths never cross the public API.
 
-See [`docs/MODULAR_DEVELOPMENT.md`](docs/MODULAR_DEVELOPMENT.md) for module boundaries, dependency rules, the target package layout, and the incremental modularization roadmap.
+See [`docs/MODULAR_DEVELOPMENT.md`](docs/MODULAR_DEVELOPMENT.md) for module boundaries, dependency rules, the target package layout, and the incremental modularization roadmap. See [`docs/PHYSICS_RUNTIME_DECOUPLING.md`](docs/PHYSICS_RUNTIME_DECOUPLING.md) for live-runtime contracts, capability negotiation, solver-stack configuration, and the Newton/water-engine adapter path.
 
 Use **Import USD** for a self-contained `.usd`, `.usda`, `.usdc`, `.usdz`, or safe ZIP package. Use **Import USD Folder** for a composed asset with sublayers, payloads, references, or textures; relative directory paths are preserved through multipart upload. The importer resolves stage transforms, converts stage units and Y-up coordinates to SimLab's meter/Z-up convention, triangulates meshes and native geometric primitives, expands PointInstancer instances at the default time, and registers a relocatable project cache. See [`docs/OPENUSD_IMPORT.md`](docs/OPENUSD_IMPORT.md) for the supported subset and package rules.
 
@@ -121,7 +123,7 @@ Robot trajectories can be saved in the scene, reopened, edited, and replayed. Th
 
 The command bar provides 0.25x, 0.5x, 1x, and 2x simulation-speed controls plus measured real-time-factor feedback. Speed changes scale fixed-step scheduling without changing the authored MuJoCo timestep or trajectory/recording timestamps.
 
-Python controllers can attach to a MuJoCo session through an immutable per-step observation/action API. Controller exceptions and deadline overruns are isolated as runtime faults without stopping physics; manual targets, trajectory playback, and Python controllers are explicit mutually exclusive control sources. See [`docs/CONTROLLER_API.md`](docs/CONTROLLER_API.md).
+Python controllers attach to the selected Runtime Session through an immutable per-step observation/action API. Controller exceptions and deadline overruns are isolated as runtime faults without stopping physics; manual targets, trajectory playback, and Python controllers are explicit mutually exclusive control sources. See [`docs/CONTROLLER_API.md`](docs/CONTROLLER_API.md).
 
 Quadrotors use named rotor actuators and an engine-neutral quadratic thrust profile. The bundled Pegasus Iris can be driven through Python Controller, REST/Bridge, Gymnasium, or the existing gRPC data plane. See [`docs/QUADROTOR_CONTROL.md`](docs/QUADROTOR_CONTROL.md).
 
@@ -152,7 +154,7 @@ Primitive geometry follows a shared viewport/MuJoCo contract: Box sizes are half
 
 The Property Panel includes Default, Rubber, Wood, Metal, and Ice physics materials plus explicit-mass and material-density modes. Presets link density, friction, MuJoCo contact parameters, and viewport roughness/metalness. The viewport collider debug toggle (`C`) displays dynamic/static wireframes and center-of-mass markers.
 
-Run, Step, and Export MJCF perform a physics preflight first. The preflight validates dynamic/static configuration, mass, friction, primitive or imported mesh geometry, asset paths, and then asks MuJoCo to compile the generated MJCF. Blocking errors are shown with actor and field context in the UI and are also written to the Console Panel.
+Run and Step ask the selected Runtime Backend to perform physics preflight. The default MuJoCo adapter validates dynamic/static configuration, mass, friction, primitive or imported mesh geometry and asset paths, then compiles generated MJCF. Export MJCF deliberately performs the same MuJoCo-specific check. Blocking errors are shown with actor and field context in the UI and are also written to the Console Panel.
 
 ## Tests
 

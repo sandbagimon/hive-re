@@ -25,8 +25,10 @@ SimulationBackendSession
        +--> GrpcSimulationBackend -- one atomic Step RPC --> MuJoCo server
 ```
 
-网页实时仿真继续由 `SimulationService` 管理；训练环境不复用它的 Run/Pause、UI
-catch-up 或 WebSocket 状态。每个 `SimLabEnv` 创建并独占一个后端 Session，因此多个
+网页实时仿真继续由 `SimulationService` 管理，但它现在只依赖
+`SimulationRuntimeSession`，通过 `RuntimeBackendRegistry` 选择 MuJoCo、Newton 或未来的
+组合求解器；训练环境不复用它的 Run/Pause、UI catch-up 或 WebSocket 状态。每个
+`SimLabEnv` 创建并独占一个后端 Session，因此多个
 环境之间没有 `MjData`、episode 计数器或随机数状态泄漏。
 
 ## 2. 稳定契约
@@ -165,6 +167,15 @@ CreateSession、Reset、Step、Close。远程请求不接受客户端文件路�
 - 前端关闭后 Gym/gRPC episode 继续运行；
 - 后端不会从 Three.js 读取渲染状态，算法也不会通过 REST 每步轮询；
 - Scene authoring revision 与 Task 配置分开管理，同一场景可绑定多个任务。
+
+这里存在两条不同但都引擎无关的契约：
+
+- `SimulationBackendSession` 是算法数据面，强调紧凑数组和原子 Step，可经 gRPC 传输；
+- `SimulationRuntimeSession` 是编辑器实时运行时，保持控制器、轨迹、传感器、抓取、
+  录制和完整 `SimulationState` 功能。
+
+二者不互相调用；具体 MuJoCo 代码分别位于各自的 adapter 中。详细扩展方式见
+[`PHYSICS_RUNTIME_DECOUPLING.md`](PHYSICS_RUNTIME_DECOUPLING.md)。
 
 ## 7. 验证
 
