@@ -19,6 +19,7 @@ from simlab.services.controller_runtime import (
     ControllerObservation,
     ControllerRunner,
     JointObservation,
+    NavigationUpdate,
     RangefinderObservation,
     StepController,
 )
@@ -177,6 +178,43 @@ class ControllerSimulationState:
 
 
 @dataclass(frozen=True, slots=True)
+class NavigationSimulationState:
+    status: str = "idle"
+    route: tuple[tuple[float, float, float], ...] = ()
+    route_revision: int = 0
+    map_revision: int = 0
+    replan_count: int = 0
+    occupied_cell_count: int = 0
+    last_replan_time: float | None = None
+    message: str | None = None
+
+    @classmethod
+    def from_update(cls, update: NavigationUpdate) -> NavigationSimulationState:
+        return cls(
+            status=update.status,
+            route=update.route,
+            route_revision=update.route_revision,
+            map_revision=update.map_revision,
+            replan_count=update.replan_count,
+            occupied_cell_count=update.occupied_cell_count,
+            last_replan_time=update.last_replan_time,
+            message=update.message,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "status": self.status,
+            "route": [list(point) for point in self.route],
+            "route_revision": self.route_revision,
+            "map_revision": self.map_revision,
+            "replan_count": self.replan_count,
+            "occupied_cell_count": self.occupied_cell_count,
+            "last_replan_time": self.last_replan_time,
+            "message": self.message,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class RecordingSimulationState:
     active: bool = False
     sample_count: int = 0
@@ -224,6 +262,9 @@ class SimulationState:
         | RangefinderSensorSample
     ] = field(default_factory=list)
     controller: ControllerSimulationState = field(default_factory=ControllerSimulationState)
+    navigation: NavigationSimulationState = field(
+        default_factory=NavigationSimulationState
+    )
     trajectory: TrajectoryPlaybackState = field(
         default_factory=lambda: TrajectoryPlaybackState(
             status="stopped",
@@ -246,6 +287,7 @@ class SimulationState:
             "delivery_tasks": [task.to_dict() for task in self.delivery_tasks],
             "sensors": [sensor.to_dict() for sensor in self.sensors],
             "controller": self.controller.to_dict(),
+            "navigation": self.navigation.to_dict(),
             "trajectory": self.trajectory.to_dict(),
             "recording": self.recording.to_dict(),
             "clock": self.clock.to_dict(),
@@ -342,6 +384,7 @@ class MuJoCoSimulationSession:
         self._controller_status = "ready"
         self._controller_message: str | None = None
         self._last_command_time: float | None = None
+        self._navigation_state = NavigationSimulationState()
         self._reset_to_home()
         self._home_controls = self.data.ctrl.copy()
         mujoco.mj_forward(self.model, self.data)
@@ -402,6 +445,7 @@ class MuJoCoSimulationSession:
         self._reset_to_home()
         self._mujoco.mj_forward(self.model, self.data)
         self._reset_sensors()
+        self._navigation_state = NavigationSimulationState()
         if self._controller_runner.enabled:
             self._controller_runner.reset(self._controller_observation())
             self._sync_python_controller_state()
@@ -416,6 +460,7 @@ class MuJoCoSimulationSession:
         if self._trajectory_player.status == "playing":
             raise RuntimeError("Pause or stop the trajectory before attaching a controller")
         self._controller_runner.attach(controller, name=name)
+        self._navigation_state = NavigationSimulationState()
         self._controller_runner.reset(self._controller_observation())
         self._sync_python_controller_state()
         return self.state()
@@ -425,6 +470,7 @@ class MuJoCoSimulationSession:
         self._controller_status = "ready"
         self._controller_message = None
         self._last_command_time = None
+        self._navigation_state = NavigationSimulationState()
         return self.state()
 
     def set_joint_position_targets(self, targets: dict[str, float]) -> SimulationState:
@@ -610,6 +656,7 @@ class MuJoCoSimulationSession:
                 deadline=self._controller_runner.state.deadline,
                 reset_deadline=self._controller_runner.state.reset_deadline,
             ),
+            navigation=self._navigation_state,
             trajectory=self._trajectory_player.state(float(self.data.time)),
             recording=self._recording_state(),
         )
@@ -1170,6 +1217,10 @@ class MuJoCoSimulationSession:
             else:
                 self._apply_actuator_control_updates([*updates, *direct_updates])
                 self._apply_attachment_command_updates(attachment_updates)
+                if action.navigation is not None:
+                    self._navigation_state = NavigationSimulationState.from_update(
+                        action.navigation
+                    )
         self._sync_python_controller_state()
 
     def _validate_quadrotor_bindings(self) -> None:

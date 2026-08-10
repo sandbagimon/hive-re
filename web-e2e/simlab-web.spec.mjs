@@ -230,7 +230,7 @@ test('Iris physically picks up and delivers a payload from A to B', async ({ pag
 });
 
 test('obstacle-aware Iris controller initializes and runs in the browser', async ({ page }) => {
-  test.setTimeout(45_000);
+  test.setTimeout(75_000);
   await configureApi(page);
   await page.goto('/');
   await expect(page.locator('#asset-list')).toContainText('Pegasus Iris Quadcopter', {
@@ -263,23 +263,27 @@ test('obstacle-aware Iris controller initializes and runs in the browser', async
   expect(loaded.simulationState.controller.status).toBe('ready');
   expect(loaded.simulationState.controller.deadline).toBe(0.02);
   expect(loaded.simulationState.controller.reset_deadline).toBe(0.2);
+  expect(loaded.simulationState.navigation.status).toBe('idle');
   expect(loaded.simulationState.sensors.filter(
     (sample) => sample.sensor_type === 'rangefinder',
   )).toHaveLength(12);
 
   await page.getByRole('button', { name: 'Run', exact: true }).click();
   await page.locator('[data-simulation-speed="2"]').click();
-  await expect.poll(async () => {
-    const state = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
-    return state.simulationState?.time ?? 0;
-  }, { timeout: 30_000, intervals: [250, 500, 1000] }).toBeGreaterThan(3);
+  await expect.poll(async () => Number(
+    await page.locator('#viewport').getAttribute('data-navigation-replans'),
+  ), { timeout: 55_000, intervals: [250, 500, 1000] }).toBeGreaterThan(0);
 
   const runtime = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
   expect(runtime.simulationState.controller.status).toBe('active');
   expect(runtime.simulationState.controller.message).toBeNull();
   expect(runtime.simulationState.controller.step_count).toBeGreaterThan(1_000);
+  expect(runtime.simulationState.navigation.replan_count).toBeGreaterThan(0);
+  expect(runtime.simulationState.navigation.route_revision).toBeGreaterThan(1);
+  expect(runtime.simulationState.navigation.status).toBe('following');
   expect(runtime.simulationState.actors.find((item) => item.id === 'actor_002').position[2])
     .toBeGreaterThan(0.5);
+  await expect(page.locator('#scene-stats')).toContainText(/replans [1-9]/);
 });
 
 test('frontend recovers shared assets when the API starts after the page', async ({ page }) => {

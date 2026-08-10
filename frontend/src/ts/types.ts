@@ -370,6 +370,17 @@ export interface ControllerSimulationState {
   reset_deadline: number | null;
 }
 
+export interface NavigationSimulationState {
+  status: 'idle' | 'ready' | 'planning' | 'following' | 'blocked' | 'arrived' | 'complete';
+  route: [number, number, number][];
+  route_revision: number;
+  map_revision: number;
+  replan_count: number;
+  occupied_cell_count: number;
+  last_replan_time: number | null;
+  message: string | null;
+}
+
 export interface TrajectorySimulationState {
   status: 'stopped' | 'playing' | 'paused' | 'completed';
   time: number;
@@ -418,6 +429,7 @@ export interface SimulationState {
   attachments: AttachmentSimulationState[];
   delivery_tasks: DeliveryTaskSimulationState[];
   sensors: SensorSample[];
+  navigation: NavigationSimulationState;
   trajectory: TrajectorySimulationState;
   recording: RecordingSimulationState;
   clock: ClockSimulationState;

@@ -39,6 +39,7 @@ def test_obstacle_delivery_uses_range_data_and_completes(tmp_path: Path) -> None
     rangefinders = [sensor for sensor in sensors if sensor.sensor_type == "rangefinder"]
     assert len(rangefinders) == 12
     assert all(sensor.max_distance == 4.0 for sensor in rangefinders)
+    assert any(actor.id == "actor_unmapped_pillar" for actor in scene.actors)
     assert scene.simulation_config["controller_deadline"] == 0.02
     assert scene.simulation_config["controller_reset_deadline"] == 0.2
     assert scene.simulation_config["navigation"]["route"] == [
@@ -59,7 +60,7 @@ def test_obstacle_delivery_uses_range_data_and_completes(tmp_path: Path) -> None
         [sample for sample in attached.sensors if sample.to_dict()["sensor_type"] == "rangefinder"]
     ) == 12
     assert len(session._controller_observation().rangefinders) == 12
-    state = session.step(steps=15_000)
+    state = session.step(steps=21_000)
 
     controller = loaded.controller
     payload = next(item for item in state.actors if item.actor_id == "actor_003")
@@ -67,5 +68,8 @@ def test_obstacle_delivery_uses_range_data_and_completes(tmp_path: Path) -> None
     assert state.delivery_tasks[0].status == "completed"
     assert controller.phase == "complete"
     assert controller.avoidance_events > 0
+    assert controller.replan_count > 0
+    assert state.navigation.route_revision > 1
+    assert state.navigation.status == "complete"
     assert 0.35 < controller.minimum_clearance < 1.2
     assert payload.position == pytest.approx([4.0, 3.0, 0.16], abs=0.25)

@@ -129,9 +129,10 @@ The bundled Iris A→B delivery scene performs a real MuJoCo pickup: a cascaded 
 the payload, a contact/proximity/speed-gated attachment carries its physical mass, and a task monitor only
 completes after the released payload settles at B. See [`docs/DRONE_DELIVERY.md`](docs/DRONE_DELIVERY.md).
 
-The obstacle-aware variant adds 12 fixed-rate MuJoCo rangefinders, inflated-map A* routing, and a sensor-driven
-local safety layer. The browser renders live color-coded rays and nearest clearance while the same physical
-pickup/drop-off task completes around a blocking wall. See
+The obstacle-aware variant adds 12 fixed-rate MuJoCo rangefinders, a TTL-based live occupancy grid,
+frame-budgeted incremental A* replanning, safe hover/retry behavior, and a sensor-driven local safety layer.
+The browser renders live color-coded rays, navigation status, replan count, and the latest route while the
+same physical pickup/drop-off task discovers an unmapped obstacle and completes around it. See
 [`docs/DRONE_OBSTACLE_DELIVERY.md`](docs/DRONE_OBSTACLE_DELIVERY.md).
 
 Training algorithms use a separate Gymnasium data plane. `SimLabEnv` composes an engine-neutral backend contract, a robot adapter, and a task, and can switch between an in-process `MujocoBackend` and an atomic gRPC backend without changing task or algorithm code. Install `.[algorithm]` for local training or `.[algorithm,remote]` for gRPC. See [`docs/ALGORITHM_BACKEND_DECOUPLING.md`](docs/ALGORITHM_BACKEND_DECOUPLING.md).

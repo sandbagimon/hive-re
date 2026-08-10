@@ -35,6 +35,11 @@ position-driven joints, `ControllerAction.actuator_controls` addresses actuators
 maps atomically and applies the same stable-ID lookup and range clamping used by REST and UI commands.
 One action cannot address the same actuator through both actuator maps.
 
+Controllers may optionally return a typed `NavigationUpdate` in `ControllerAction.navigation`. The
+session publishes its route, navigation/map revisions, status, replan count, occupied-cell count, last
+replan time, and message as `SimulationState.navigation`. This telemetry does not mutate the authoring
+scene and is delivered to browser clients through the existing simulation WebSocket.
+
 For example, a quadrotor controller can command rotor angular velocities without importing MuJoCo:
 
 ```python

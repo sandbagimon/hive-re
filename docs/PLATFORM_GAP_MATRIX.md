@@ -77,7 +77,7 @@ SimLab 当前不是单体 Qt 面板应用，主要边界已经形成：
 | C5 Domain Randomization / Sim2Real | **缺失**。没有参数分布、随机化阶段或审计记录。 | 官网强调仿真到部署的完整流程；具体随机化 API 未公开。 | Replicator randomization、Isaac Lab events/randomization 和 sim-to-real 工作流。 | 增加可复现 randomization graph：pose、physics、material、light、sensor noise，并记录每 episode 参数。 | P2 |
 | C6 Task / Environment API | **基础闭环**。`SimLabEnv` 已有 Gymnasium spaces、seed/reset、reward、termination/truncation、Robot/Task 分层，以及本地 MuJoCo/原子 gRPC 后端切换；尚无 vectorized/MJX runtime。 | 宣称兼容主流强化学习平台。 | Isaac Lab 提供 manager-based/direct workflows、环境、任务和 wrappers。 | 增加 task registry、domain randomization、vector env、训练 runner 与 benchmark。 | P1 |
 | C7 强化学习与模仿学习 | **缺失**。无训练 runner、算法 adapter、demo buffer。 | 官网宣称强化学习训练及多机并发。 | Isaac Lab 集成 RL、imitation、motion planning 工作流和示例任务。 | 仿真平台只提供稳定 env API 与 adapters；先接一个外部 RL 库，避免自研算法框架。 | P2 |
-| C8 运动规划与导航 | **部分**。Iris 运货示例已有膨胀栅格 A*、路线简化和 rangefinder 局部避障，但地图仍由任务配置，未形成通用导航服务。 | 公开概述覆盖具身智能研发，具体 planner 未确认。 | Isaac 生态含运动规划、操控和导航相关工具链。 | 定义 engine-neutral map/collision-query API，再增加动态障碍、重规划、SLAM/外部 planner adapter。 | P3 |
+| C8 运动规划与导航 | **部分**。Iris 运货示例已有先验+实时占用栅格、带控制帧预算的增量 A*、路径失效/停滞重规划、安全悬停重试、rangefinder 局部避障和实时路线 telemetry；尚未形成通用导航服务或 SLAM。 | 公开概述覆盖具身智能研发，具体 planner 未确认。 | Isaac 生态含运动规划、操控和导航相关工具链。 | 将 map/collision-query 提升为 engine-neutral 服务，再增加 3D/动态障碍预测、SLAM 与外部 planner adapter。 | P3 |
 
 ## D. 规模化、扩展与交付
 

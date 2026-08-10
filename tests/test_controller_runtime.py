@@ -11,6 +11,7 @@ from simlab.services.controller_runtime import (
     ControllerObservation,
     ControllerRunner,
     JointObservation,
+    NavigationUpdate,
     RangefinderObservation,
 )
 
@@ -37,7 +38,13 @@ def _observation(time: float = 0.0) -> ControllerObservation:
 
 def test_controller_observation_and_action_are_immutable() -> None:
     observation = _observation()
-    action = ControllerAction({"shoulder": 0.5})
+    action = ControllerAction(
+        {"shoulder": 0.5},
+        navigation=NavigationUpdate(
+            status="following",
+            route=((0.0, 0.0, 1.0), (1.0, 2.0, 1.0)),
+        ),
+    )
 
     with pytest.raises(TypeError):
         observation.joints["elbow"] = JointObservation(0.0, 0.0)  # type: ignore[index]
@@ -49,6 +56,8 @@ def test_controller_observation_and_action_are_immutable() -> None:
         observation.rangefinders["rear"] = observation.rangefinders["front"]  # type: ignore[index]
     with pytest.raises(FrozenInstanceError):
         observation.time = 1.0  # type: ignore[misc]
+    with pytest.raises(FrozenInstanceError):
+        action.navigation.status = "blocked"  # type: ignore[misc,union-attr]
 
 
 def test_controller_runner_calls_reset_and_step_with_stable_state() -> None:

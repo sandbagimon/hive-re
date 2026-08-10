@@ -73,6 +73,7 @@ def create_obstacle_delivery_scene():
             },
         }
     )
+    assert scene.robotics is not None
     articulation = scene.robotics.articulations[0]
     articulation.sensors.extend(_horizontal_ray_sensor(index) for index in range(RAY_COUNT))
     scene.actors.extend(
@@ -84,6 +85,14 @@ def create_obstacle_delivery_scene():
                 [0.25, 0.8, 1.2],
                 dynamic=False,
                 rgba=[0.92, 0.32, 0.12, 1.0],
+            ),
+            _box(
+                "actor_unmapped_pillar",
+                "Unmapped Replanning Pillar",
+                [2.35, 3.0, 1.2],
+                [0.22, 0.22, 1.2],
+                dynamic=False,
+                rgba=[0.78, 0.2, 0.82, 1.0],
             ),
             _box(
                 "actor_obstacle_pillar_west",

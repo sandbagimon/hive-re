@@ -10,7 +10,11 @@ from simlab.models.robotics import (
 from simlab.models.scene import Scene
 from simlab.models.trajectory import JointTrajectory
 from simlab.models.transform import Transform
-from simlab.services.controller_runtime import ControllerAction, ControllerObservation
+from simlab.services.controller_runtime import (
+    ControllerAction,
+    ControllerObservation,
+    NavigationUpdate,
+)
 from simlab.services.openusd_importer import import_openusd_asset
 from simlab.services.simulation_session import (
     MuJoCoSimulationSession,
@@ -563,7 +567,18 @@ def test_robot_session_runs_python_controller_before_each_physics_step(tmp_path)
         def step(self, observation: ControllerObservation) -> ControllerAction:
             self.observation_times.append(observation.time)
             assert shoulder.id in observation.joints
-            return ControllerAction({shoulder.id: 0.6, elbow.id: -1.0})
+            return ControllerAction(
+                {shoulder.id: 0.6, elbow.id: -1.0},
+                navigation=NavigationUpdate(
+                    status="following",
+                    route=((0.0, 0.0, 1.0), (1.0, 2.0, 1.0)),
+                    route_revision=2,
+                    map_revision=4,
+                    replan_count=1,
+                    occupied_cell_count=3,
+                    last_replan_time=0.2,
+                ),
+            )
 
     controller = ReachController()
     session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
@@ -580,6 +595,13 @@ def test_robot_session_runs_python_controller_before_each_physics_step(tmp_path)
     assert stepped.time == pytest.approx(1.0)
     assert stepped.controller.status == "active"
     assert stepped.controller.step_count == 100
+    assert stepped.navigation.status == "following"
+    assert stepped.navigation.route_revision == 2
+    assert stepped.navigation.replan_count == 1
+    assert stepped.to_dict()["navigation"]["route"] == [
+        [0.0, 0.0, 1.0],
+        [1.0, 2.0, 1.0],
+    ]
     assert [state.ctrl for state in stepped.actuators] == pytest.approx([0.6, -1.0])
     assert stepped.joints[0].qpos > 0.1
 
@@ -587,9 +609,11 @@ def test_robot_session_runs_python_controller_before_each_physics_step(tmp_path)
     assert controller.reset_count == 2
     assert reset.controller.status == "ready"
     assert reset.controller.step_count == 0
+    assert reset.navigation.status == "idle"
     detached = session.detach_controller()
     assert detached.controller.mode == "manual"
     assert detached.controller.name is None
+    assert detached.navigation.status == "idle"
 
 
 def test_robot_session_contains_python_controller_fault_and_keeps_stepping(tmp_path) -> None:

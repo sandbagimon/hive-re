@@ -1057,21 +1057,31 @@ function syncNavigationVisual(sceneData: Scene): void {
   const navigation = sceneData.simulation_config.navigation as {
     route?: [number, number, number][];
   } | undefined;
-  const route = navigation?.route ?? [];
-  const signature = JSON.stringify(route);
+  const runtimeNavigation = simulationState?.navigation;
+  const route = runtimeNavigation?.route.length
+    ? runtimeNavigation.route
+    : navigation?.route ?? [];
+  const status = runtimeNavigation?.status ?? 'ready';
+  const signature = JSON.stringify({ route, status });
   if (signature === navigationRenderSignature) return;
   for (const child of [...navigationGroup.children]) {
     navigationGroup.remove(child);
     disposeObject(child);
   }
   navigationRenderSignature = signature;
+  canvas.dataset.navigationStatus = status;
+  canvas.dataset.navigationReplans = String(runtimeNavigation?.replan_count ?? 0);
+  canvas.dataset.navigationRouteRevision = String(runtimeNavigation?.route_revision ?? 0);
   if (route.length < 2) return;
+  const color = status === 'blocked' ? 0xff4d4f
+    : status === 'planning' ? 0xffbf3f
+      : status === 'complete' ? 0x43d3a5 : 0x44c7f4;
   const line = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints(
       route.map((point) => new THREE.Vector3(...point)),
     ),
     new THREE.LineBasicMaterial({
-      color: 0x44c7f4,
+      color,
       transparent: true,
       opacity: 0.9,
       depthTest: false,
@@ -1083,7 +1093,7 @@ function syncNavigationVisual(sceneData: Scene): void {
   for (const point of route) {
     const marker = new THREE.Mesh(
       new THREE.SphereGeometry(0.055, 12, 8),
-      new THREE.MeshBasicMaterial({ color: 0x44c7f4, depthTest: false }),
+      new THREE.MeshBasicMaterial({ color, depthTest: false }),
     );
     marker.position.set(...point);
     marker.renderOrder = 6;
@@ -1216,8 +1226,12 @@ function updateHud(): void {
   const rangeText = nearestRange !== undefined && Number.isFinite(nearestRange)
     ? ` | clearance ${nearestRange.toFixed(2)} m`
     : '';
+  const navigation = simulationState?.navigation;
+  const navigationText = navigation && navigation.status !== 'idle'
+    ? ` | nav ${navigation.status} · replans ${navigation.replan_count}`
+    : '';
   requiredElement('#scene-name').textContent = currentScene.name;
-  requiredElement('#scene-stats').textContent = `${currentScene.actors.length} actors${simText}${taskText}${rangeText}`;
+  requiredElement('#scene-stats').textContent = `${currentScene.actors.length} actors${simText}${taskText}${rangeText}${navigationText}`;
   const colliderState = selected && colliderDebugVisible
     ? ` | ${actorIsDynamic(selected) ? 'Dynamic' : 'Static'} collider`
     : '';
@@ -1284,6 +1298,7 @@ export function applySimulationState(state: SimulationState | null): void {
   }
   updateAttachmentVisuals();
   updateRangefinderVisuals();
+  syncNavigationVisual(currentScene);
   updateSelectionOutline();
   updateHud();
 }

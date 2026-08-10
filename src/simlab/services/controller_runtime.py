@@ -110,12 +110,56 @@ class ControllerObservation:
 
 
 @dataclass(frozen=True, slots=True)
+class NavigationUpdate:
+    status: str
+    route: tuple[tuple[float, float, float], ...] = ()
+    route_revision: int = 0
+    map_revision: int = 0
+    replan_count: int = 0
+    occupied_cell_count: int = 0
+    last_replan_time: float | None = None
+    message: str | None = None
+
+    def __post_init__(self) -> None:
+        status = self.status.strip()
+        if not status:
+            raise ValueError("Navigation status must not be empty")
+        route = tuple(tuple(float(value) for value in point) for point in self.route)
+        if any(len(point) != 3 for point in route) or any(
+            not math.isfinite(value) for point in route for value in point
+        ):
+            raise ValueError("Navigation route must contain finite xyz points")
+        counters = (
+            self.route_revision,
+            self.map_revision,
+            self.replan_count,
+            self.occupied_cell_count,
+        )
+        if any(
+            isinstance(value, bool) or not isinstance(value, int) or value < 0
+            for value in counters
+        ):
+            raise ValueError("Navigation revisions and counters must be integers >= 0")
+        if self.last_replan_time is not None and (
+            not math.isfinite(self.last_replan_time) or self.last_replan_time < 0
+        ):
+            raise ValueError("Navigation replan time must be finite and >= 0")
+        object.__setattr__(self, "status", status)
+        object.__setattr__(self, "route", route)
+
+
+@dataclass(frozen=True, slots=True)
 class ControllerAction:
     position_targets: Mapping[str, float] = field(default_factory=dict)
     actuator_controls: Mapping[str, float] = field(default_factory=dict)
     attachment_commands: Mapping[str, bool] = field(default_factory=dict)
+    navigation: NavigationUpdate | None = None
 
     def __post_init__(self) -> None:
+        if self.navigation is not None and not isinstance(
+            self.navigation, NavigationUpdate
+        ):
+            raise ValueError("Controller navigation must be a NavigationUpdate")
         targets = {str(joint_id): float(value) for joint_id, value in self.position_targets.items()}
         if any(not joint_id for joint_id in targets):
             raise ValueError("Controller action joint IDs must not be empty")

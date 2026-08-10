@@ -1,5 +1,8 @@
 # Drone Obstacle-Aware Delivery
 
+> 2026-08-10 后续迭代已加入在线占用地图和实时增量重规划，参见
+> [`2026-08-10-realtime-drone-replanning.md`](2026-08-10-realtime-drone-replanning.md)。
+
 日期：2026-08-07
 分支：`feature/drone-obstacle-avoidance`
 

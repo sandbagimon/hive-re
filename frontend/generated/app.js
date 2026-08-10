@@ -141,6 +141,7 @@ function renderInspector(actor, scene, simulationState, selectedJointId, selecte
     const controller = simulationState?.controller ?? {
         status: 'ready', message: null, command_time: null, timeout: null,
         mode: 'manual', name: null, step_count: 0, last_duration: null, deadline: null,
+        reset_deadline: null,
     };
     const controllerStatus = `<div class="controller-status" data-controller-status="${controller.status}">
     <span data-controller-status-label>${controller.status.replace('_', ' ')}</span>

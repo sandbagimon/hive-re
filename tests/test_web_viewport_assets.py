@@ -100,10 +100,14 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "sensor.sensor_type === 'contact'" in app
     assert 'data-sensor-field="normal_force"' in app
     assert 'data-sensor-field="first_point"' in app
-    assert (
-        "export type SensorSample = JointStateSensorSample | ImuSensorSample "
-        "| ContactSensorSample"
-    ) in types
+    assert "export type SensorSample" in types
+    for sensor_state in (
+        "JointStateSensorSample",
+        "ImuSensorSample",
+        "ContactSensorSample",
+        "RangefinderSensorSample",
+    ):
+        assert sensor_state in types
     assert "selectViewportLink" in app
     assert "selectedLinkId" in viewport
     assert "window.simlabEditor" in app
@@ -122,7 +126,7 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert 'id="controller-panel"' in html
     assert "data-recording-joint" in app
     assert "data-recording-sensor" in app
-    assert "['joint_state', 'imu', 'contact']" in app
+    assert "['joint_state', 'imu', 'contact', 'rangefinder']" in app
     assert "sensor_ids: sensorIds" in app
     assert "data-recording-command" in app
     assert "updateRecordingRuntime" in app
@@ -144,6 +148,8 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "four_cup_vacuum" in types
     assert "TorusGeometry" in viewport
     assert "delivery_tasks" in viewport
+    assert "navigationRouteRevision" in viewport
+    assert "replan_count" in types
     assert "function clearActors" not in viewport
     assert "sceneRevision" not in viewport
 
