@@ -46,9 +46,23 @@ def test_obstacle_delivery_uses_range_data_and_completes(tmp_path: Path) -> None
         == "insulated_delivery_bag"
     )
     assert actors["actor_obstacle_wall"].properties["visual_style"] == "known_obstacle"
+    assert actors["actor_001"].properties["visual_style"] == "cinematic_wet_asphalt"
     assert (
-        actors["actor_unmapped_pillar"].properties["visual_style"]
-        == "unmapped_obstacle"
+        actors["actor_pickup_restaurant"].properties["visual_style"]
+        == "restaurant_pickup"
+    )
+    assert (
+        actors["actor_dropoff_residence"].properties["visual_style"]
+        == "residential_dropoff"
+    )
+    assert (
+        actors["actor_dynamic_delivery_van"].properties["visual_style"]
+        == "dynamic_delivery_van"
+    )
+    assert actors["actor_dynamic_delivery_van"].properties["physics"]["dynamic"]
+    assert (
+        actors["actor_dynamic_courier"].properties["visual_style"]
+        == "dynamic_courier"
     )
     barrier_visual = actors["actor_obstacle_wall"].properties["visual_model"]
     assert barrier_visual["license"] == "CC0-1.0"
@@ -60,7 +74,6 @@ def test_obstacle_delivery_uses_range_data_and_completes(tmp_path: Path) -> None
     assert actors["actor_obstacle_wall"].transform.position[2] == 1.2
     assert actors["actor_obstacle_wall"].properties["size"] == [0.25, 0.8, 1.2]
     for actor_id in (
-        "actor_unmapped_pillar",
         "actor_obstacle_pillar_west",
         "actor_obstacle_pillar_east",
     ):
@@ -68,8 +81,17 @@ def test_obstacle_delivery_uses_range_data_and_completes(tmp_path: Path) -> None
         assert barrel_visual["license"] == "CC0-1.0"
         assert barrel_visual["source_url"].endswith("/barrel_03")
         assert len(barrel_visual["instances"]) == 2
-    assert scene.simulation_config["controller_deadline"] == 0.02
+    assert scene.simulation_config["controller_deadline"] == 0.05
     assert scene.simulation_config["controller_reset_deadline"] == 0.2
+    assert scene.simulation_config["visual_environment"]["preset"] == (
+        "cinematic_blue_hour_delivery"
+    )
+    dynamic_events = scene.simulation_config["dynamic_events"]
+    assert [event["actor_id"] for event in dynamic_events] == [
+        "actor_dynamic_delivery_van",
+        "actor_dynamic_courier",
+    ]
+    assert all(len(event["keyframes"]) >= 6 for event in dynamic_events)
     assert scene.simulation_config["navigation"]["route"] == [
         [x, y, 1.5] for x, y in plan_route((0.0, 0.0), (4.0, 3.0))
     ]
@@ -99,5 +121,7 @@ def test_obstacle_delivery_uses_range_data_and_completes(tmp_path: Path) -> None
     assert controller.replan_count > 0
     assert state.navigation.route_revision > 1
     assert state.navigation.status == "complete"
+    assert len(state.dynamic_events) == 2
+    assert all(event.status == "completed" for event in state.dynamic_events)
     assert 0.35 < controller.minimum_clearance < 1.2
     assert payload.position == pytest.approx([4.0, 3.0, 0.16], abs=0.25)

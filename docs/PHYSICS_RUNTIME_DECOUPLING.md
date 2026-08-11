@@ -105,7 +105,7 @@ Scene 会自动推导刚体、碰撞、关节、约束、外力和射线查询�
 
 ```text
 rigid_body | articulation | collision | constraint | external_force
-ray_query | fluid | particle | deformable_body | differentiable
+ray_query | kinematic_actor | fluid | particle | deformable_body | differentiable
 ```
 
 Backend 的 `EngineDescriptor.capabilities` 必须覆盖需求。缺失能力会在加载原生引擎模型前

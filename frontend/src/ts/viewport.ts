@@ -256,6 +256,57 @@ citySky.frustumCulled = false;
 citySky.renderOrder = -100;
 scene.add(citySky);
 
+const cinematicSky = new THREE.Mesh(
+  new THREE.SphereGeometry(1, 32, 16),
+  new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    depthWrite: false,
+    uniforms: {
+      lowerColor: { value: new THREE.Color(0x111923) },
+      horizonColor: { value: new THREE.Color(0x40586c) },
+      zenithColor: { value: new THREE.Color(0x081321) },
+      afterglowColor: { value: new THREE.Color(0xe68153) },
+    },
+    vertexShader: `
+      varying vec3 vSkyDirection;
+      void main() {
+        vSkyDirection = normalize(position);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vSkyDirection;
+      uniform vec3 lowerColor;
+      uniform vec3 horizonColor;
+      uniform vec3 zenithColor;
+      uniform vec3 afterglowColor;
+      void main() {
+        float height = clamp(vSkyDirection.z, -1.0, 1.0);
+        float upperMix = pow(max(height, 0.0), 0.55);
+        vec3 upper = mix(horizonColor, zenithColor, upperMix);
+        vec3 color = mix(lowerColor, upper, smoothstep(-0.28, 0.04, height));
+        vec3 glowDirection = normalize(vec3(-0.72, 0.18, 0.15));
+        float glow = pow(max(dot(vSkyDirection, glowDirection), 0.0), 14.0);
+        color += afterglowColor * glow * 0.24;
+        gl_FragColor = vec4(color, 1.0);
+      }
+    `,
+  }),
+);
+cinematicSky.visible = false;
+cinematicSky.frustumCulled = false;
+cinematicSky.renderOrder = -99;
+scene.add(cinematicSky);
+
+const pickupPracticalLight = new THREE.PointLight(0xff9b54, 7.5, 7.0, 1.8);
+pickupPracticalLight.position.set(-2.38, 0.0, 1.55);
+pickupPracticalLight.visible = false;
+scene.add(pickupPracticalLight);
+const dropoffPracticalLight = new THREE.PointLight(0xffc17d, 6.2, 6.0, 1.8);
+dropoffPracticalLight.position.set(4.0, 3.72, 1.7);
+dropoffPracticalLight.visible = false;
+scene.add(dropoffPracticalLight);
+
 const actorGroup = new THREE.Group();
 scene.add(actorGroup);
 const attachmentGroup = new THREE.Group();
@@ -301,6 +352,7 @@ let currentScene: Scene = {
 let simulationState: SimulationState | null = null;
 let colliderDebugVisible = false;
 let cityEnvironmentVisible = false;
+let cinematicEnvironmentVisible = false;
 const focusBox = new THREE.Box3();
 const focusSphere = new THREE.Sphere();
 const viewDirections: Record<CameraView, any> = {
@@ -326,32 +378,69 @@ function isLargeEnvironment(actor: Actor): boolean {
 
 function updateEnvironmentAppearance(sceneData: Scene): void {
   const wasCityEnvironmentVisible = cityEnvironmentVisible;
+  const wasCinematicEnvironmentVisible = cinematicEnvironmentVisible;
   cityEnvironmentVisible = sceneData.actors.some(isLargeEnvironment);
-  canvas.dataset.environmentMode = cityEnvironmentVisible ? 'city' : 'editor';
+  const environment = sceneData.simulation_config.visual_environment as {
+    preset?: string;
+    exposure?: number;
+    fog_color?: string;
+    fog_near?: number;
+    fog_far?: number;
+  } | undefined;
+  cinematicEnvironmentVisible = !cityEnvironmentVisible
+    && environment?.preset === 'cinematic_blue_hour_delivery';
+  const mode = cityEnvironmentVisible ? 'city'
+    : cinematicEnvironmentVisible ? 'cinematic-delivery' : 'editor';
+  canvas.dataset.environmentMode = mode;
   canvas.dataset.shadowMode = cityEnvironmentVisible ? 'disabled' : 'soft';
-  grid.visible = !cityEnvironmentVisible;
-  axes.visible = !cityEnvironmentVisible;
-  editorFloor.visible = !cityEnvironmentVisible;
-  editorSky.visible = !cityEnvironmentVisible;
+  grid.visible = !cityEnvironmentVisible && !cinematicEnvironmentVisible;
+  axes.visible = !cityEnvironmentVisible && !cinematicEnvironmentVisible;
+  editorFloor.visible = !cityEnvironmentVisible && !cinematicEnvironmentVisible;
+  editorSky.visible = !cityEnvironmentVisible && !cinematicEnvironmentVisible;
   citySky.visible = cityEnvironmentVisible;
-  renderer.setClearColor(cityEnvironmentVisible ? 0xb9d3e3 : 0x101d29, 1);
-  renderer.toneMappingExposure = 1.08;
+  cinematicSky.visible = cinematicEnvironmentVisible;
+  pickupPracticalLight.visible = cinematicEnvironmentVisible;
+  dropoffPracticalLight.visible = cinematicEnvironmentVisible;
+  renderer.setClearColor(
+    cityEnvironmentVisible ? 0xb9d3e3
+      : cinematicEnvironmentVisible ? 0x0b1520 : 0x101d29,
+    1,
+  );
+  renderer.toneMappingExposure = cinematicEnvironmentVisible
+    ? environment?.exposure ?? 0.92 : 1.08;
   keyLight.castShadow = !cityEnvironmentVisible;
   if (scene.fog instanceof THREE.Fog) {
-    scene.fog.color.set(cityEnvironmentVisible ? 0xc4d8e2 : 0x243746);
+    scene.fog.color.set(
+      cityEnvironmentVisible ? 0xc4d8e2
+        : cinematicEnvironmentVisible ? environment?.fog_color ?? 0x17232f : 0x243746,
+    );
   }
-  ambient.color.set(cityEnvironmentVisible ? 0xcce5ff : 0xd9edff);
-  ambient.groundColor.set(cityEnvironmentVisible ? 0x53665d : 0x56636b);
-  ambient.intensity = cityEnvironmentVisible ? 1.25 : 1.72;
-  keyLight.intensity = cityEnvironmentVisible ? 2.1 : 2.45;
-  fillLight.intensity = cityEnvironmentVisible ? 0.5 : 0.72;
-  const environmentModeChanged = cityEnvironmentVisible !== wasCityEnvironmentVisible;
+  ambient.color.set(
+    cityEnvironmentVisible ? 0xcce5ff
+      : cinematicEnvironmentVisible ? 0x6f91ad : 0xd9edff,
+  );
+  ambient.groundColor.set(
+    cityEnvironmentVisible ? 0x53665d
+      : cinematicEnvironmentVisible ? 0x18212a : 0x56636b,
+  );
+  ambient.intensity = cityEnvironmentVisible ? 1.25
+    : cinematicEnvironmentVisible ? 0.92 : 1.72;
+  keyLight.color.set(cinematicEnvironmentVisible ? 0xffb477 : 0xffedcf);
+  keyLight.intensity = cityEnvironmentVisible ? 2.1
+    : cinematicEnvironmentVisible ? 3.0 : 2.45;
+  fillLight.color.set(cinematicEnvironmentVisible ? 0x6da8e0 : 0x9dc9ef);
+  fillLight.intensity = cityEnvironmentVisible ? 0.5
+    : cinematicEnvironmentVisible ? 0.95 : 0.72;
+  const environmentModeChanged = cityEnvironmentVisible !== wasCityEnvironmentVisible
+    || cinematicEnvironmentVisible !== wasCinematicEnvironmentVisible;
   if (scene.fog instanceof THREE.Fog && environmentModeChanged) {
     // A large environment gets camera-dependent fog distances in frameObject(). Preserve those
     // distances while reconciling unrelated actors; resetting them to the editor defaults would
     // fog out a kilometre-scale scene and make it flash white after every scene edit.
-    scene.fog.near = cityEnvironmentVisible ? 18 : 28;
-    scene.fog.far = cityEnvironmentVisible ? 60 : 90;
+    scene.fog.near = cityEnvironmentVisible ? 18
+      : cinematicEnvironmentVisible ? environment?.fog_near ?? 18 : 28;
+    scene.fog.far = cityEnvironmentVisible ? 60
+      : cinematicEnvironmentVisible ? environment?.fog_far ?? 58 : 90;
   }
   if (scene.fog instanceof THREE.Fog) {
     canvas.dataset.fogNear = scene.fog.near.toFixed(3);
@@ -372,10 +461,18 @@ export function configureViewport(callbacks: {
 }
 
 function resize(): void {
-  const width = canvas.clientWidth || window.innerWidth;
-  const height = canvas.clientHeight || window.innerHeight;
+  const width = Math.max(1, Math.floor(canvas.clientWidth || window.innerWidth));
+  const height = Math.max(1, Math.floor(canvas.clientHeight || window.innerHeight));
+  const pixelRatio = renderer.getPixelRatio();
+  const drawingWidth = Math.floor(width * pixelRatio);
+  const drawingHeight = Math.floor(height * pixelRatio);
+  if (
+    canvas.width === drawingWidth
+    && canvas.height === drawingHeight
+    && Math.abs(camera.aspect - width / height) < 1e-9
+  ) return;
   renderer.setSize(width, height, false);
-  camera.aspect = width / Math.max(height, 1);
+  camera.aspect = width / height;
   camera.updateProjectionMatrix();
 }
 
@@ -400,12 +497,18 @@ function materialForActor(actor: Actor): any {
   if (importedMesh) return new THREE.MeshStandardMaterial(options);
   const style = actor.properties.visual_style;
   const highFidelityCoating = style === 'insulated_delivery_bag'
+    || style === 'cinematic_wet_asphalt'
+    || style === 'dynamic_delivery_van'
     || style?.startsWith('landing_pad_');
   const material = highFidelityCoating
     ? new THREE.MeshPhysicalMaterial({
       ...options,
-      clearcoat: style?.startsWith('landing_pad_') ? 0.58 : 0.08,
-      clearcoatRoughness: style?.startsWith('landing_pad_') ? 0.3 : 0.72,
+      clearcoat: style === 'cinematic_wet_asphalt' ? 0.72
+        : style === 'dynamic_delivery_van' ? 0.82
+          : style?.startsWith('landing_pad_') ? 0.58 : 0.08,
+      clearcoatRoughness: style === 'cinematic_wet_asphalt' ? 0.2
+        : style === 'dynamic_delivery_van' ? 0.16
+          : style?.startsWith('landing_pad_') ? 0.3 : 0.72,
       ior: 1.48,
       sheen: style === 'insulated_delivery_bag' ? 0.28 : 0,
       sheenRoughness: 0.88,
@@ -420,6 +523,10 @@ function materialForActor(actor: Actor): any {
     const size = actor.properties.size ?? [5, 5, 0.05];
     repeat = [Math.max(size[0] ?? 5, 1), Math.max(size[1] ?? 5, 1)];
     bumpScale = 0.012;
+  } else if (style === 'cinematic_wet_asphalt') {
+    surface = 'concrete';
+    repeat = [5.5, 4.5];
+    bumpScale = 0.018;
   } else if (style === 'shipping_package') {
     surface = 'cardboard';
     repeat = [3.5, 3];
@@ -440,13 +547,22 @@ function materialForActor(actor: Actor): any {
     surface = 'powder_coat';
     repeat = [2.5, 5];
     bumpScale = 0.0045;
+  } else if (style === 'restaurant_pickup' || style === 'residential_dropoff') {
+    surface = 'concrete';
+    repeat = [5, 4];
+    bumpScale = 0.008;
+  } else if (style === 'dynamic_courier') {
+    surface = 'powder_coat';
+    repeat = [2, 4];
+    bumpScale = 0.003;
   }
   if (surface) {
     applyProceduralSurface(material, surface, {
       repeat,
       anisotropy: renderer.capabilities.getMaxAnisotropy(),
       bumpScale,
-      envMapIntensity: style === 'operations_ground' ? 0.58 : 0.82,
+      envMapIntensity: style === 'operations_ground' ? 0.58
+        : style === 'cinematic_wet_asphalt' ? 1.15 : 0.82,
     });
   }
   return material;
@@ -891,6 +1007,465 @@ function addOperationsGroundDetails(mesh: any, actor: Actor): void {
   mesh.add(markings);
 }
 
+function addVisualDetail(
+  root: any,
+  geometry: any,
+  material: any,
+  position: [number, number, number],
+): any {
+  const detail = new THREE.Mesh(geometry, material);
+  detail.position.set(...position);
+  detail.castShadow = true;
+  detail.receiveShadow = true;
+  detail.userData.actorDetail = true;
+  root.add(detail);
+  return detail;
+}
+
+function cinematicRoadMarkingTexture(): any | null {
+  return canvasTexture(1024, (context, size) => {
+    context.clearRect(0, 0, size, size);
+    context.strokeStyle = 'rgba(226, 210, 160, 0.42)';
+    context.lineWidth = 8;
+    context.setLineDash([72, 52]);
+    context.beginPath();
+    context.moveTo(size * 0.53, 0);
+    context.lineTo(size * 0.53, size);
+    context.stroke();
+    context.setLineDash([]);
+    context.strokeStyle = 'rgba(239, 244, 238, 0.58)';
+    context.lineWidth = 5;
+    for (let index = 0; index < 7; index += 1) {
+      const x = size * (0.08 + index * 0.052);
+      context.beginPath();
+      context.moveTo(x, size * 0.11);
+      context.lineTo(x, size * 0.26);
+      context.stroke();
+    }
+    context.strokeStyle = 'rgba(240, 184, 62, 0.46)';
+    context.lineWidth = 7;
+    context.strokeRect(size * 0.05, size * 0.04, size * 0.31, size * 0.28);
+  });
+}
+
+function addCinematicWetAsphaltDetails(
+  mesh: any,
+  actor: Actor,
+  loadRevision: number,
+): void {
+  const size = actor.properties.size ?? [5.5, 4.5, 0.05];
+  const halfX = size[0] ?? 5.5;
+  const halfY = size[1] ?? 4.5;
+  const halfZ = size[2] ?? 0.05;
+  mesh.material.color.set(0xffffff);
+  mesh.material.roughness = 0.48;
+  mesh.material.metalness = 0.04;
+  mesh.material.clearcoat = 0.72;
+  mesh.material.clearcoatRoughness = 0.2;
+  mesh.material.envMapIntensity = 1.15;
+  const textureUrl = new URL(
+    './textures/cinematic-delivery/wet-asphalt-albedo.png',
+    document.baseURI,
+  ).href;
+  canvas.dataset.cinematicAsphaltTexture = 'loading';
+  new THREE.TextureLoader().load(textureUrl, (texture) => {
+    if (!actorLoadIsCurrent(actor.id, mesh, loadRevision)) {
+      texture.dispose();
+      return;
+    }
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(Math.max(halfX / 1.55, 1), Math.max(halfY / 1.55, 1));
+    texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 12);
+    mesh.material.map?.dispose();
+    mesh.material.map = texture;
+    mesh.material.needsUpdate = true;
+    canvas.dataset.cinematicAsphaltTexture = 'loaded';
+  }, undefined, () => {
+    if (actorLoadIsCurrent(actor.id, mesh, loadRevision)) {
+      canvas.dataset.cinematicAsphaltTexture = 'failed';
+    }
+  });
+
+  const markings = addVisualDetail(
+    mesh,
+    new THREE.PlaneGeometry(halfX * 2, halfY * 2),
+    new THREE.MeshBasicMaterial({
+      map: cinematicRoadMarkingTexture(),
+      transparent: true,
+      opacity: 0.9,
+      depthWrite: false,
+      toneMapped: false,
+    }),
+    [0, 0, halfZ + 0.0025],
+  );
+  markings.castShadow = false;
+  markings.renderOrder = 2;
+
+  const puddleMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0x182a38,
+    transparent: true,
+    opacity: 0.42,
+    roughness: 0.08,
+    metalness: 0.02,
+    clearcoat: 1,
+    clearcoatRoughness: 0.04,
+    envMapIntensity: 1.65,
+    depthWrite: false,
+  });
+  for (const [index, puddle] of [
+    [-2.15, -0.75, 0.72, 0.28, -0.18],
+    [1.2, -2.1, 0.5, 0.2, 0.3],
+    [3.25, 1.55, 0.84, 0.24, -0.12],
+  ].entries()) {
+    const [x, y, width, depth, rotation] = puddle;
+    const detail = addVisualDetail(
+      mesh,
+      new THREE.CircleGeometry(1, 40),
+      index === 0 ? puddleMaterial : puddleMaterial.clone(),
+      [x, y, halfZ + 0.004],
+    );
+    detail.scale.set(width, depth, 1);
+    detail.rotation.z = rotation;
+    detail.castShadow = false;
+    detail.renderOrder = 3;
+  }
+}
+
+function facadeSignTexture(
+  title: string,
+  subtitle: string,
+  accent: string,
+): any | null {
+  return canvasTexture(1024, (context, size) => {
+    context.fillStyle = 'rgba(7, 12, 17, 0.96)';
+    context.fillRect(0, 0, size, size);
+    context.shadowColor = accent;
+    context.shadowBlur = 38;
+    context.strokeStyle = accent;
+    context.lineWidth = 14;
+    context.strokeRect(30, 30, size - 60, size - 60);
+    context.fillStyle = '#fff5e8';
+    context.font = `800 ${Math.round(size * 0.17)}px system-ui, sans-serif`;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(title, size / 2, size * 0.43);
+    context.shadowBlur = 18;
+    context.fillStyle = accent;
+    context.font = `700 ${Math.round(size * 0.072)}px system-ui, sans-serif`;
+    context.fillText(subtitle, size / 2, size * 0.68);
+  });
+}
+
+function addRestaurantPickupDetails(mesh: any, actor: Actor): void {
+  const size = actor.properties.size ?? [1.5, 0.22, 1.35];
+  const halfX = size[0] ?? 1.5;
+  const halfY = size[1] ?? 0.22;
+  mesh.material.color.set(0x263038);
+  mesh.material.roughness = 0.82;
+  const frame = new THREE.MeshStandardMaterial({
+    color: 0x14191e,
+    roughness: 0.28,
+    metalness: 0.75,
+    envMapIntensity: 1.05,
+  });
+  const glass = new THREE.MeshPhysicalMaterial({
+    color: 0x5a7180,
+    roughness: 0.12,
+    metalness: 0.08,
+    transmission: 0.28,
+    transparent: true,
+    opacity: 0.72,
+    clearcoat: 0.8,
+    clearcoatRoughness: 0.1,
+    envMapIntensity: 1.25,
+  });
+  const warmInterior = new THREE.MeshBasicMaterial({ color: 0xffa35b, toneMapped: false });
+  addVisualDetail(mesh, new THREE.BoxGeometry(1.75, 0.035, 0.9), glass, [-0.32, halfY + 0.026, -0.25]);
+  addVisualDetail(
+    mesh,
+    new THREE.BoxGeometry(1.62, 0.018, 0.78),
+    warmInterior,
+    [-0.32, halfY + 0.012, -0.25],
+  );
+  for (const x of [-1.18, -0.6, 0.0, 0.56]) {
+    addVisualDetail(mesh, new THREE.BoxGeometry(0.035, 0.055, 0.94), frame.clone(), [x, halfY + 0.048, -0.25]);
+  }
+  const door = addVisualDetail(
+    mesh,
+    new THREE.BoxGeometry(0.55, 0.06, 1.12),
+    frame.clone(),
+    [1.02, halfY + 0.045, -0.22],
+  );
+  addVisualDetail(door, new THREE.BoxGeometry(0.42, 0.025, 0.82), glass.clone(), [0, 0.04, 0.05]);
+  addVisualDetail(
+    door,
+    new THREE.SphereGeometry(0.035, 16, 10),
+    new THREE.MeshStandardMaterial({ color: 0xd7b36c, metalness: 0.9, roughness: 0.18 }),
+    [-0.18, 0.08, 0],
+  );
+  const sign = addVisualDetail(
+    mesh,
+    new THREE.PlaneGeometry(2.25, 0.56),
+    new THREE.MeshBasicMaterial({
+      map: facadeSignTexture('NIGHT KITCHEN', 'PICKUP • OPEN', '#ff7a3d'),
+      toneMapped: false,
+    }),
+    [-0.12, halfY + 0.075, 0.72],
+  );
+  sign.rotation.x = -Math.PI / 2;
+  const awningMaterials = [0xf0e3cc, 0xc8452f].map((color) => (
+    new THREE.MeshPhysicalMaterial({ color, roughness: 0.65, sheen: 0.25 })
+  ));
+  for (let index = 0; index < 9; index += 1) {
+    const awning = addVisualDetail(
+      mesh,
+      new THREE.BoxGeometry(0.29, 0.5, 0.055),
+      awningMaterials[index % 2].clone(),
+      [-1.16 + index * 0.29, halfY + 0.25, 0.34],
+    );
+    awning.rotation.x = -0.12;
+  }
+  for (const x of [-halfX * 0.88, halfX * 0.88]) {
+    const lamp = addVisualDetail(
+      mesh,
+      new THREE.SphereGeometry(0.07, 20, 12),
+      new THREE.MeshStandardMaterial({
+        color: 0xffd2a0,
+        emissive: 0xff7a32,
+        emissiveIntensity: 3.4,
+        roughness: 0.18,
+      }),
+      [x, halfY + 0.12, 0.44],
+    );
+    lamp.userData.dynamicEventPulse = true;
+  }
+}
+
+function addResidentialDropoffDetails(mesh: any, actor: Actor): void {
+  const size = actor.properties.size ?? [1.45, 0.24, 1.7];
+  const halfX = size[0] ?? 1.45;
+  const halfY = size[1] ?? 0.24;
+  mesh.material.color.set(0x3b4247);
+  mesh.material.roughness = 0.78;
+  const trim = new THREE.MeshStandardMaterial({
+    color: 0x20272d,
+    roughness: 0.32,
+    metalness: 0.62,
+  });
+  const warmWindow = new THREE.MeshStandardMaterial({
+    color: 0xffd29b,
+    emissive: 0xffa755,
+    emissiveIntensity: 1.75,
+    roughness: 0.18,
+    metalness: 0.1,
+  });
+  for (const z of [-0.72, 0.18, 1.02]) {
+    for (const x of [-0.82, 0, 0.82]) {
+      const window = addVisualDetail(
+        mesh,
+        new THREE.BoxGeometry(0.47, 0.04, 0.52),
+        warmWindow.clone(),
+        [x, -halfY - 0.028, z],
+      );
+      window.userData.dynamicEventPulse = z > 0.5;
+      for (const offset of [-0.13, 0.13]) {
+        addVisualDetail(window, new THREE.BoxGeometry(0.025, 0.025, 0.5), trim.clone(), [offset, -0.04, 0]);
+      }
+      const balcony = addVisualDetail(
+        mesh,
+        new THREE.BoxGeometry(0.68, 0.35, 0.055),
+        trim.clone(),
+        [x, -halfY - 0.16, z - 0.35],
+      );
+      balcony.castShadow = true;
+    }
+  }
+  const entrance = addVisualDetail(
+    mesh,
+    new THREE.BoxGeometry(0.58, 0.06, 1.1),
+    new THREE.MeshPhysicalMaterial({
+      color: 0x172331,
+      roughness: 0.2,
+      metalness: 0.42,
+      clearcoat: 0.65,
+    }),
+    [0, -halfY - 0.04, -1.05],
+  );
+  const address = addVisualDetail(
+    entrance,
+    new THREE.PlaneGeometry(0.3, 0.3),
+    new THREE.MeshBasicMaterial({
+      map: facadeSignTexture('B', 'DELIVERY', '#78e3a3'),
+      toneMapped: false,
+    }),
+    [0, -0.04, 0.2],
+  );
+  address.rotation.x = Math.PI / 2;
+  const canopy = addVisualDetail(
+    mesh,
+    new THREE.BoxGeometry(1.35, 0.64, 0.08),
+    trim.clone(),
+    [0, -halfY - 0.31, -0.42],
+  );
+  canopy.rotation.x = 0.06;
+  const roofEdge = addVisualDetail(
+    mesh,
+    new THREE.BoxGeometry(halfX * 2.1, 0.08, 0.14),
+    trim.clone(),
+    [0, -halfY - 0.01, 1.67],
+  );
+  roofEdge.castShadow = true;
+}
+
+function addDynamicDeliveryVanDetails(mesh: any): void {
+  mesh.material.color.set(0xbe3b2b);
+  mesh.material.roughness = 0.24;
+  mesh.material.metalness = 0.32;
+  mesh.material.clearcoat = 0.86;
+  mesh.material.clearcoatRoughness = 0.14;
+  const dark = new THREE.MeshStandardMaterial({
+    color: 0x10161b,
+    roughness: 0.24,
+    metalness: 0.68,
+    envMapIntensity: 1.2,
+  });
+  const glass = new THREE.MeshPhysicalMaterial({
+    color: 0x233b4c,
+    roughness: 0.08,
+    metalness: 0.25,
+    transmission: 0.24,
+    transparent: true,
+    opacity: 0.72,
+    clearcoat: 1,
+    envMapIntensity: 1.45,
+  });
+  addVisualDetail(mesh, new THREE.BoxGeometry(0.62, 0.7, 0.35), mesh.material.clone(), [0.39, 0, 0.48]);
+  addVisualDetail(mesh, new THREE.BoxGeometry(0.08, 0.58, 0.32), glass, [0.735, 0, 0.34]);
+  for (const y of [-0.355, 0.355]) {
+    addVisualDetail(mesh, new THREE.BoxGeometry(0.42, 0.025, 0.3), glass.clone(), [0.35, y, 0.35]);
+  }
+  const wheelMaterial = new THREE.MeshStandardMaterial({ color: 0x090b0d, roughness: 0.92 });
+  for (const x of [-0.46, 0.46]) {
+    for (const y of [-0.37, 0.37]) {
+      const wheel = addVisualDetail(
+        mesh,
+        new THREE.CylinderGeometry(0.17, 0.17, 0.12, 28),
+        wheelMaterial.clone(),
+        [x, y, -0.5],
+      );
+      addVisualDetail(
+        wheel,
+        new THREE.CylinderGeometry(0.075, 0.075, 0.125, 20),
+        new THREE.MeshStandardMaterial({ color: 0xb6bec5, metalness: 0.9, roughness: 0.22 }),
+        [0, 0, 0],
+      );
+    }
+  }
+  for (const [x, color] of [[0.735, 0xf5f3d2], [-0.735, 0xff4a35]]) {
+    for (const y of [-0.23, 0.23]) {
+      const lamp = addVisualDetail(
+        mesh,
+        new THREE.BoxGeometry(0.03, 0.12, 0.1),
+        new THREE.MeshStandardMaterial({
+          color,
+          emissive: color,
+          emissiveIntensity: 3.2,
+          roughness: 0.16,
+        }),
+        [x, y, -0.06],
+      );
+      lamp.userData.dynamicEventPulse = true;
+    }
+  }
+  const sideSign = addVisualDetail(
+    mesh,
+    new THREE.PlaneGeometry(0.72, 0.32),
+    new THREE.MeshBasicMaterial({
+      map: facadeSignTexture('CITY FOOD', 'ON THE MOVE', '#ffba62'),
+      toneMapped: false,
+    }),
+    [-0.14, -0.351, 0.05],
+  );
+  sideSign.rotation.x = Math.PI / 2;
+  addVisualDetail(mesh, new THREE.BoxGeometry(1.52, 0.08, 0.1), dark, [0, 0, -0.7]);
+}
+
+function addDynamicCourierDetails(mesh: any): void {
+  mesh.material.transparent = true;
+  mesh.material.opacity = 0;
+  mesh.material.depthWrite = false;
+  mesh.material.colorWrite = false;
+  const rubber = new THREE.MeshStandardMaterial({ color: 0x0a0d10, roughness: 0.92 });
+  const steel = new THREE.MeshStandardMaterial({
+    color: 0x4a5963,
+    roughness: 0.3,
+    metalness: 0.82,
+  });
+  const navy = new THREE.MeshPhysicalMaterial({
+    color: 0x174a67,
+    roughness: 0.48,
+    sheen: 0.32,
+    sheenColor: new THREE.Color(0x6a9ebb),
+  });
+  for (const x of [-0.25, 0.25]) {
+    const wheel = addVisualDetail(
+      mesh,
+      new THREE.TorusGeometry(0.19, 0.025, 12, 32),
+      rubber.clone(),
+      [x, 0, -0.62],
+    );
+    wheel.rotation.x = Math.PI / 2;
+  }
+  const framePoints = [
+    [new THREE.Vector3(-0.25, 0, -0.56), new THREE.Vector3(0, 0, -0.18)],
+    [new THREE.Vector3(0.25, 0, -0.56), new THREE.Vector3(0, 0, -0.18)],
+    [new THREE.Vector3(-0.25, 0, -0.56), new THREE.Vector3(0.25, 0, -0.56)],
+  ];
+  for (const points of framePoints) {
+    const curve = new THREE.LineCurve3(points[0], points[1]);
+    addVisualDetail(mesh, new THREE.TubeGeometry(curve, 8, 0.025, 8), steel.clone(), [0, 0, 0]);
+  }
+  addVisualDetail(mesh, new THREE.CapsuleGeometry(0.16, 0.46, 8, 16), navy, [0, 0, 0.02]);
+  addVisualDetail(
+    mesh,
+    new THREE.SphereGeometry(0.14, 24, 16),
+    new THREE.MeshStandardMaterial({ color: 0xe7b18c, roughness: 0.72 }),
+    [0.03, 0, 0.48],
+  );
+  addVisualDetail(
+    mesh,
+    new THREE.SphereGeometry(0.155, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.58),
+    new THREE.MeshPhysicalMaterial({
+      color: 0xffc438,
+      roughness: 0.22,
+      metalness: 0.24,
+      clearcoat: 0.8,
+    }),
+    [0.03, 0, 0.55],
+  );
+  const bag = addVisualDetail(
+    mesh,
+    roundedRectangleGeometry(0.3, 0.24, 0.36, 0.035),
+    new THREE.MeshStandardMaterial({ color: 0xe36a2e, roughness: 0.64 }),
+    [-0.12, 0.11, 0.0],
+  );
+  bag.rotation.x = Math.PI / 2;
+  const beacon = addVisualDetail(
+    mesh,
+    new THREE.SphereGeometry(0.035, 16, 10),
+    new THREE.MeshStandardMaterial({
+      color: 0x52d8ff,
+      emissive: 0x25bce9,
+      emissiveIntensity: 3.5,
+      roughness: 0.12,
+    }),
+    [0.03, 0, 0.68],
+  );
+  beacon.userData.dynamicEventPulse = true;
+}
+
 function addLandingPadDetails(mesh: any, actor: Actor, label: string, accent: string): void {
   const size = actor.properties.size ?? [0.75, 0.75, 0.025];
   const halfX = size[0] ?? 0.75;
@@ -1116,6 +1691,9 @@ function addActorVisualDetails(mesh: any, actor: Actor, loadRevision: number): v
     addInsulatedDeliveryBagDetails(mesh, actor, loadRevision);
   }
   else if (visualStyle === 'operations_ground') addOperationsGroundDetails(mesh, actor);
+  else if (visualStyle === 'cinematic_wet_asphalt') {
+    addCinematicWetAsphaltDetails(mesh, actor, loadRevision);
+  }
   else if (visualStyle === 'landing_pad_pickup') {
     addLandingPadDetails(mesh, actor, 'A', 'rgba(95, 190, 255, 0.95)');
   } else if (visualStyle === 'landing_pad_dropoff') {
@@ -1126,6 +1704,14 @@ function addActorVisualDetails(mesh: any, actor: Actor, loadRevision: number): v
     addObstacleDetails(mesh, actor, 0xff5ce1, true);
   } else if (visualStyle === 'safety_pillar') {
     addObstacleDetails(mesh, actor, 0xffb647);
+  } else if (visualStyle === 'restaurant_pickup') {
+    addRestaurantPickupDetails(mesh, actor);
+  } else if (visualStyle === 'residential_dropoff') {
+    addResidentialDropoffDetails(mesh, actor);
+  } else if (visualStyle === 'dynamic_delivery_van') {
+    addDynamicDeliveryVanDetails(mesh);
+  } else if (visualStyle === 'dynamic_courier') {
+    addDynamicCourierDetails(mesh);
   }
 }
 
@@ -1522,7 +2108,9 @@ function createActorObject(actor: Actor, sceneData: Scene): any | null {
   const mesh = new THREE.Mesh(geometryForActor(actor), materialForActor(actor));
   updateActorObject(mesh, actor);
   mesh.userData.actorId = actor.id;
-  mesh.castShadow = actor.properties.visual_style !== 'operations_ground';
+  mesh.castShadow = !['operations_ground', 'cinematic_wet_asphalt'].includes(
+    actor.properties.visual_style ?? '',
+  );
   mesh.receiveShadow = true;
   addColliderDebug(mesh, actor);
   addActorVisualDetails(mesh, actor, loadRevision);
@@ -2037,8 +2625,14 @@ function updateHud(): void {
   const navigationText = navigation && navigation.status !== 'idle'
     ? ` | nav ${navigation.status} · replans ${navigation.replan_count}`
     : '';
+  const activeEvent = simulationState?.dynamic_events?.find(
+    (event) => event.status === 'active',
+  );
+  const eventText = activeEvent ? ` | LIVE EVENT ${activeEvent.label}` : '';
+  canvas.dataset.dynamicEventStatus = activeEvent ? 'active' : 'idle';
+  canvas.dataset.dynamicEventId = activeEvent?.id ?? '';
   requiredElement('#scene-name').textContent = currentScene.name;
-  requiredElement('#scene-stats').textContent = `${currentScene.actors.length} actors${simText}${taskText}${rangeText}${navigationText}`;
+  requiredElement('#scene-stats').textContent = `${currentScene.actors.length} actors${simText}${taskText}${rangeText}${navigationText}${eventText}`;
   const colliderState = selected && colliderDebugVisible
     ? ` | ${actorIsDynamic(selected) ? 'Dynamic' : 'Static'} collider`
     : '';
@@ -2279,7 +2873,8 @@ function animate(frameTime = performance.now()): void {
   if (frameTime - lastViewportFrame < viewportFrameInterval) return;
   lastViewportFrame = frameTime;
   resize();
-  const activeSky = cityEnvironmentVisible ? citySky : editorSky;
+  const activeSky = cityEnvironmentVisible ? citySky
+    : cinematicEnvironmentVisible ? cinematicSky : editorSky;
   activeSky.position.copy(camera.position);
   activeSky.scale.setScalar(Math.max(camera.far * 0.8, 500));
   const pulseTime = performance.now() * 0.0024;
@@ -2288,6 +2883,14 @@ function animate(frameTime = performance.now()): void {
     const pulse = 1 + 0.12 * Math.sin(pulseTime + marker.userData.navigationPulsePhase);
     marker.scale.setScalar(pulse);
   }
+  actorGroup.traverse((object) => {
+    if (!object.userData.dynamicEventPulse || !object.material?.emissive) return;
+    if (object.userData.baseEmissiveIntensity === undefined) {
+      object.userData.baseEmissiveIntensity = object.material.emissiveIntensity ?? 1;
+    }
+    const base = Number(object.userData.baseEmissiveIntensity);
+    object.material.emissiveIntensity = base * (0.72 + 0.38 * Math.sin(pulseTime * 2.3));
+  });
   orbitControls.update();
   updateColliderDebugMarkers();
   updateAttachmentVisuals();

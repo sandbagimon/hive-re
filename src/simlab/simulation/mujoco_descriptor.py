@@ -25,6 +25,7 @@ def mujoco_engine_descriptor(version: str | None = None) -> EngineDescriptor:
                 EngineCapability.CONSTRAINT,
                 EngineCapability.EXTERNAL_FORCE,
                 EngineCapability.RAY_QUERY,
+                EngineCapability.KINEMATIC_ACTOR,
             }
         ),
     )

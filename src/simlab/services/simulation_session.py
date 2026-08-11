@@ -23,6 +23,10 @@ from simlab.services.controller_runtime import (
     RangefinderObservation,
     StepController,
 )
+from simlab.services.dynamic_events import (
+    DynamicEventState,
+    KinematicActorEventScheduler,
+)
 from simlab.services.imu_sensors import ImuKinematics, ImuSensorSample, ImuSensorScheduler
 from simlab.services.joint_state_recorder import JointStateRecorder
 from simlab.services.joint_state_sensors import (
@@ -38,6 +42,7 @@ from simlab.services.mjcf_exporter import (
     rangefinder_sensor_name,
 )
 from simlab.services.mujoco_contact_adapter import MujocoContactAggregator
+from simlab.services.primitive_geometry import euler_xyz_to_mujoco_quaternion
 from simlab.services.quadrotor_dynamics import quadrotor_models_from_scene
 from simlab.services.rangefinder_sensors import (
     RangefinderMeasurement,
@@ -258,6 +263,7 @@ class SimulationState:
     actuators: list[ActuatorSimulationState] = field(default_factory=list)
     attachments: list[AttachmentSimulationState] = field(default_factory=list)
     delivery_tasks: list[DeliveryTaskSimulationState] = field(default_factory=list)
+    dynamic_events: list[DynamicEventState] = field(default_factory=list)
     sensors: list[
         JointStateSensorSample
         | ImuSensorSample
@@ -288,6 +294,7 @@ class SimulationState:
             "actuators": [actuator.to_dict() for actuator in self.actuators],
             "attachments": [attachment.to_dict() for attachment in self.attachments],
             "delivery_tasks": [task.to_dict() for task in self.delivery_tasks],
+            "dynamic_events": [event.to_dict() for event in self.dynamic_events],
             "sensors": [sensor.to_dict() for sensor in self.sensors],
             "controller": self.controller.to_dict(),
             "navigation": self.navigation.to_dict(),
@@ -319,6 +326,8 @@ class MuJoCoSimulationSession:
         self.model = mujoco.MjModel.from_xml_path(str(self.xml_path))
         self.data = mujoco.MjData(self.model)
         self._body_ids = self._map_actor_bodies(scene)
+        self._dynamic_event_scheduler = KinematicActorEventScheduler.from_scene(scene)
+        self._dynamic_event_bindings = self._map_dynamic_event_bodies()
         self._link_ids, self._joint_ids, self._actuator_ids = self._map_robotics(scene)
         self._attachment_bindings = self._map_attachments(scene)
         self._attachment_requests = {
@@ -389,6 +398,7 @@ class MuJoCoSimulationSession:
         self._last_command_time: float | None = None
         self._navigation_state = NavigationSimulationState()
         self._reset_to_home()
+        self._apply_dynamic_event_poses()
         self._home_controls = self.data.ctrl.copy()
         mujoco.mj_forward(self.model, self.data)
         self._reset_sensors()
@@ -425,6 +435,9 @@ class MuJoCoSimulationSession:
             self._apply_quadrotor_forces()
             self._mujoco.mj_step(self.model, self.data)
             self._apply_trajectory_target()
+            self._apply_dynamic_event_poses()
+            if self._dynamic_event_bindings:
+                self._mujoco.mj_forward(self.model, self.data)
             self._physics_step_index += 1
             self._update_delivery_tasks()
             emitted_sensors = self._joint_state_sensors.capture(
@@ -469,6 +482,7 @@ class MuJoCoSimulationSession:
         if self._state_recorder.active:
             self._state_recorder.stop()
         self._reset_to_home()
+        self._apply_dynamic_event_poses()
         self._mujoco.mj_forward(self.model, self.data)
         self._reset_sensors()
         self._navigation_state = NavigationSimulationState()
@@ -665,6 +679,7 @@ class MuJoCoSimulationSession:
             actuators=actuator_states,
             attachments=self._attachment_states(),
             delivery_tasks=self._delivery_task_states(),
+            dynamic_events=self._dynamic_event_scheduler.states(float(self.data.time)),
             sensors=[
                 *self._joint_state_sensors.latest_samples,
                 *self._imu_sensors.latest_samples,
@@ -701,6 +716,40 @@ class MuJoCoSimulationSession:
             if body_id >= 0:
                 body_ids[actor.id] = body_id
         return body_ids
+
+    def _map_dynamic_event_bodies(self) -> dict[str, tuple[int, int]]:
+        bindings: dict[str, tuple[int, int]] = {}
+        for actor_id in self._dynamic_event_scheduler.actor_ids:
+            body_id = self._body_ids.get(actor_id, -1)
+            if body_id < 0:
+                raise ValueError(
+                    f"Dynamic event actor must be dynamic and exported to MuJoCo: {actor_id}"
+                )
+            if int(self.model.body_jntnum[body_id]) != 1:
+                raise ValueError(f"Dynamic event actor must have one free joint: {actor_id}")
+            joint_id = int(self.model.body_jntadr[body_id])
+            if (
+                joint_id < 0
+                or int(self.model.jnt_type[joint_id])
+                != int(self._mujoco.mjtJoint.mjJNT_FREE)
+            ):
+                raise ValueError(f"Dynamic event actor must be dynamic: {actor_id}")
+            bindings[actor_id] = (
+                int(self.model.jnt_qposadr[joint_id]),
+                int(self.model.jnt_dofadr[joint_id]),
+            )
+        return bindings
+
+    def _apply_dynamic_event_poses(self) -> None:
+        now = float(self.data.time)
+        for actor_id, (qpos_address, dof_address) in self._dynamic_event_bindings.items():
+            sample = self._dynamic_event_scheduler.sample(actor_id, now)
+            self.data.qpos[qpos_address : qpos_address + 3] = sample.position
+            self.data.qpos[qpos_address + 3 : qpos_address + 7] = (
+                euler_xyz_to_mujoco_quaternion(list(sample.rotation))
+            )
+            self.data.qvel[dof_address : dof_address + 3] = sample.linear_velocity
+            self.data.qvel[dof_address + 3 : dof_address + 6] = sample.angular_velocity
 
     def _map_robotics(self, scene: Scene) -> tuple[dict[str, int], dict[str, int], dict[str, int]]:
         links: dict[str, int] = {}

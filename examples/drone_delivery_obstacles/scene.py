@@ -58,6 +58,11 @@ def _with_visual_model(
     return actor
 
 
+def _with_rotation(actor: Actor, rotation: list[float]) -> Actor:
+    actor.transform.rotation = rotation
+    return actor
+
+
 def _horizontal_ray_sensor(index: int) -> Sensor:
     angle = 2.0 * math.pi * index / RAY_COUNT
     half_turn = math.sin(math.pi / 4.0)
@@ -99,18 +104,118 @@ def _horizontal_ray_sensor(index: int) -> Sensor:
 
 def create_obstacle_delivery_scene():
     scene = create_delivery_scene()
-    scene.name = "Iris Obstacle-Aware Payload Delivery"
+    scene.name = "Blue-Hour Autonomous Food Delivery"
+    ground = next(actor for actor in scene.actors if actor.id == "actor_001")
+    ground.name = "Rain-darkened Urban Delivery Street"
+    ground.properties["visual_style"] = "cinematic_wet_asphalt"
+    ground.properties["size"] = [5.5, 4.5, 0.05]
+    ground.properties["rgba"] = [0.12, 0.15, 0.18, 1.0]
     scene.simulation_config.update(
         {
-            "duration": 42.0,
+            "duration": 48.0,
             "wind": [0.1, -0.08, 0.0],
+            # Incremental planning normally completes far below this budget. The extra margin
+            # prevents a busy remote development host from turning one scheduling spike into a
+            # permanently disabled flight controller.
+            "controller_deadline": 0.05,
             "controller_reset_deadline": 0.2,
+            "visual_environment": {
+                "preset": "cinematic_blue_hour_delivery",
+                "exposure": 0.92,
+                "fog_color": "#17232f",
+                "fog_near": 18.0,
+                "fog_far": 58.0,
+            },
             "navigation": {
                 "route": [
                     [x, y, 1.5] for x, y in plan_route((0.0, 0.0), (4.0, 3.0))
                 ],
                 "clearance": LOADED_CLEARANCE,
             },
+            "dynamic_events": [
+                {
+                    "id": "event_van_blocks_pickup_exit",
+                    "type": "kinematic_actor",
+                    "actor_id": "actor_dynamic_delivery_van",
+                    "label": "Delivery van reversing across the live route",
+                    "activation_time": 12.8,
+                    "completion_time": 19.0,
+                    "interpolation": "smoothstep",
+                    "keyframes": [
+                        {
+                            "time": 0.0,
+                            "position": [-2.25, 1.45, 0.72],
+                            "rotation": [0.0, 0.0, 0.0],
+                        },
+                        {
+                            "time": 12.8,
+                            "position": [-2.25, 1.45, 0.72],
+                            "rotation": [0.0, 0.0, 0.0],
+                        },
+                        {
+                            "time": 14.4,
+                            "position": [1.15, 1.45, 0.72],
+                            "rotation": [0.0, 0.0, 0.0],
+                        },
+                        {
+                            "time": 17.1,
+                            "position": [1.15, 1.45, 0.72],
+                            "rotation": [0.0, 0.0, 0.0],
+                        },
+                        {
+                            "time": 19.0,
+                            "position": [-2.25, 1.45, 0.72],
+                            "rotation": [0.0, 0.0, 0.0],
+                        },
+                        {
+                            "time": 48.0,
+                            "position": [-2.25, 1.45, 0.72],
+                            "rotation": [0.0, 0.0, 0.0],
+                        },
+                    ],
+                },
+                {
+                    "id": "event_courier_crosses_final_leg",
+                    "type": "kinematic_actor",
+                    "actor_id": "actor_dynamic_courier",
+                    "label": "Courier entering the final approach",
+                    "activation_time": 19.2,
+                    "completion_time": 26.0,
+                    "interpolation": "smoothstep",
+                    "keyframes": [
+                        {
+                            "time": 0.0,
+                            "position": [5.35, 2.85, 0.82],
+                            "rotation": [0.0, 0.0, math.pi],
+                        },
+                        {
+                            "time": 19.2,
+                            "position": [5.35, 2.85, 0.82],
+                            "rotation": [0.0, 0.0, math.pi],
+                        },
+                        {
+                            "time": 21.0,
+                            "position": [2.75, 2.85, 0.82],
+                            "rotation": [0.0, 0.0, math.pi],
+                        },
+                        {
+                            "time": 23.5,
+                            "position": [2.75, 2.85, 0.82],
+                            "rotation": [0.0, 0.0, math.pi],
+                        },
+                        {
+                            "time": 26.0,
+                            "position": [5.35, 2.85, 0.82],
+                            "rotation": [0.0, 0.0, math.pi],
+                        },
+                        {
+                            "time": 48.0,
+                            "position": [5.35, 2.85, 0.82],
+                            "rotation": [0.0, 0.0, math.pi],
+                        },
+                    ],
+                },
+            ],
         }
     )
     assert scene.robotics is not None
@@ -132,21 +237,6 @@ def create_obstacle_delivery_scene():
                 instance_size=[0.5, 1.6, 1.2],
                 instance_heights=(-0.6,),
                 rotation=[math.pi / 2.0, 0.0, math.pi / 2.0],
-            ),
-            _with_visual_model(
-                _box(
-                    "actor_unmapped_pillar",
-                    "Unmapped Replanning Pillar",
-                    [2.35, 3.0, 1.2],
-                    [0.22, 0.22, 1.2],
-                    dynamic=False,
-                    rgba=[0.78, 0.2, 0.82, 1.0],
-                    visual_style="unmapped_obstacle",
-                ),
-                POLY_HAVEN_BARREL,
-                instance_size=[0.44, 0.44, 1.2],
-                instance_heights=(-0.6, 0.6),
-                rotation=[math.pi / 2.0, 0.0, 0.0],
             ),
             _with_visual_model(
                 _box(
@@ -177,6 +267,51 @@ def create_obstacle_delivery_scene():
                 instance_size=[0.56, 0.56, 0.9],
                 instance_heights=(-0.45, 0.45),
                 rotation=[math.pi / 2.0, 0.0, 0.0],
+            ),
+            _with_rotation(
+                _box(
+                    "actor_pickup_restaurant",
+                    "Neon Pickup Kitchen",
+                    [-2.72, 0.0, 1.35],
+                    [1.5, 0.22, 1.35],
+                    dynamic=False,
+                    rgba=[0.12, 0.15, 0.17, 1.0],
+                    visual_style="restaurant_pickup",
+                    physics_material="default",
+                ),
+                [0.0, 0.0, -math.pi / 2.0],
+            ),
+            _box(
+                "actor_dropoff_residence",
+                "Warm Residential Dropoff",
+                [4.0, 4.15, 1.7],
+                [1.45, 0.24, 1.7],
+                dynamic=False,
+                rgba=[0.2, 0.22, 0.24, 1.0],
+                visual_style="residential_dropoff",
+                physics_material="default",
+            ),
+            _box(
+                "actor_dynamic_delivery_van",
+                "Unmapped Reversing Delivery Van",
+                [-2.25, 1.45, 0.72],
+                [0.72, 0.34, 0.72],
+                dynamic=True,
+                mass=96.0,
+                rgba=[0.88, 0.19, 0.1, 1.0],
+                visual_style="dynamic_delivery_van",
+                physics_material="rubber",
+            ),
+            _box(
+                "actor_dynamic_courier",
+                "Unmapped Crossing Courier",
+                [5.35, 2.85, 0.82],
+                [0.25, 0.22, 0.82],
+                dynamic=True,
+                mass=82.0,
+                rgba=[0.08, 0.23, 0.34, 1.0],
+                visual_style="dynamic_courier",
+                physics_material="rubber",
             ),
         ]
     )

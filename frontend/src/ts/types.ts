@@ -9,8 +9,13 @@ export type ActorVisualStyle =
   | 'shipping_package'
   | 'insulated_delivery_bag'
   | 'operations_ground'
+  | 'cinematic_wet_asphalt'
   | 'landing_pad_pickup'
   | 'landing_pad_dropoff'
+  | 'restaurant_pickup'
+  | 'residential_dropoff'
+  | 'dynamic_delivery_van'
+  | 'dynamic_courier'
   | 'known_obstacle'
   | 'unmapped_obstacle'
   | 'safety_pillar';
@@ -406,6 +411,14 @@ export interface NavigationSimulationState {
   message: string | null;
 }
 
+export interface DynamicEventSimulationState {
+  id: string;
+  actor_id: string;
+  label: string;
+  status: 'scheduled' | 'active' | 'completed';
+  progress: number;
+}
+
 export interface TrajectorySimulationState {
   status: 'stopped' | 'playing' | 'paused' | 'completed';
   time: number;
@@ -453,6 +466,7 @@ export interface SimulationState {
   actuators: ActuatorSimulationState[];
   attachments: AttachmentSimulationState[];
   delivery_tasks: DeliveryTaskSimulationState[];
+  dynamic_events: DynamicEventSimulationState[];
   sensors: SensorSample[];
   navigation: NavigationSimulationState;
   trajectory: TrajectorySimulationState;

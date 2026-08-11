@@ -41,6 +41,7 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
         "actuators",
         "attachments",
         "delivery_tasks",
+        "dynamic_events",
         "sensors",
         "controller",
         "trajectory",

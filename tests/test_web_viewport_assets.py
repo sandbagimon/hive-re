@@ -25,6 +25,9 @@ def test_typescript_editor_assets_are_an_independent_frontend() -> None:
     assert Path("frontend/public/docs/viewport-controls.html").exists()
     assert Path("frontend/public/textures/delivery-bag-oxford-albedo.png").exists()
     assert Path(
+        "frontend/public/textures/cinematic-delivery/wet-asphalt-albedo.png"
+    ).exists()
+    assert Path(
         "frontend/public/models/polyhaven/concrete_road_barrier_02/"
         "concrete_road_barrier_02_2k.gltf"
     ).exists()
@@ -187,6 +190,13 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "loadPhotographicEnvironment" in viewport
     assert "photorealObstacleStatus" in viewport
     assert "photographicEnvironment" in viewport
+    assert "cinematic_blue_hour_delivery" in viewport
+    assert "addCinematicWetAsphaltDetails" in viewport
+    assert "addRestaurantPickupDetails" in viewport
+    assert "addResidentialDropoffDetails" in viewport
+    assert "addDynamicDeliveryVanDetails" in viewport
+    assert "addDynamicCourierDetails" in viewport
+    assert "dynamic_events" in types
     assert "visual_model" in types
     pbr_model_loader = (root / "ts" / "pbr-model-loader.ts").read_text(
         encoding="utf-8"

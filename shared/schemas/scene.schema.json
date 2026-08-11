@@ -304,6 +304,47 @@
             }
           ]
         },
+        "dynamic_events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "type": { "const": "kinematic_actor" },
+              "actor_id": { "type": "string", "minLength": 1 },
+              "label": { "type": "string", "minLength": 1 },
+              "activation_time": { "type": "number", "minimum": 0 },
+              "completion_time": { "type": "number", "exclusiveMinimum": 0 },
+              "interpolation": { "enum": ["linear", "smoothstep"] },
+              "keyframes": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "time": { "type": "number", "minimum": 0 },
+                    "position": {
+                      "type": "array",
+                      "items": { "type": "number" },
+                      "minItems": 3,
+                      "maxItems": 3
+                    },
+                    "rotation": {
+                      "type": "array",
+                      "items": { "type": "number" },
+                      "minItems": 3,
+                      "maxItems": 3
+                    }
+                  },
+                  "required": ["time", "position"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["id", "type", "actor_id", "keyframes"],
+            "additionalProperties": false
+          }
+        },
         "required_capabilities": {
           "type": "array",
           "items": {
@@ -314,6 +355,7 @@
               "constraint",
               "external_force",
               "ray_query",
+              "kinematic_actor",
               "fluid",
               "particle",
               "deformable_body",

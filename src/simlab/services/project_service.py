@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from simlab.models.scene import Scene
+from simlab.services.dynamic_events import KinematicActorEventScheduler
 from simlab.services.quadrotor_dynamics import quadrotor_models_from_scene
 from simlab.services.robotics_validation import validate_robotics_model
 from simlab.services.trajectory_validation import (
@@ -30,6 +31,11 @@ def validate_scene(scene: Scene) -> None:
 
     try:
         quadrotor_models_from_scene(scene)
+    except ValueError as exc:
+        raise ProjectValidationError(str(exc)) from exc
+
+    try:
+        KinematicActorEventScheduler.from_scene(scene)
     except ValueError as exc:
         raise ProjectValidationError(str(exc)) from exc
 

@@ -1,11 +1,11 @@
 {
   "version": "1.0",
-  "name": "Iris Obstacle-Aware Payload Delivery",
+  "name": "Blue-Hour Autonomous Food Delivery",
   "units": "meters",
   "actors": [
     {
       "id": "actor_001",
-      "name": "Ground",
+      "name": "Rain-darkened Urban Delivery Street",
       "type": "object",
       "asset_id": "primitive_box",
       "transform": {
@@ -28,14 +28,14 @@
       "properties": {
         "primitive": "box",
         "size": [
-          4.25,
-          3.25,
+          5.5,
+          4.5,
           0.05
         ],
         "rgba": [
-          0.27,
-          0.34,
-          0.38,
+          0.12,
+          0.15,
+          0.18,
           1.0
         ],
         "physics": {
@@ -60,7 +60,7 @@
             2.0
           ]
         },
-        "visual_style": "operations_ground"
+        "visual_style": "cinematic_wet_asphalt"
       }
     },
     {
@@ -430,109 +430,6 @@
       }
     },
     {
-      "id": "actor_unmapped_pillar",
-      "name": "Unmapped Replanning Pillar",
-      "type": "object",
-      "asset_id": "primitive_box",
-      "transform": {
-        "position": [
-          2.35,
-          3.0,
-          1.2
-        ],
-        "rotation": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "scale": [
-          1.0,
-          1.0,
-          1.0
-        ]
-      },
-      "properties": {
-        "primitive": "box",
-        "size": [
-          0.22,
-          0.22,
-          1.2
-        ],
-        "rgba": [
-          0.78,
-          0.2,
-          0.82,
-          1.0
-        ],
-        "physics": {
-          "dynamic": false,
-          "material": "default",
-          "mass_mode": "mass",
-          "mass": 1.0,
-          "friction": [
-            1.0,
-            0.005,
-            0.0001
-          ],
-          "solref": [
-            0.025,
-            1.0
-          ],
-          "solimp": [
-            0.92,
-            0.97,
-            0.001,
-            0.5,
-            2.0
-          ]
-        },
-        "visual_style": "unmapped_obstacle",
-        "visual_model": {
-          "url": "./models/polyhaven/barrel_03/barrel_03_2k.gltf",
-          "source_url": "https://polyhaven.com/a/barrel_03",
-          "license": "CC0-1.0",
-          "author": "Serhii Khromov",
-          "resolution": "2K",
-          "instances": [
-            {
-              "position": [
-                0.0,
-                0.0,
-                -0.6
-              ],
-              "rotation": [
-                1.5707963267948966,
-                0.0,
-                0.0
-              ],
-              "size": [
-                0.44,
-                0.44,
-                1.2
-              ]
-            },
-            {
-              "position": [
-                0.0,
-                0.0,
-                0.6
-              ],
-              "rotation": [
-                1.5707963267948966,
-                0.0,
-                0.0
-              ],
-              "size": [
-                0.44,
-                0.44,
-                1.2
-              ]
-            }
-          ]
-        }
-      }
-    },
-    {
       "id": "actor_obstacle_pillar_west",
       "name": "West Safety Pillar",
       "type": "object",
@@ -737,11 +634,251 @@
           ]
         }
       }
+    },
+    {
+      "id": "actor_pickup_restaurant",
+      "name": "Neon Pickup Kitchen",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -2.72,
+          0.0,
+          1.35
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          -1.5707963267948966
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          1.5,
+          0.22,
+          1.35
+        ],
+        "rgba": [
+          0.12,
+          0.15,
+          0.17,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "restaurant_pickup"
+      }
+    },
+    {
+      "id": "actor_dropoff_residence",
+      "name": "Warm Residential Dropoff",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          4.0,
+          4.15,
+          1.7
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          1.45,
+          0.24,
+          1.7
+        ],
+        "rgba": [
+          0.2,
+          0.22,
+          0.24,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "residential_dropoff"
+      }
+    },
+    {
+      "id": "actor_dynamic_delivery_van",
+      "name": "Unmapped Reversing Delivery Van",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -2.25,
+          1.45,
+          0.72
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          0.72,
+          0.34,
+          0.72
+        ],
+        "rgba": [
+          0.88,
+          0.19,
+          0.1,
+          1.0
+        ],
+        "physics": {
+          "dynamic": true,
+          "material": "rubber",
+          "mass_mode": "mass",
+          "mass": 96.0,
+          "friction": [
+            0.72,
+            0.008,
+            0.0002
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "dynamic_delivery_van"
+      }
+    },
+    {
+      "id": "actor_dynamic_courier",
+      "name": "Unmapped Crossing Courier",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          5.35,
+          2.85,
+          0.82
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          0.25,
+          0.22,
+          0.82
+        ],
+        "rgba": [
+          0.08,
+          0.23,
+          0.34,
+          1.0
+        ],
+        "physics": {
+          "dynamic": true,
+          "material": "rubber",
+          "mass_mode": "mass",
+          "mass": 82.0,
+          "friction": [
+            0.72,
+            0.008,
+            0.0002
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "dynamic_courier"
+      }
     }
   ],
   "simulation_config": {
     "timestep": 0.002,
-    "duration": 42.0,
+    "duration": 48.0,
     "integrator": "implicitfast",
     "wind": [
       0.1,
@@ -750,9 +887,16 @@
     ],
     "air_density": 1.225,
     "air_viscosity": 1.8e-05,
-    "controller_deadline": 0.02,
+    "controller_deadline": 0.05,
     "max_catch_up_steps": 32,
     "controller_reset_deadline": 0.2,
+    "visual_environment": {
+      "preset": "cinematic_blue_hour_delivery",
+      "exposure": 0.92,
+      "fog_color": "#17232f",
+      "fog_near": 18.0,
+      "fog_far": 58.0
+    },
     "navigation": {
       "route": [
         [
@@ -772,7 +916,187 @@
         ]
       ],
       "clearance": 0.68
-    }
+    },
+    "dynamic_events": [
+      {
+        "id": "event_van_blocks_pickup_exit",
+        "type": "kinematic_actor",
+        "actor_id": "actor_dynamic_delivery_van",
+        "label": "Delivery van reversing across the live route",
+        "activation_time": 12.8,
+        "completion_time": 19.0,
+        "interpolation": "smoothstep",
+        "keyframes": [
+          {
+            "time": 0.0,
+            "position": [
+              -2.25,
+              1.45,
+              0.72
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "time": 12.8,
+            "position": [
+              -2.25,
+              1.45,
+              0.72
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "time": 14.4,
+            "position": [
+              1.15,
+              1.45,
+              0.72
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "time": 17.1,
+            "position": [
+              1.15,
+              1.45,
+              0.72
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "time": 19.0,
+            "position": [
+              -2.25,
+              1.45,
+              0.72
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "time": 48.0,
+            "position": [
+              -2.25,
+              1.45,
+              0.72
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        ]
+      },
+      {
+        "id": "event_courier_crosses_final_leg",
+        "type": "kinematic_actor",
+        "actor_id": "actor_dynamic_courier",
+        "label": "Courier entering the final approach",
+        "activation_time": 19.2,
+        "completion_time": 26.0,
+        "interpolation": "smoothstep",
+        "keyframes": [
+          {
+            "time": 0.0,
+            "position": [
+              5.35,
+              2.85,
+              0.82
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              3.141592653589793
+            ]
+          },
+          {
+            "time": 19.2,
+            "position": [
+              5.35,
+              2.85,
+              0.82
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              3.141592653589793
+            ]
+          },
+          {
+            "time": 21.0,
+            "position": [
+              2.75,
+              2.85,
+              0.82
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              3.141592653589793
+            ]
+          },
+          {
+            "time": 23.5,
+            "position": [
+              2.75,
+              2.85,
+              0.82
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              3.141592653589793
+            ]
+          },
+          {
+            "time": 26.0,
+            "position": [
+              5.35,
+              2.85,
+              0.82
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              3.141592653589793
+            ]
+          },
+          {
+            "time": 48.0,
+            "position": [
+              5.35,
+              2.85,
+              0.82
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              3.141592653589793
+            ]
+          }
+        ]
+      }
+    ]
   },
   "robotics": {
     "version": "2.0",

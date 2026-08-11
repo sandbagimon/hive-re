@@ -229,8 +229,8 @@ test('Iris physically picks up and delivers a payload from A to B', async ({ pag
   });
 });
 
-test('obstacle-aware Iris controller initializes and runs in the browser', async ({ page }, testInfo) => {
-  test.setTimeout(180_000);
+test('obstacle-aware Iris controller initializes and runs in the browser', async ({ page }) => {
+  test.setTimeout(240_000);
   await configureApi(page);
   await page.goto('/');
   await expect(page.locator('#asset-list')).toContainText('Pegasus Iris Quadcopter', {
@@ -241,7 +241,7 @@ test('obstacle-aware Iris controller initializes and runs in the browser', async
   await page.getByRole('button', { name: 'Open', exact: true }).click();
   await (await openChooser).setFiles('examples/drone_delivery_obstacles/scene.json');
   await expect(page.locator('#project-label'))
-    .toContainText('Iris Obstacle-Aware Payload Delivery', { timeout: 15_000 });
+    .toContainText('Blue-Hour Autonomous Food Delivery', { timeout: 15_000 });
   await expect(page.locator('#viewport')).toHaveAttribute('data-render-quality', 'enhanced');
   await expect(page.locator('#viewport')).toHaveAttribute('data-shadow-mode', 'soft');
   await expect(page.locator('#viewport'))
@@ -249,37 +249,16 @@ test('obstacle-aware Iris controller initializes and runs in the browser', async
   await expect(page.locator('#viewport'))
     .toHaveAttribute('data-environment-lighting', 'photographic-hdri-pmrem');
   await expect(page.locator('#viewport'))
+    .toHaveAttribute('data-environment-mode', 'cinematic-delivery');
+  await expect(page.locator('#viewport'))
+    .toHaveAttribute('data-cinematic-asphalt-texture', 'loaded', { timeout: 20_000 });
+  await expect(page.locator('#viewport'))
     .toHaveAttribute('data-photoreal-obstacle-status', 'loaded', { timeout: 20_000 });
   await expect(page.locator('#viewport'))
-    .toHaveAttribute('data-photoreal-obstacle-count', '4');
-  await page.locator('[data-action="frame"]').click();
-  await page.waitForTimeout(500);
-  await page.locator('#viewport').screenshot({
-    path: testInfo.outputPath('obstacle-delivery-enhanced.png'),
-  });
-  await page.locator('[data-actor-row]').filter({ hasText: 'Central Flight Barrier' }).click();
-  await page.locator('[data-action="frame"]').click();
-  await page.waitForTimeout(300);
-  await page.locator('#viewport').evaluate((canvas) => {
-    const rect = canvas.getBoundingClientRect();
-    canvas.dispatchEvent(new PointerEvent('pointerdown', {
-      bubbles: true,
-      clientX: rect.left + 2,
-      clientY: rect.top + 2,
-    }));
-  });
-  await page.locator('#viewport').screenshot({
-    path: testInfo.outputPath('photoreal-obstacle-closeup.png'),
-  });
+    .toHaveAttribute('data-photoreal-obstacle-count', '3');
   await expect(page.locator('#viewport'))
     .toHaveAttribute('data-delivery-bag-texture', 'loaded', { timeout: 15_000 });
-  await page.locator('[data-actor-row]').filter({ hasText: 'Insulated Takeout Bag' }).click();
-  await page.locator('[data-action="frame"]').click();
-  await page.waitForTimeout(500);
   await page.locator('[data-actor-row]').filter({ hasText: 'Pegasus Iris Quadcopter' }).click();
-  await page.locator('#viewport').screenshot({
-    path: testInfo.outputPath('insulated-takeout-bag.png'),
-  });
 
   page.once('dialog', (dialog) => dialog.accept());
   const controllerResponse = page.waitForResponse((response) => (
@@ -298,12 +277,16 @@ test('obstacle-aware Iris controller initializes and runs in the browser', async
 
   const loaded = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
   expect(loaded.simulationState.controller.status).toBe('ready');
-  expect(loaded.simulationState.controller.deadline).toBe(0.02);
+  expect(loaded.simulationState.controller.deadline).toBe(0.05);
   expect(loaded.simulationState.controller.reset_deadline).toBe(0.2);
   expect(loaded.simulationState.navigation.status).toBe('idle');
   expect(loaded.simulationState.sensors.filter(
     (sample) => sample.sensor_type === 'rangefinder',
   )).toHaveLength(12);
+  expect(loaded.simulationState.dynamic_events).toHaveLength(2);
+  expect(loaded.simulationState.dynamic_events.every(
+    (event) => event.status === 'scheduled',
+  )).toBe(true);
 
   await page.getByRole('button', { name: 'Run', exact: true }).click();
   await page.locator('[data-simulation-speed="2"]').click();
@@ -318,6 +301,9 @@ test('obstacle-aware Iris controller initializes and runs in the browser', async
   expect(runtime.simulationState.navigation.replan_count).toBeGreaterThan(0);
   expect(runtime.simulationState.navigation.route_revision).toBeGreaterThan(1);
   expect(runtime.simulationState.navigation.status).toBe('following');
+  expect(runtime.simulationState.dynamic_events.some(
+    (event) => event.status === 'active',
+  )).toBe(true);
   expect(runtime.simulationState.actors.find((item) => item.id === 'actor_002').position[2])
     .toBeGreaterThan(0.5);
   await expect(page.locator('#scene-stats')).toContainText(/replans [1-9]/);

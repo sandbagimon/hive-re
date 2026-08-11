@@ -70,6 +70,21 @@
         "actuators": { "type": "array" },
         "attachments": { "type": "array" },
         "delivery_tasks": { "type": "array" },
+        "dynamic_events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "actor_id": { "type": "string", "minLength": 1 },
+              "label": { "type": "string", "minLength": 1 },
+              "status": { "enum": ["scheduled", "active", "completed"] },
+              "progress": { "type": "number", "minimum": 0, "maximum": 1 }
+            },
+            "required": ["id", "actor_id", "label", "status", "progress"],
+            "additionalProperties": false
+          }
+        },
         "sensors": {
           "type": "array",
           "items": {
@@ -181,7 +196,7 @@
           "additionalProperties": false
         }
       },
-      "required": ["time", "actors", "links", "joints", "actuators", "attachments", "delivery_tasks", "sensors", "trajectory", "recording", "controller"],
+      "required": ["time", "actors", "links", "joints", "actuators", "attachments", "delivery_tasks", "dynamic_events", "sensors", "trajectory", "recording", "controller"],
       "additionalProperties": false
     }
   },

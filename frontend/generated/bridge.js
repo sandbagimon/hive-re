@@ -273,10 +273,14 @@ export class EditorBridgeClient {
         const file = (await this.chooseFiles('.json'))?.[0];
         if (!file)
             return { ok: false, error: 'Cancelled' };
+        // The store may still be synchronizing the initial Untitled Scene. Serialize Open behind
+        // that write so a late initial response can never overwrite the scene the user selected.
+        await this.sceneSync;
         const project = await this.updateScene(await file.text());
         return this.success({ scene: project.scene, path: file.name });
     }
     async saveBrowserProject(sceneJson) {
+        await this.sceneSync;
         const project = await this.updateScene(sceneJson);
         const scene = project.scene;
         const safeName = String(scene.name ?? 'scene')

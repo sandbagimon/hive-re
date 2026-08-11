@@ -44,6 +44,7 @@ class EngineCapability(StrEnum):
     CONSTRAINT = "constraint"
     EXTERNAL_FORCE = "external_force"
     RAY_QUERY = "ray_query"
+    KINEMATIC_ACTOR = "kinematic_actor"
     FLUID = "fluid"
     PARTICLE = "particle"
     DEFORMABLE_BODY = "deformable_body"
@@ -291,6 +292,8 @@ def required_engine_capabilities(scene: Scene) -> frozenset[EngineCapability]:
         required.update({EngineCapability.COLLISION, EngineCapability.CONSTRAINT})
     if any(isinstance(actor.properties.get("propulsion"), Mapping) for actor in scene.actors):
         required.add(EngineCapability.EXTERNAL_FORCE)
+    if scene.simulation_config.get("dynamic_events"):
+        required.add(EngineCapability.KINEMATIC_ACTOR)
 
     explicit = scene.simulation_config.get("required_capabilities", [])
     if not isinstance(explicit, list) or not all(isinstance(item, str) for item in explicit):
