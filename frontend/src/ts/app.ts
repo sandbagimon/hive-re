@@ -20,6 +20,8 @@ import type {
   AssetMetadata,
   ExportPayload,
   JointTrajectory,
+  LocalSceneManifest,
+  LocalSceneStatus,
   OpenUsdImportPayload,
   PhysicsProperties,
   PreflightPayload,
@@ -49,6 +51,7 @@ import { DockManager } from './dock-manager.js';
 
 interface AssetsPayload {
   assets: AssetMetadata[];
+  local_scenes: LocalSceneStatus[];
 }
 
 interface RunPayload {
@@ -1920,6 +1923,18 @@ configureViewport({
     store.appendLog(`Mesh bundle load failed: ${result.error ?? artifactId}`);
     return null;
   },
+  resolveLocalSceneManifest: async (sceneId) => {
+    const result = await bridge.call<LocalSceneManifest>('getLocalSceneManifest', sceneId);
+    if (result.ok && result.data) return result.data;
+    store.appendLog(`Local scene manifest load failed: ${result.error ?? sceneId}`);
+    return null;
+  },
+  resolveLocalSceneChunk: async (sceneId, chunkId) => {
+    const result = await bridge.call<ArrayBuffer>('getLocalSceneChunk', sceneId, chunkId);
+    if (result.ok && result.data) return result.data;
+    store.appendLog(`Local scene chunk load failed: ${result.error ?? chunkId}`);
+    return null;
+  },
 });
 
 function syncViewportSelection(state: EditorState): void {
@@ -2064,6 +2079,7 @@ async function initialize(): Promise<void> {
 }
 
 let lastAssetConnectionError = '';
+let lastLocalSceneStatus = '';
 
 async function loadAssetsWithRetry(): Promise<void> {
   const assets = await bridge.call<AssetsPayload>('getAssets');
@@ -2071,11 +2087,28 @@ async function loadAssetsWithRetry(): Promise<void> {
     store.setAssets(assets.data.assets);
     if (lastAssetConnectionError) store.appendLog('Shared assets connected.');
     lastAssetConnectionError = '';
+    const localScene = assets.data.local_scenes[0];
+    const localStatus = localScene
+      ? `${localScene.scene_id}:${localScene.status}:${localScene.error ?? ''}`
+      : '';
+    if (localStatus && localStatus !== lastLocalSceneStatus) {
+      if (localScene.status === 'preparing') {
+        store.appendLog(`${localScene.name}: optimizing geometry in the backend…`);
+      } else if (localScene.status === 'ready') {
+        store.appendLog(`${localScene.name}: streaming asset ready.`);
+      } else if (localScene.status === 'failed' || localScene.status === 'unavailable') {
+        store.appendLog(`${localScene.name}: ${localScene.error ?? localScene.status}`);
+      }
+    }
+    lastLocalSceneStatus = localStatus;
     bridge.syncEditorState(
       JSON.stringify(store.current.scene),
       store.current.dirty,
       store.current.currentPath,
     );
+    if (localScene?.status === 'preparing') {
+      window.setTimeout(() => { void loadAssetsWithRetry(); }, 1500);
+    }
     return;
   }
   const error = assets.error ?? 'Backend API unavailable';

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, BinaryIO
 
 from simlab.models.scene import Scene
+from simlab.services.local_scene_streaming import LocalSceneService
 from simlab.services.project_service import validate_scene
 from simlab.web_application import WebApplication
 
@@ -129,6 +130,7 @@ class ResourceManager:
         seed_assets: Path,
         *,
         allow_controller_execution: bool = False,
+        local_scene_root: Path | None = None,
     ) -> None:
         self.data_root = data_root.resolve()
         self.seed_assets = seed_assets.resolve()
@@ -138,6 +140,7 @@ class ResourceManager:
         self.projects: dict[str, ProjectResource] = {}
         self.simulations: dict[str, SimulationResource] = {}
         self.artifacts: dict[str, ArtifactResource] = {}
+        self.local_scenes = LocalSceneService(self.data_root, local_scene_root)
 
     def create_project(self, name: str = "Untitled Project") -> ProjectResource:
         with self._lock:
@@ -202,6 +205,9 @@ class ResourceManager:
             for item in raw_assets
             if isinstance(item, dict) and isinstance(item.get("id"), str)
         }
+        local_asset = self.local_scenes.asset(project.root)
+        if local_asset is not None:
+            assets[local_asset["id"]] = local_asset
         canonical_articulations: dict[str, dict[str, Any]] = {}
         for actor in actors:
             if not isinstance(actor, dict):
@@ -272,7 +278,25 @@ class ResourceManager:
             app.close()
         if not result.get("ok"):
             raise RuntimeError(str(result.get("error")))
-        return [self.externalize(project, item) for item in result["data"]["assets"]]
+        assets = [self.externalize(project, item) for item in result["data"]["assets"]]
+        local_asset = self.local_scenes.asset(project.root)
+        if local_asset is not None:
+            assets.append(self.externalize(project, local_asset))
+        return assets
+
+    def local_scene_statuses(self, project_id: str) -> list[dict[str, Any]]:
+        self.get_project(project_id)
+        return self.local_scenes.statuses()
+
+    def local_scene_manifest(self, project_id: str, scene_id: str) -> dict[str, Any]:
+        self.get_project(project_id)
+        return self.local_scenes.manifest(scene_id)
+
+    def local_scene_chunk_path(
+        self, project_id: str, scene_id: str, chunk_id: str
+    ) -> Path:
+        self.get_project(project_id)
+        return self.local_scenes.chunk_path(scene_id, chunk_id)
 
     def import_openusd(
         self,

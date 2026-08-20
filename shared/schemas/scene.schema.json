@@ -32,6 +32,7 @@
         "source_format": { "const": "openusd" },
         "source": { "type": "string", "minLength": 1 },
         "visual_cache": { "type": "string", "minLength": 1 },
+        "stream_scene_id": { "type": "string", "minLength": 1 },
         "collision_mesh": { "type": "string", "minLength": 1 },
         "bounds": {
           "type": "object",
@@ -43,7 +44,11 @@
           "additionalProperties": false
         }
       },
-      "required": ["kind", "source_format", "source", "visual_cache", "collision_mesh"],
+      "required": ["kind", "source_format", "source", "collision_mesh"],
+      "oneOf": [
+        { "required": ["visual_cache"] },
+        { "required": ["stream_scene_id"] }
+      ],
       "additionalProperties": false
     },
     "quadrotorRotor": {

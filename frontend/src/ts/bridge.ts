@@ -3,6 +3,7 @@ import type { RpcResult, SimulationState, SimulationStatus } from './types.js';
 type BridgeMethod =
   | 'getAssets' | 'importOpenUsd' | 'importOpenUsdFolder'
   | 'getVisualGeometry' | 'getVisualGeometryBundle'
+  | 'getLocalSceneManifest' | 'getLocalSceneChunk'
   | 'openProject' | 'saveProject'
   | 'validateProjectContent' | 'exportMjcf' | 'preflight'
   | 'runSimulation' | 'pauseSimulation' | 'setSimulationSpeed'
@@ -212,8 +213,13 @@ export class EditorBridgeClient {
   private async dispatch<T>(method: BridgeMethod, args: unknown[]): Promise<RpcResult<T>> {
     switch (method) {
       case 'getAssets': {
-        const payload = await this.request<{ assets: unknown[] }>(this.projectPath('/assets'));
-        return this.success<T>({ assets: payload.assets });
+        const payload = await this.request<{ assets: unknown[]; local_scenes?: unknown[] }>(
+          this.projectPath('/assets'),
+        );
+        return this.success<T>({
+          assets: payload.assets,
+          local_scenes: payload.local_scenes ?? [],
+        });
       }
       case 'openProject':
         return this.openBrowserProject<T>();
@@ -231,6 +237,10 @@ export class EditorBridgeClient {
         return this.getVisualGeometry<T>(String(args[0]));
       case 'getVisualGeometryBundle':
         return this.getVisualGeometryBundle<T>(String(args[0]));
+      case 'getLocalSceneManifest':
+        return this.getLocalSceneManifest<T>(String(args[0]));
+      case 'getLocalSceneChunk':
+        return this.getLocalSceneChunk<T>(String(args[0]), String(args[1]));
       case 'preflight':
         await this.synchronizeSceneArgument(args[0]);
         return this.success<T>(await this.request(this.projectPath('/preflight'), { method: 'POST' }));
@@ -373,6 +383,20 @@ export class EditorBridgeClient {
       `/api/v1/artifacts/${encodeURIComponent(artifactId)}`,
       { cache: 'force-cache' },
     );
+    return this.success<T>(await response.arrayBuffer());
+  }
+
+  private async getLocalSceneManifest<T>(sceneId: string): Promise<RpcResult<T>> {
+    const payload = await this.request(this.projectPath(
+      `/local-scenes/${encodeURIComponent(sceneId)}/manifest`,
+    ));
+    return this.success<T>(payload);
+  }
+
+  private async getLocalSceneChunk<T>(sceneId: string, chunkId: string): Promise<RpcResult<T>> {
+    const response = await this.requestResponse(this.projectPath(
+      `/local-scenes/${encodeURIComponent(sceneId)}/chunks/${encodeURIComponent(chunkId)}`,
+    ), { cache: 'force-cache' });
     return this.success<T>(await response.arrayBuffer());
   }
 

@@ -15,6 +15,7 @@ fi
 BACKEND_HOST="${SIMLAB_BACKEND_HOST:-127.0.0.1}"
 BACKEND_PORT="${SIMLAB_BACKEND_PORT:-8765}"
 DATA_ROOT="${SIMLAB_DATA_ROOT:-${SCRIPT_DIR}/.simlab-data}"
+LOCAL_SCENE_ROOT="${SIMLAB_LOCAL_SCENE_ROOT:-${SCRIPT_DIR}/external/architectural-brownstone/unpacked}"
 ALGORITHM_HOST="${SIMLAB_ALGORITHM_HOST:-127.0.0.1}"
 ALGORITHM_PORT="${SIMLAB_ALGORITHM_PORT:-50051}"
 if [[ -n "${SIMLAB_ALGORITHM_BIND:-}" ]]; then
@@ -89,6 +90,13 @@ trap handle_signal INT TERM
 echo "Starting SimLab API backend at http://${BACKEND_HOST}:${BACKEND_PORT}"
 echo "Starting MuJoCo algorithm gRPC backend at ${ALGORITHM_BIND}"
 echo "API data directory: ${DATA_ROOT}"
+if [[ -f "${LOCAL_SCENE_ROOT}/Demos/AEC/BrownstoneDemo/World_BrownstoneDemopack_Park(8Gb).usd" ]]; then
+  LOCAL_SCENE_ARGS=(--local-scene-root "${LOCAL_SCENE_ROOT}")
+  echo "Local Park scene root: ${LOCAL_SCENE_ROOT}"
+else
+  LOCAL_SCENE_ARGS=()
+  echo "Local Park scene: disabled (pack not found at ${LOCAL_SCENE_ROOT})"
+fi
 echo "Algorithm asset root: ${ALGORITHM_ASSET_ROOT}"
 
 "${VENV_PYTHON}" -u -m simlab.web_server \
@@ -96,6 +104,7 @@ echo "Algorithm asset root: ${ALGORITHM_ASSET_ROOT}"
   --port "${BACKEND_PORT}" \
   --data-root "${DATA_ROOT}" \
   --seed-assets "${SCRIPT_DIR}/assets" \
+  "${LOCAL_SCENE_ARGS[@]}" \
   --cors-origin "http://127.0.0.1:5173" \
   --cors-origin "http://localhost:5173" \
   --cors-origin "http://127.0.0.1:4173" \

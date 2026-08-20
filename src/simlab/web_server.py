@@ -33,6 +33,7 @@ def create_app(
     cors_origins: list[str] | None = None,
     access_token: str | None = None,
     allow_controller_execution: bool = False,
+    local_scene_root: Path | None = None,
 ) -> FastAPI:
     root = (data_root or repository_root() / ".simlab-data").resolve()
     assets = (seed_assets or repository_root() / "assets").resolve()
@@ -40,6 +41,7 @@ def create_app(
         root,
         assets,
         allow_controller_execution=allow_controller_execution,
+        local_scene_root=local_scene_root,
     )
     app = FastAPI(
         title="SimLab API",
@@ -106,6 +108,16 @@ def main() -> None:
     parser.add_argument("--cors-origin", action="append", dest="cors_origins")
     parser.add_argument("--access-token", default=os.environ.get("SIMLAB_API_TOKEN"))
     parser.add_argument("--allow-controller-execution", action="store_true")
+    parser.add_argument(
+        "--local-scene-root",
+        type=Path,
+        default=(
+            Path(os.environ["SIMLAB_LOCAL_SCENE_ROOT"])
+            if os.environ.get("SIMLAB_LOCAL_SCENE_ROOT")
+            else None
+        ),
+        help="Root of the unpacked Architectural Brownstone asset pack",
+    )
     args = parser.parse_args()
     uvicorn.run(
         create_app(
@@ -114,6 +126,7 @@ def main() -> None:
             cors_origins=args.cors_origins,
             access_token=args.access_token,
             allow_controller_execution=args.allow_controller_execution,
+            local_scene_root=args.local_scene_root,
         ),
         host=args.host,
         port=args.port,

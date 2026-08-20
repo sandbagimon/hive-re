@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from collections.abc import AsyncIterator
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, WebSocket
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 
 from simlab.resources import ResourceManager
@@ -114,7 +115,48 @@ def create_v1_router(manager: ResourceManager, access_token: str | None) -> APIR
 
     @router.get("/projects/{project_id}/assets", dependencies=[auth])
     async def assets(project_id: str) -> dict[str, Any]:
-        return {"version": "v1", "assets": manager.assets(project_id)}
+        return {
+            "version": "v1",
+            "assets": manager.assets(project_id),
+            "local_scenes": manager.local_scene_statuses(project_id),
+        }
+
+    @router.get(
+        "/projects/{project_id}/local-scenes/{scene_id}/manifest",
+        dependencies=[auth],
+    )
+    async def local_scene_manifest(project_id: str, scene_id: str) -> dict[str, Any]:
+        return manager.local_scene_manifest(project_id, scene_id)
+
+    @router.get(
+        "/projects/{project_id}/local-scenes/{scene_id}/chunks/{chunk_id}",
+        dependencies=[auth],
+    )
+    async def local_scene_chunk(
+        project_id: str, scene_id: str, chunk_id: str, request: Request
+    ) -> Response:
+        path = manager.local_scene_chunk_path(project_id, scene_id, chunk_id)
+        etag = f'"{scene_id}-{chunk_id}-{path.stat().st_size}"'
+        headers = {
+            "Content-Encoding": "identity",
+            "Cache-Control": "private, max-age=31536000, immutable",
+            "Content-Length": str(path.stat().st_size),
+            "ETag": etag,
+        }
+        if request.headers.get("if-none-match") == etag:
+            return Response(status_code=304, headers=headers)
+
+        async def content() -> AsyncIterator[bytes]:
+            with path.open("rb") as source:
+                while data := source.read(1024 * 1024):
+                    yield data
+                    await asyncio.sleep(0)
+
+        return StreamingResponse(
+            content(),
+            media_type="application/vnd.simlab.geometry-bundle",
+            headers=headers,
+        )
 
     @router.post(
         "/projects/{project_id}/assets/openusd",

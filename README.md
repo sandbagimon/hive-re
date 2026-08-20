@@ -75,9 +75,16 @@ Then open `http://127.0.0.1:5173`. For a production-like build use `npm run buil
 The backend launcher checks both ports, verifies the HTTP health endpoint, and shuts down both
 services together on `Ctrl+C`. Override its defaults with `SIMLAB_BACKEND_HOST`,
 `SIMLAB_BACKEND_PORT`, `SIMLAB_DATA_ROOT`, `SIMLAB_ALGORITHM_HOST`,
-`SIMLAB_ALGORITHM_PORT`, `SIMLAB_ALGORITHM_ASSET_ROOT`, or `SIMLAB_ALGORITHM_WORKERS`.
+`SIMLAB_ALGORITHM_PORT`, `SIMLAB_ALGORITHM_ASSET_ROOT`, `SIMLAB_ALGORITHM_WORKERS`, or
+`SIMLAB_LOCAL_SCENE_ROOT`.
 Additional command-line arguments are passed to the FastAPI process, for example
 `./start_backend.sh --allow-controller-execution` on a trusted development machine.
+
+If the unpacked Architectural Brownstone pack is present under
+`external/architectural-brownstone/unpacked`, the backend also prepares the Park (8GB) entry as a
+streamed static environment with a low-detail collision proxy. See
+[`docs/LOCAL_SCENE_STREAMING.md`](docs/LOCAL_SCENE_STREAMING.md) for the cache, API, and alternate
+path configuration.
 
 For an authenticated development backend, export the same API token in both terminals before
 starting the services. `start_frontend.sh` forwards it only into Vite's no-store runtime config;

@@ -64,6 +64,8 @@ let actorSelectedCallback = () => undefined;
 let actorTransformCallback = () => undefined;
 let visualGeometryResolver = async () => null;
 let visualGeometryBundleResolver = async () => null;
+let localSceneManifestResolver = async () => null;
+let localSceneChunkResolver = async () => null;
 const geometryBundleCache = new Map();
 transformControls.addEventListener('dragging-changed', (event) => {
     orbitControls.enabled = !event.value;
@@ -308,6 +310,8 @@ const materialVisuals = {
     ice: { roughness: 0.12, metalness: 0.08 },
 };
 function isLargeEnvironment(actor) {
+    if (actor.properties.geometry?.stream_scene_id)
+        return true;
     const bounds = actor.properties.geometry?.bounds;
     if (!bounds)
         return false;
@@ -374,6 +378,8 @@ export function configureViewport(callbacks) {
     actorTransformCallback = callbacks.onActorTransformChanged;
     visualGeometryResolver = callbacks.resolveVisualGeometry;
     visualGeometryBundleResolver = callbacks.resolveVisualGeometryBundle;
+    localSceneManifestResolver = callbacks.resolveLocalSceneManifest;
+    localSceneChunkResolver = callbacks.resolveLocalSceneChunk;
 }
 function resize() {
     const width = Math.max(1, Math.floor(canvas.clientWidth || window.innerWidth));
@@ -1584,6 +1590,88 @@ function resolveGeometryBundle(artifactId) {
     }
     return promise;
 }
+function addStreamedSceneActor(actor, sceneId, loadRevision) {
+    const root = new THREE.Group();
+    updateActorObject(root, actor);
+    root.userData.actorId = actor.id;
+    root.userData.streamSceneId = sceneId;
+    root.userData.loadedChunks = 0;
+    canvas.dataset.localSceneStatus = 'loading-manifest';
+    canvas.dataset.localSceneLoadedChunks = '0';
+    void localSceneManifestResolver(sceneId).then(async (manifest) => {
+        if (!manifest || !actorLoadIsCurrent(actor.id, root, loadRevision)) {
+            canvas.dataset.localSceneStatus = manifest ? 'cancelled' : 'failed';
+            return;
+        }
+        const target = orbitControls.target;
+        const chunks = [...manifest.chunks].sort((left, right) => {
+            const distance = (chunk) => {
+                const center = chunk.bounds.min.map((value, index) => (value + chunk.bounds.max[index]) / 2);
+                return (center[0] - target.x) ** 2
+                    + (center[1] - target.y) ** 2
+                    + (center[2] - target.z) ** 2;
+            };
+            return distance(left) - distance(right);
+        });
+        root.userData.totalChunks = chunks.length;
+        canvas.dataset.localSceneTotalChunks = String(chunks.length);
+        canvas.dataset.localSceneStatus = 'streaming';
+        const material = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            vertexColors: true,
+            roughness: 0.72,
+            metalness: 0.03,
+            dithering: true,
+            envMapIntensity: 0.62,
+        });
+        let cursor = 0;
+        let loaded = 0;
+        const loadNext = async () => {
+            while (cursor < chunks.length) {
+                const chunk = chunks[cursor];
+                cursor += 1;
+                const buffer = await localSceneChunkResolver(sceneId, chunk.id);
+                if (!buffer || !actorLoadIsCurrent(actor.id, root, loadRevision))
+                    return;
+                const bundle = decodeGeometryBundle(buffer);
+                for (const geometry of bundle.values()) {
+                    const mesh = new THREE.Mesh(geometryFromBundle(geometry), material);
+                    mesh.name = chunk.id;
+                    mesh.userData.actorId = actor.id;
+                    mesh.userData.localSceneChunk = chunk.id;
+                    mesh.castShadow = false;
+                    mesh.receiveShadow = true;
+                    root.add(mesh);
+                }
+                loaded += 1;
+                root.userData.loadedChunks = loaded;
+                canvas.dataset.localSceneLoadedChunks = String(loaded);
+                if (loaded === 1) {
+                    requestAnimationFrame(() => {
+                        if (actorLoadIsCurrent(actor.id, root, loadRevision)) {
+                            frameObject(root, largeEnvironmentViewDirection.clone());
+                        }
+                    });
+                }
+                updateSelectionOutline();
+            }
+        };
+        await Promise.all(Array.from({ length: Math.min(3, chunks.length) }, loadNext));
+        if (!actorLoadIsCurrent(actor.id, root, loadRevision)) {
+            material.dispose();
+            return;
+        }
+        if (loaded === 0)
+            material.dispose();
+        canvas.dataset.localSceneStatus = loaded === chunks.length ? 'ready' : 'partial';
+        updateSelectionOutline();
+    }).catch(() => {
+        if (actorLoadIsCurrent(actor.id, root, loadRevision)) {
+            canvas.dataset.localSceneStatus = 'failed';
+        }
+    });
+    return root;
+}
 function geometryForRobotVisual(visual, hasBundle) {
     const size = visual.size;
     if (visual.geometry_type === 'mesh' && (hasBundle || visual.visual_cache)) {
@@ -1845,6 +1933,13 @@ function createActorObject(actor, sceneData) {
     }
     if (actor.type !== 'object')
         return null;
+    const streamSceneId = actor.properties.geometry?.stream_scene_id;
+    if (streamSceneId) {
+        const environment = addStreamedSceneActor(actor, streamSceneId, loadRevision);
+        actorGroup.add(environment);
+        actorMeshes.set(actor.id, environment);
+        return environment;
+    }
     const mesh = new THREE.Mesh(geometryForActor(actor), materialForActor(actor));
     updateActorObject(mesh, actor);
     mesh.userData.actorId = actor.id;

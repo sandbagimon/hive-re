@@ -46,7 +46,8 @@ export interface MeshGeometryProperties {
   kind: 'mesh';
   source_format: 'openusd';
   source: string;
-  visual_cache: string;
+  visual_cache?: string;
+  stream_scene_id?: string;
   collision_mesh: string;
   bounds?: { min: Vector3; max: Vector3 };
 }
@@ -316,6 +317,34 @@ export interface AssetMetadata {
   default_transform?: Transform;
   default_properties?: ActorProperties;
   robotics?: RoboticsModel;
+}
+
+export interface LocalSceneStatus {
+  scene_id: string;
+  name: string;
+  status: 'disabled' | 'unavailable' | 'preparing' | 'ready' | 'failed';
+  error?: string;
+  statistics?: Record<string, number>;
+}
+
+export interface LocalSceneChunk {
+  id: string;
+  tile: [number, number];
+  byte_length: number;
+  vertex_count: number;
+  triangle_count: number;
+  bounds: { min: Vector3; max: Vector3 };
+}
+
+export interface LocalSceneManifest {
+  format: 'simlab-local-scene';
+  version: 1;
+  scene_id: string;
+  name: string;
+  bounds: { min: Vector3; max: Vector3 };
+  chunks: LocalSceneChunk[];
+  statistics: Record<string, number>;
+  warnings: string[];
 }
 
 export interface ActorSimulationState {

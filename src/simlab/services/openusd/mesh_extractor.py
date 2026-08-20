@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -212,6 +213,7 @@ def _geometry_instances(
     usd: Any,
     usd_geom: Any,
     warnings: list[str],
+    path_filter: Callable[[str], bool] | None = None,
 ) -> tuple[list[_GeometryInstance], int]:
     point_instancers = [
         usd_geom.PointInstancer(prim)
@@ -225,9 +227,10 @@ def _geometry_instances(
     }
     output: list[_GeometryInstance] = []
     for prim in stage.Traverse():
+        prim_path = str(prim.GetPath())
         if _is_supported_geometry(prim, usd_geom) and not _inside_prototype(
-            str(prim.GetPath()), prototype_roots
-        ):
+            prim_path, prototype_roots
+        ) and (path_filter is None or path_filter(prim_path)):
             output.append(
                 _GeometryInstance(
                     prim=prim,
@@ -239,6 +242,9 @@ def _geometry_instances(
 
     instance_count = 0
     for instancer in point_instancers:
+        instancer_path = str(instancer.GetPath())
+        if path_filter is not None and not path_filter(instancer_path):
+            continue
         prototypes = list(instancer.GetPrototypesRel().GetTargets())
         proto_indices = list(instancer.GetProtoIndicesAttr().Get() or [])
         transforms = list(
@@ -267,7 +273,10 @@ def _geometry_instances(
                 continue
             prototype_world = xform_cache.GetLocalToWorldTransform(prototype)
             for prim in usd.PrimRange(prototype):
-                if not _is_supported_geometry(prim, usd_geom):
+                prim_path = str(prim.GetPath())
+                if not _is_supported_geometry(prim, usd_geom) or (
+                    path_filter is not None and not path_filter(prim_path)
+                ):
                     continue
                 prim_world = xform_cache.GetLocalToWorldTransform(prim)
                 relative = prim_world * prototype_world.GetInverse()

@@ -22,6 +22,7 @@ import {
 } from './robot-kinematics.js';
 import type {
   Actor,
+  LocalSceneManifest,
   RobotArticulation,
   RobotSensor,
   RangefinderSensorSample,
@@ -108,6 +109,11 @@ let visualGeometryResolver: (cachePath: string) => Promise<VisualGeometryPayload
   async () => null;
 let visualGeometryBundleResolver: (artifactId: string) => Promise<ArrayBuffer | null> =
   async () => null;
+let localSceneManifestResolver: (sceneId: string) => Promise<LocalSceneManifest | null> =
+  async () => null;
+let localSceneChunkResolver: (
+  sceneId: string, chunkId: string
+) => Promise<ArrayBuffer | null> = async () => null;
 const geometryBundleCache = new Map<
   string,
   Promise<Map<string, BundledGeometry> | null>
@@ -386,6 +392,7 @@ const materialVisuals: Record<string, { roughness: number; metalness: number }> 
 };
 
 function isLargeEnvironment(actor: Actor): boolean {
+  if (actor.properties.geometry?.stream_scene_id) return true;
   const bounds = actor.properties.geometry?.bounds;
   if (!bounds) return false;
   return Math.max(...bounds.max.map((value, index) => value - bounds.min[index])) >= 250;
@@ -468,11 +475,15 @@ export function configureViewport(callbacks: {
   onActorTransformChanged: (actorId: string, transform: Transform) => void;
   resolveVisualGeometry: (cachePath: string) => Promise<VisualGeometryPayload | null>;
   resolveVisualGeometryBundle: (artifactId: string) => Promise<ArrayBuffer | null>;
+  resolveLocalSceneManifest: (sceneId: string) => Promise<LocalSceneManifest | null>;
+  resolveLocalSceneChunk: (sceneId: string, chunkId: string) => Promise<ArrayBuffer | null>;
 }): void {
   actorSelectedCallback = callbacks.onActorSelected;
   actorTransformCallback = callbacks.onActorTransformChanged;
   visualGeometryResolver = callbacks.resolveVisualGeometry;
   visualGeometryBundleResolver = callbacks.resolveVisualGeometryBundle;
+  localSceneManifestResolver = callbacks.resolveLocalSceneManifest;
+  localSceneChunkResolver = callbacks.resolveLocalSceneChunk;
 }
 
 function resize(): void {
@@ -2068,6 +2079,94 @@ function resolveGeometryBundle(
   return promise;
 }
 
+function addStreamedSceneActor(
+  actor: Actor,
+  sceneId: string,
+  loadRevision: number,
+): any {
+  const root = new THREE.Group();
+  updateActorObject(root, actor);
+  root.userData.actorId = actor.id;
+  root.userData.streamSceneId = sceneId;
+  root.userData.loadedChunks = 0;
+  canvas.dataset.localSceneStatus = 'loading-manifest';
+  canvas.dataset.localSceneLoadedChunks = '0';
+
+  void localSceneManifestResolver(sceneId).then(async (manifest) => {
+    if (!manifest || !actorLoadIsCurrent(actor.id, root, loadRevision)) {
+      canvas.dataset.localSceneStatus = manifest ? 'cancelled' : 'failed';
+      return;
+    }
+    const target = orbitControls.target;
+    const chunks = [...manifest.chunks].sort((left, right) => {
+      const distance = (chunk: typeof left) => {
+        const center = chunk.bounds.min.map(
+          (value, index) => (value + chunk.bounds.max[index]) / 2,
+        );
+        return (center[0] - target.x) ** 2
+          + (center[1] - target.y) ** 2
+          + (center[2] - target.z) ** 2;
+      };
+      return distance(left) - distance(right);
+    });
+    root.userData.totalChunks = chunks.length;
+    canvas.dataset.localSceneTotalChunks = String(chunks.length);
+    canvas.dataset.localSceneStatus = 'streaming';
+    const material = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      vertexColors: true,
+      roughness: 0.72,
+      metalness: 0.03,
+      dithering: true,
+      envMapIntensity: 0.62,
+    });
+    let cursor = 0;
+    let loaded = 0;
+    const loadNext = async (): Promise<void> => {
+      while (cursor < chunks.length) {
+        const chunk = chunks[cursor];
+        cursor += 1;
+        const buffer = await localSceneChunkResolver(sceneId, chunk.id);
+        if (!buffer || !actorLoadIsCurrent(actor.id, root, loadRevision)) return;
+        const bundle = decodeGeometryBundle(buffer);
+        for (const geometry of bundle.values()) {
+          const mesh = new THREE.Mesh(geometryFromBundle(geometry), material);
+          mesh.name = chunk.id;
+          mesh.userData.actorId = actor.id;
+          mesh.userData.localSceneChunk = chunk.id;
+          mesh.castShadow = false;
+          mesh.receiveShadow = true;
+          root.add(mesh);
+        }
+        loaded += 1;
+        root.userData.loadedChunks = loaded;
+        canvas.dataset.localSceneLoadedChunks = String(loaded);
+        if (loaded === 1) {
+          requestAnimationFrame(() => {
+            if (actorLoadIsCurrent(actor.id, root, loadRevision)) {
+              frameObject(root, largeEnvironmentViewDirection.clone());
+            }
+          });
+        }
+        updateSelectionOutline();
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(3, chunks.length) }, loadNext));
+    if (!actorLoadIsCurrent(actor.id, root, loadRevision)) {
+      material.dispose();
+      return;
+    }
+    if (loaded === 0) material.dispose();
+    canvas.dataset.localSceneStatus = loaded === chunks.length ? 'ready' : 'partial';
+    updateSelectionOutline();
+  }).catch(() => {
+    if (actorLoadIsCurrent(actor.id, root, loadRevision)) {
+      canvas.dataset.localSceneStatus = 'failed';
+    }
+  });
+  return root;
+}
+
 function geometryForRobotVisual(visual: RobotVisualGeometry, hasBundle: boolean): any {
   const size = visual.size;
   if (visual.geometry_type === 'mesh' && (hasBundle || visual.visual_cache)) {
@@ -2362,6 +2461,13 @@ function createActorObject(actor: Actor, sceneData: Scene): any | null {
     return robot;
   }
   if (actor.type !== 'object') return null;
+  const streamSceneId = actor.properties.geometry?.stream_scene_id;
+  if (streamSceneId) {
+    const environment = addStreamedSceneActor(actor, streamSceneId, loadRevision);
+    actorGroup.add(environment);
+    actorMeshes.set(actor.id, environment);
+    return environment;
+  }
   const mesh = new THREE.Mesh(geometryForActor(actor), materialForActor(actor));
   updateActorObject(mesh, actor);
   mesh.userData.actorId = actor.id;
