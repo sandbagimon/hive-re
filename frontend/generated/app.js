@@ -27,6 +27,7 @@ let previousSimulationState = null;
 let syncSnapshot = '';
 let renderSnapshot = '';
 let assetFilter = '';
+let localSceneStatuses = [];
 const element = (id) => {
     const value = document.getElementById(id);
     if (!value)
@@ -53,7 +54,27 @@ function articulationsForActor(actor, scene) {
 function renderAssets(assets) {
     const list = element('asset-list');
     const groups = groupAssets(assets, assetFilter);
-    list.innerHTML = groups.length ? groups.map((group) => `
+    const normalizedFilter = assetFilter.trim().toLowerCase();
+    const pendingLocalScenes = localSceneStatuses.filter((scene) => (scene.status !== 'ready'
+        && scene.status !== 'disabled'
+        && (!normalizedFilter || scene.name.toLowerCase().includes(normalizedFilter))));
+    const localSceneMarkup = pendingLocalScenes.length ? `
+    <section class="asset-group" data-asset-category="environment" aria-labelledby="asset-group-local-scenes">
+      <header class="asset-group-header">
+        <h3 id="asset-group-local-scenes">Local scenes</h3>
+        <span class="asset-group-count">${pendingLocalScenes.length}</span>
+      </header>
+      <div class="asset-group-items">${pendingLocalScenes.map((scene) => {
+        const status = scene.status === 'preparing' ? 'Optimizing…'
+            : scene.status === 'failed' ? 'Build failed' : 'Source unavailable';
+        return `<button class="asset-item" type="button" disabled aria-busy="${scene.status === 'preparing'}" title="${escapeHtml(scene.error ?? status)}">
+          <span class="asset-swatch" style="background:rgb(89, 116, 82)"></span>
+          <span class="item-label">${escapeHtml(scene.name)}</span>
+          <span class="item-meta">${status}</span>
+        </button>`;
+    }).join('')}</div>
+    </section>` : '';
+    const catalogMarkup = groups.length ? groups.map((group) => `
     <section class="asset-group" data-asset-category="${group.category}" aria-labelledby="asset-group-${group.category}">
       <header class="asset-group-header">
         <h3 id="asset-group-${group.category}">${group.label}</h3>
@@ -68,8 +89,11 @@ function renderAssets(assets) {
           <span class="item-meta">${escapeHtml(asset.primitive ?? asset.source_format ?? asset.type)}</span>
         </button>`;
     }).join('')}</div>
-    </section>`).join('')
+    </section>`).join('') : '';
+    const emptyMarkup = localSceneMarkup || catalogMarkup
+        ? ''
         : `<div class="empty-state">${assets.length ? `No assets match “${escapeHtml(assetFilter.trim())}”` : 'No assets'}</div>`;
+    list.innerHTML = `${localSceneMarkup}${catalogMarkup}${emptyMarkup}`;
     for (const button of list.querySelectorAll('[data-asset-id]')) {
         button.addEventListener('click', () => {
             const asset = store.current.assets.find((item) => item.id === button.dataset.assetId);
@@ -1841,6 +1865,7 @@ let lastLocalSceneStatus = '';
 async function loadAssetsWithRetry() {
     const assets = await bridge.call('getAssets');
     if (assets.ok && assets.data) {
+        localSceneStatuses = assets.data.local_scenes;
         store.setAssets(assets.data.assets);
         if (lastAssetConnectionError)
             store.appendLog('Shared assets connected.');
