@@ -3,7 +3,7 @@ import type { RpcResult, SimulationState, SimulationStatus } from './types.js';
 type BridgeMethod =
   | 'getAssets' | 'importOpenUsd' | 'importOpenUsdFolder'
   | 'getVisualGeometry' | 'getVisualGeometryBundle'
-  | 'getLocalSceneManifest' | 'getLocalSceneChunk'
+  | 'getLocalSceneManifest' | 'getLocalSceneChunk' | 'getLocalSceneTexture'
   | 'openProject' | 'saveProject'
   | 'validateProjectContent' | 'exportMjcf' | 'preflight'
   | 'runSimulation' | 'pauseSimulation' | 'setSimulationSpeed'
@@ -241,6 +241,8 @@ export class EditorBridgeClient {
         return this.getLocalSceneManifest<T>(String(args[0]));
       case 'getLocalSceneChunk':
         return this.getLocalSceneChunk<T>(String(args[0]), String(args[1]));
+      case 'getLocalSceneTexture':
+        return this.getLocalSceneTexture<T>(String(args[0]), String(args[1]));
       case 'preflight':
         await this.synchronizeSceneArgument(args[0]);
         return this.success<T>(await this.request(this.projectPath('/preflight'), { method: 'POST' }));
@@ -398,6 +400,16 @@ export class EditorBridgeClient {
       `/local-scenes/${encodeURIComponent(sceneId)}/chunks/${encodeURIComponent(chunkId)}`,
     ), { cache: 'force-cache' });
     return this.success<T>(await response.arrayBuffer());
+  }
+
+  private async getLocalSceneTexture<T>(
+    sceneId: string,
+    textureId: string,
+  ): Promise<RpcResult<T>> {
+    const response = await this.requestResponse(this.projectPath(
+      `/local-scenes/${encodeURIComponent(sceneId)}/textures/${encodeURIComponent(textureId)}`,
+    ), { cache: 'force-cache' });
+    return this.success<T>(URL.createObjectURL(await response.blob()));
   }
 
   private selectOpenUsdEntry(paths: string[]): string | null | undefined {

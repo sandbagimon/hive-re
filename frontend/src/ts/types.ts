@@ -336,13 +336,36 @@ export interface LocalSceneChunk {
   bounds: { min: Vector3; max: Vector3 };
 }
 
+export interface LocalSceneMaterial {
+  id: string;
+  name: string;
+  base_color: [number, number, number, number];
+  roughness: number;
+  metalness: number;
+  opacity: number;
+  texture_scale: [number, number];
+  textures: Partial<Record<
+    'base_color' | 'normal' | 'roughness' | 'metalness' | 'orm',
+    string
+  >>;
+}
+
+export interface LocalSceneTexture {
+  id: string;
+  filename: string;
+  media_type: string;
+  byte_length: number;
+}
+
 export interface LocalSceneManifest {
   format: 'simlab-local-scene';
-  version: 1;
+  version: 2;
   scene_id: string;
   name: string;
   bounds: { min: Vector3; max: Vector3 };
   chunks: LocalSceneChunk[];
+  materials: Record<string, LocalSceneMaterial>;
+  textures: Record<string, LocalSceneTexture>;
   statistics: Record<string, number>;
   warnings: string[];
 }

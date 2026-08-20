@@ -208,6 +208,8 @@ export class EditorBridgeClient {
                 return this.getLocalSceneManifest(String(args[0]));
             case 'getLocalSceneChunk':
                 return this.getLocalSceneChunk(String(args[0]), String(args[1]));
+            case 'getLocalSceneTexture':
+                return this.getLocalSceneTexture(String(args[0]), String(args[1]));
             case 'preflight':
                 await this.synchronizeSceneArgument(args[0]);
                 return this.success(await this.request(this.projectPath('/preflight'), { method: 'POST' }));
@@ -356,6 +358,10 @@ export class EditorBridgeClient {
     async getLocalSceneChunk(sceneId, chunkId) {
         const response = await this.requestResponse(this.projectPath(`/local-scenes/${encodeURIComponent(sceneId)}/chunks/${encodeURIComponent(chunkId)}`), { cache: 'force-cache' });
         return this.success(await response.arrayBuffer());
+    }
+    async getLocalSceneTexture(sceneId, textureId) {
+        const response = await this.requestResponse(this.projectPath(`/local-scenes/${encodeURIComponent(sceneId)}/textures/${encodeURIComponent(textureId)}`), { cache: 'force-cache' });
+        return this.success(URL.createObjectURL(await response.blob()));
     }
     selectOpenUsdEntry(paths) {
         const candidates = paths

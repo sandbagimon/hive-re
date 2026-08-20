@@ -114,6 +114,9 @@ let localSceneManifestResolver: (sceneId: string) => Promise<LocalSceneManifest 
 let localSceneChunkResolver: (
   sceneId: string, chunkId: string
 ) => Promise<ArrayBuffer | null> = async () => null;
+let localSceneTextureResolver: (
+  sceneId: string, textureId: string
+) => Promise<string | null> = async () => null;
 const geometryBundleCache = new Map<
   string,
   Promise<Map<string, BundledGeometry> | null>
@@ -477,6 +480,7 @@ export function configureViewport(callbacks: {
   resolveVisualGeometryBundle: (artifactId: string) => Promise<ArrayBuffer | null>;
   resolveLocalSceneManifest: (sceneId: string) => Promise<LocalSceneManifest | null>;
   resolveLocalSceneChunk: (sceneId: string, chunkId: string) => Promise<ArrayBuffer | null>;
+  resolveLocalSceneTexture: (sceneId: string, textureId: string) => Promise<string | null>;
 }): void {
   actorSelectedCallback = callbacks.onActorSelected;
   actorTransformCallback = callbacks.onActorTransformChanged;
@@ -484,6 +488,7 @@ export function configureViewport(callbacks: {
   visualGeometryBundleResolver = callbacks.resolveVisualGeometryBundle;
   localSceneManifestResolver = callbacks.resolveLocalSceneManifest;
   localSceneChunkResolver = callbacks.resolveLocalSceneChunk;
+  localSceneTextureResolver = callbacks.resolveLocalSceneTexture;
 }
 
 function resize(): void {
@@ -2079,6 +2084,36 @@ function resolveGeometryBundle(
   return promise;
 }
 
+function loadLocalSceneTexture(
+  sceneId: string,
+  textureId: string,
+  colorTexture: boolean,
+  scale: [number, number],
+): Promise<any | null> {
+  return localSceneTextureResolver(sceneId, textureId).then((url) => {
+    if (!url) return null;
+    return new Promise((resolve) => {
+      new THREE.TextureLoader().load(
+        url,
+        (texture) => {
+          URL.revokeObjectURL(url);
+          texture.colorSpace = colorTexture ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+          texture.wrapS = THREE.RepeatWrapping;
+          texture.wrapT = THREE.RepeatWrapping;
+          texture.repeat.set(scale[0], scale[1]);
+          texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
+          resolve(texture);
+        },
+        undefined,
+        () => {
+          URL.revokeObjectURL(url);
+          resolve(null);
+        },
+      );
+    });
+  });
+}
+
 function addStreamedSceneActor(
   actor: Actor,
   sceneId: string,
@@ -2112,14 +2147,83 @@ function addStreamedSceneActor(
     root.userData.totalChunks = chunks.length;
     canvas.dataset.localSceneTotalChunks = String(chunks.length);
     canvas.dataset.localSceneStatus = 'streaming';
-    const material = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
+    const fallbackMaterial = new THREE.MeshStandardMaterial({
+      color: 0x8c948a,
       vertexColors: true,
       roughness: 0.72,
       metalness: 0.03,
       dithering: true,
       envMapIntensity: 0.62,
     });
+    const materials = new Map(Object.entries(manifest.materials).map(([id, definition]) => {
+      const material = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(
+          definition.base_color[0],
+          definition.base_color[1],
+          definition.base_color[2],
+        ),
+        vertexColors: true,
+        roughness: definition.roughness,
+        metalness: definition.metalness,
+        opacity: definition.opacity,
+        transparent: definition.opacity < 0.999,
+        dithering: true,
+        envMapIntensity: 0.62,
+      });
+      return [id, material] as const;
+    }));
+    root.userData.disposableMaterials = [fallbackMaterial, ...materials.values()];
+    const texturePromises = new Map<string, Promise<any | null>>();
+    const texture = (
+      textureId: string,
+      colorTexture: boolean,
+      scale: [number, number],
+    ): Promise<any | null> => {
+      const key = [
+        textureId,
+        colorTexture ? 'srgb' : 'linear',
+        scale[0],
+        scale[1],
+      ].join(':');
+      let promise = texturePromises.get(key);
+      if (!promise) {
+        promise = loadLocalSceneTexture(sceneId, textureId, colorTexture, scale);
+        texturePromises.set(key, promise);
+      }
+      return promise;
+    };
+    for (const [materialId, definition] of Object.entries(manifest.materials)) {
+      const material = materials.get(materialId);
+      if (!material) continue;
+      const assignments: Array<[string | undefined, MaterialTextureSlot, boolean]> = [
+        [definition.textures.base_color, 'map', true],
+        [definition.textures.normal, 'normalMap', false],
+        [definition.textures.roughness, 'roughnessMap', false],
+        [definition.textures.metalness, 'metalnessMap', false],
+      ];
+      if (definition.textures.orm) {
+        if (!definition.textures.roughness) {
+          assignments.push([definition.textures.orm, 'roughnessMap', false]);
+        }
+        if (!definition.textures.metalness) {
+          assignments.push([definition.textures.orm, 'metalnessMap', false]);
+        }
+      }
+      for (const [textureId, slot, colorTexture] of assignments) {
+        if (!textureId) continue;
+        void texture(textureId, colorTexture, definition.texture_scale).then((loadedTexture) => {
+          if (!loadedTexture) return;
+          if (!actorLoadIsCurrent(actor.id, root, loadRevision)) {
+            loadedTexture.dispose();
+            return;
+          }
+          material[slot] = loadedTexture;
+          if (slot === 'roughnessMap') material.roughness = 1;
+          if (slot === 'metalnessMap') material.metalness = 1;
+          material.needsUpdate = true;
+        });
+      }
+    }
     let cursor = 0;
     let loaded = 0;
     const loadNext = async (): Promise<void> => {
@@ -2129,8 +2233,11 @@ function addStreamedSceneActor(
         const buffer = await localSceneChunkResolver(sceneId, chunk.id);
         if (!buffer || !actorLoadIsCurrent(actor.id, root, loadRevision)) return;
         const bundle = decodeGeometryBundle(buffer);
-        for (const geometry of bundle.values()) {
-          const mesh = new THREE.Mesh(geometryFromBundle(geometry), material);
+        for (const [materialId, geometry] of bundle.entries()) {
+          const mesh = new THREE.Mesh(
+            geometryFromBundle(geometry),
+            materials.get(materialId) ?? fallbackMaterial,
+          );
           mesh.name = chunk.id;
           mesh.userData.actorId = actor.id;
           mesh.userData.localSceneChunk = chunk.id;
@@ -2153,10 +2260,8 @@ function addStreamedSceneActor(
     };
     await Promise.all(Array.from({ length: Math.min(3, chunks.length) }, loadNext));
     if (!actorLoadIsCurrent(actor.id, root, loadRevision)) {
-      material.dispose();
       return;
     }
-    if (loaded === 0) material.dispose();
     canvas.dataset.localSceneStatus = loaded === chunks.length ? 'ready' : 'partial';
     updateSelectionOutline();
   }).catch(() => {
@@ -2352,6 +2457,9 @@ function rebuildColliderDebug(mesh: any, actor: Actor): void {
 function disposeObject(object: any): void {
   const materials = new Set<any>();
   const textures = new Set<any>();
+  for (const material of object.userData?.disposableMaterials ?? []) {
+    materials.add(material);
+  }
   object.traverse((child) => {
     child.geometry?.dispose();
     const childMaterials = Array.isArray(child.material)
@@ -2364,6 +2472,11 @@ function disposeObject(object: any): void {
       }
     }
   });
+  for (const material of materials) {
+    for (const slot of ['map', 'bumpMap', 'normalMap', 'roughnessMap', 'metalnessMap']) {
+      if (material[slot]) textures.add(material[slot]);
+    }
+  }
   for (const texture of textures) texture.dispose();
   for (const material of materials) material.dispose();
 }

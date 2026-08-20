@@ -158,6 +158,34 @@ def create_v1_router(manager: ResourceManager, access_token: str | None) -> APIR
             headers=headers,
         )
 
+    @router.get(
+        "/projects/{project_id}/local-scenes/{scene_id}/textures/{texture_id}",
+        dependencies=[auth],
+    )
+    async def local_scene_texture(
+        project_id: str, scene_id: str, texture_id: str, request: Request
+    ) -> Response:
+        path, media_type = manager.local_scene_texture_path(
+            project_id, scene_id, texture_id
+        )
+        etag = f'"{scene_id}-{texture_id}-{path.stat().st_size}"'
+        headers = {
+            "Content-Encoding": "identity",
+            "Cache-Control": "private, max-age=31536000, immutable",
+            "Content-Length": str(path.stat().st_size),
+            "ETag": etag,
+        }
+        if request.headers.get("if-none-match") == etag:
+            return Response(status_code=304, headers=headers)
+
+        async def content() -> AsyncIterator[bytes]:
+            with path.open("rb") as source:
+                while data := source.read(1024 * 1024):
+                    yield data
+                    await asyncio.sleep(0)
+
+        return StreamingResponse(content(), media_type=media_type, headers=headers)
+
     @router.post(
         "/projects/{project_id}/assets/openusd",
         dependencies=[auth],

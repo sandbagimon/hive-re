@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from simlab.services.local_scene_materials import LocalMaterialRegistry
 from simlab.services.openusd.asset_cache import (
     atomic_copy,
     atomic_write_bytes,
@@ -27,7 +28,7 @@ PARK_SCENE_ID = "brownstone-park"
 PARK_ENTRY = Path(
     "Demos/AEC/BrownstoneDemo/World_BrownstoneDemopack_Park(8Gb).usd"
 )
-CACHE_VERSION = 1
+CACHE_VERSION = 2
 TILE_SIZE_METERS = 24.0
 MAX_VERTICES_PER_CHUNK = 350_000
 MAX_COLLISION_BOXES = 192
@@ -214,10 +215,15 @@ def _build_collision_proxy(candidates: list[_Bounds]) -> MeshData:
     return output
 
 
-def build_park_cache(source: Path, cache_root: Path, fingerprint: str) -> dict[str, Any]:
+def build_park_cache(
+    source: Path,
+    cache_root: Path,
+    fingerprint: str,
+    asset_root: Path | None = None,
+) -> dict[str, Any]:
     loaded = load_openusd_stage(source)
     try:
-        from pxr import Gf, Usd, UsdGeom
+        from pxr import Gf, Usd, UsdGeom, UsdShade
     except ImportError as exc:
         raise RuntimeError("OpenUSD Python bindings are unavailable") from exc
 
@@ -233,17 +239,24 @@ def build_park_cache(source: Path, cache_root: Path, fingerprint: str) -> dict[s
         warnings,
         path_filter=_visual_path_allowed,
     )
-    local_cache: dict[str, tuple[list[list[float]], list[int], list[float], list[float]]] = {}
     cache_root.mkdir(parents=True, exist_ok=True)
-    tile_chunks: dict[tuple[int, int], MeshData] = {}
+    material_registry = LocalMaterialRegistry(asset_root or source.parent, cache_root)
+    local_cache: dict[
+        str,
+        tuple[list[list[float]], list[int], list[float], str, list[float]],
+    ] = {}
+    tile_chunks: dict[tuple[int, int], dict[str, MeshData]] = {}
     chunk_entries: list[dict[str, Any]] = []
     all_bounds: list[_Bounds] = []
     collision_candidates: list[_Bounds] = []
 
-    def flush_chunk(tile: tuple[int, int], mesh: MeshData) -> None:
-        if not mesh.vertex_count:
+    def chunk_vertex_count(meshes: dict[str, MeshData]) -> int:
+        return sum(mesh.vertex_count for mesh in meshes.values())
+
+    def flush_chunk(tile: tuple[int, int], meshes: dict[str, MeshData]) -> None:
+        if not chunk_vertex_count(meshes):
             return
-        bundle = build_geometry_bundle([("scene", mesh)])
+        bundle = build_geometry_bundle(sorted(meshes.items()))
         content_hash = hashlib.sha256(bundle.content).hexdigest()[:16]
         chunk_id = f"chunk-{len(chunk_entries):04d}-{content_hash}"
         atomic_write_bytes(cache_root / f"{chunk_id}.simbin", bundle.content)
@@ -254,7 +267,9 @@ def build_park_cache(source: Path, cache_root: Path, fingerprint: str) -> dict[s
                 "byte_length": len(bundle.content),
                 "vertex_count": bundle.vertex_count,
                 "triangle_count": bundle.triangle_count,
-                "bounds": _union_bounds([_mesh_bounds(mesh)]),
+                "bounds": _union_bounds(
+                    [_mesh_bounds(mesh) for mesh in meshes.values() if mesh.vertex_count]
+                ),
             }
         )
 
@@ -265,10 +280,14 @@ def build_park_cache(source: Path, cache_root: Path, fingerprint: str) -> dict[s
         cached = local_cache.get(path)
         if cached is None:
             positions, indices, uvs, _native = _local_geometry(instance.prim, UsdGeom)
-            color = _fast_display_color(instance.prim, UsdGeom)
-            cached = (positions, indices, uvs, color)
+            material_id, vertex_color = material_registry.material_for_prim(
+                instance.prim,
+                _fast_display_color(instance.prim, UsdGeom),
+                UsdShade,
+            )
+            cached = (positions, indices, uvs, material_id, vertex_color)
             local_cache[path] = cached
-        positions, indices, uvs, color = cached
+        positions, indices, uvs, material_id, vertex_color = cached
         if not positions or not indices:
             continue
         mesh = MeshData()
@@ -277,7 +296,7 @@ def build_park_cache(source: Path, cache_root: Path, fingerprint: str) -> dict[s
             positions,
             indices,
             instance.matrix,
-            color,
+            vertex_color,
             uvs,
             path,
             Gf,
@@ -291,21 +310,24 @@ def build_park_cache(source: Path, cache_root: Path, fingerprint: str) -> dict[s
         center_x = (bounds.minimum[0] + bounds.maximum[0]) / 2.0
         center_y = (bounds.minimum[1] + bounds.maximum[1]) / 2.0
         tile = (math.floor(center_x / TILE_SIZE_METERS), math.floor(center_y / TILE_SIZE_METERS))
-        chunk = tile_chunks.setdefault(tile, MeshData())
-        if chunk.vertex_count and chunk.vertex_count + mesh.vertex_count > MAX_VERTICES_PER_CHUNK:
+        chunk = tile_chunks.setdefault(tile, {})
+        if (
+            chunk_vertex_count(chunk)
+            and chunk_vertex_count(chunk) + mesh.vertex_count > MAX_VERTICES_PER_CHUNK
+        ):
             flush_chunk(tile, chunk)
-            chunk = MeshData()
+            chunk = {}
             tile_chunks[tile] = chunk
-        _merge_mesh(chunk, mesh)
-        if chunk.vertex_count >= MAX_VERTICES_PER_CHUNK:
+        _merge_mesh(chunk.setdefault(material_id, MeshData()), mesh)
+        if chunk_vertex_count(chunk) >= MAX_VERTICES_PER_CHUNK:
             flush_chunk(tile, chunk)
-            tile_chunks[tile] = MeshData()
+            tile_chunks[tile] = {}
 
     if not all_bounds:
         raise RuntimeError("Park stage did not produce any visible geometry")
 
-    for tile, mesh in sorted(tile_chunks.items()):
-        flush_chunk(tile, mesh)
+    for tile, meshes in sorted(tile_chunks.items()):
+        flush_chunk(tile, meshes)
 
     collision = _build_collision_proxy(collision_candidates)
     if not collision.vertex_count:
@@ -316,23 +338,47 @@ def build_park_cache(source: Path, cache_root: Path, fingerprint: str) -> dict[s
     )
     manifest: dict[str, Any] = {
         "format": "simlab-local-scene",
-        "version": 1,
+        "version": 2,
         "scene_id": PARK_SCENE_ID,
         "name": "Architectural Brownstone Park (8GB)",
         "source": PARK_ENTRY.as_posix(),
         "source_fingerprint": fingerprint,
         "bounds": _union_bounds(all_bounds),
         "chunks": chunk_entries,
+        "materials": material_registry.materials,
+        "textures": material_registry.textures,
         "statistics": {
             "chunk_count": len(chunk_entries),
             "vertex_count": sum(item["vertex_count"] for item in chunk_entries),
             "triangle_count": sum(item["triangle_count"] for item in chunk_entries),
             "point_instance_count": point_instance_count,
             "collision_box_count": collision.vertex_count // 8,
+            "material_count": len(material_registry.materials),
+            "texture_count": len(material_registry.textures),
+            "missing_texture_count": material_registry.missing_texture_count,
         },
-        "warnings": warnings[:100],
+        "warnings": (
+            warnings
+            + (
+                [
+                    f"{material_registry.missing_texture_count} authored texture references "
+                    "were unavailable; their material constants were used instead."
+                ]
+                if material_registry.missing_texture_count
+                else []
+            )
+        )[:100],
     }
     atomic_write_text(cache_root / "manifest.json", json.dumps(manifest, indent=2) + "\n")
+    active_chunks = {f"{item['id']}.simbin" for item in chunk_entries}
+    for stale_chunk in cache_root.glob("chunk-*.simbin"):
+        if stale_chunk.name not in active_chunks:
+            stale_chunk.unlink(missing_ok=True)
+    active_textures = {item["filename"] for item in material_registry.textures.values()}
+    texture_root = cache_root / "textures"
+    for stale_texture in texture_root.glob("tex_*.*"):
+        if stale_texture.name not in active_textures:
+            stale_texture.unlink(missing_ok=True)
     return manifest
 
 
@@ -372,10 +418,15 @@ class LocalSceneService:
             try:
                 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
                 chunks = manifest.get("chunks", [])
+                textures = manifest.get("textures", {}).values()
                 if (
                     manifest.get("source_fingerprint") == fingerprint
                     and chunks
                     and all((self.cache_root / f"{item['id']}.simbin").is_file() for item in chunks)
+                    and all(
+                        (self.cache_root / "textures" / item["filename"]).is_file()
+                        for item in textures
+                    )
                     and (self.cache_root / "collision.obj").is_file()
                 ):
                     self._manifest = manifest
@@ -394,7 +445,12 @@ class LocalSceneService:
 
     def _build(self, source: Path, fingerprint: str) -> None:
         try:
-            manifest = build_park_cache(source, self.cache_root, fingerprint)
+            manifest = build_park_cache(
+                source,
+                self.cache_root,
+                fingerprint,
+                self.asset_root,
+            )
         except Exception as exc:
             with self._lock:
                 self._status = "failed"
@@ -478,3 +534,16 @@ class LocalSceneService:
         if not path.is_file():
             raise KeyError(f"Local scene chunk is unavailable: {chunk_id}")
         return path
+
+    def texture_path(self, scene_id: str, texture_id: str) -> tuple[Path, str]:
+        manifest = self._ready_manifest(scene_id)
+        texture = manifest.get("textures", {}).get(texture_id)
+        if not isinstance(texture, dict):
+            raise KeyError(f"Unknown local scene texture: {texture_id}")
+        filename = texture.get("filename")
+        if not isinstance(filename, str) or Path(filename).name != filename:
+            raise KeyError(f"Invalid local scene texture: {texture_id}")
+        path = self.cache_root / "textures" / filename
+        if not path.is_file():
+            raise KeyError(f"Local scene texture is unavailable: {texture_id}")
+        return path, str(texture.get("media_type") or "application/octet-stream")

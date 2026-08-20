@@ -1722,6 +1722,13 @@ configureViewport({
         store.appendLog(`Local scene chunk load failed: ${result.error ?? chunkId}`);
         return null;
     },
+    resolveLocalSceneTexture: async (sceneId, textureId) => {
+        const result = await bridge.call('getLocalSceneTexture', sceneId, textureId);
+        if (result.ok && result.data)
+            return result.data;
+        store.appendLog(`Local scene texture load failed: ${result.error ?? textureId}`);
+        return null;
+    },
 });
 function syncViewportSelection(state) {
     selectViewportActor(state.selectedActorId);

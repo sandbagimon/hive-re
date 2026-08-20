@@ -298,6 +298,12 @@ class ResourceManager:
         self.get_project(project_id)
         return self.local_scenes.chunk_path(scene_id, chunk_id)
 
+    def local_scene_texture_path(
+        self, project_id: str, scene_id: str, texture_id: str
+    ) -> tuple[Path, str]:
+        self.get_project(project_id)
+        return self.local_scenes.texture_path(scene_id, texture_id)
+
     def import_openusd(
         self,
         project_id: str,
