@@ -18,3 +18,7 @@ declare module '*GLTFLoader.js' {
 declare module '*RGBELoader.js' {
   export const RGBELoader: any;
 }
+
+declare module '*SkeletonUtils.js' {
+  export const clone: (source: any) => any;
+}

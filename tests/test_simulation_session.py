@@ -616,6 +616,50 @@ def test_robot_session_runs_python_controller_before_each_physics_step(tmp_path)
     assert detached.navigation.status == "idle"
 
 
+def test_robot_session_can_run_controller_slower_than_physics(tmp_path) -> None:
+    pytest.importorskip("mujoco")
+    imported = import_openusd_asset(
+        "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
+    )
+    scene = Scene(
+        actors=[
+            Actor(
+                id="actor_arm",
+                name="Arm",
+                type="robot",
+                asset_id=imported.asset["id"],
+                properties=imported.asset["default_properties"],
+            )
+        ],
+        robotics=imported.robotics_model,
+        simulation_config={
+            "timestep": 0.005,
+            "controller_update_rate_hz": 50.0,
+        },
+    )
+
+    class CountingController:
+        def __init__(self) -> None:
+            self.observation_times: list[float] = []
+
+        def reset(self, observation: ControllerObservation) -> None:
+            self.observation_times.clear()
+
+        def step(self, observation: ControllerObservation) -> ControllerAction:
+            self.observation_times.append(observation.time)
+            return ControllerAction()
+
+    controller = CountingController()
+    session = MuJoCoSimulationSession(scene, tmp_path / "scene.xml", asset_root=tmp_path)
+    session.attach_controller(controller)
+
+    stepped = session.step(steps=20)
+
+    assert stepped.time == pytest.approx(0.1)
+    assert stepped.controller.step_count == 5
+    assert controller.observation_times == pytest.approx([0.0, 0.02, 0.04, 0.06, 0.08])
+
+
 def test_robot_session_contains_python_controller_fault_and_keeps_stepping(tmp_path) -> None:
     pytest.importorskip("mujoco")
     imported = import_openusd_asset(

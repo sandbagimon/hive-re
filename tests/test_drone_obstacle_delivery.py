@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import pytest
@@ -55,15 +56,45 @@ def test_obstacle_delivery_uses_range_data_and_completes(tmp_path: Path) -> None
         actors["actor_dropoff_residence"].properties["visual_style"]
         == "residential_dropoff"
     )
-    assert (
-        actors["actor_dynamic_delivery_van"].properties["visual_style"]
-        == "dynamic_delivery_van"
+    forklift = actors["actor_dynamic_forklift"]
+    assert forklift.name == "Unmapped Crossing Forklift"
+    assert forklift.properties["visual_style"] == "dynamic_forklift"
+    assert forklift.properties["physics"]["dynamic"]
+    assert forklift.properties["physics"]["mass"] == 2_600.0
+    assert forklift.properties["size"] == [0.9, 0.5, 1.0]
+    assert forklift.transform.position == [1.15, -1.2, 1.0]
+    assert forklift.transform.rotation == pytest.approx([0.0, 0.0, math.pi / 2.0])
+    forklift_visual = forklift.properties["visual_model"]
+    assert forklift_visual["license"] == "CC-BY-4.0"
+    assert forklift_visual["author"] == "louis-muir"
+    assert forklift_visual["source_url"].endswith(
+        "/forklift-truck-060f3f8bc7de4e6ca2f348d414702e9d"
     )
-    assert actors["actor_dynamic_delivery_van"].properties["physics"]["dynamic"]
+    assert forklift_visual["url"].endswith("/sketchfab/forklift/forklift.glb")
+    forklift_model = Path("frontend/public") / forklift_visual["url"].removeprefix(
+        "./"
+    )
+    assert forklift_model.is_file()
     assert (
         actors["actor_dynamic_courier"].properties["visual_style"]
         == "dynamic_courier"
     )
+    courier_visual = actors["actor_dynamic_courier"].properties["visual_model"]
+    assert courier_visual["license"] == "CC0-1.0"
+    assert courier_visual["url"].endswith("/courier/human-jay.glb")
+    courier_model = Path("frontend/public") / courier_visual["url"].removeprefix("./")
+    assert courier_model.is_file()
+    courier_animation = courier_visual["animation"]
+    assert courier_animation["locomotion"] == "walking"
+    assert courier_animation["clips"] == {
+        "idle": "Idle_A",
+        "walking": "Walk",
+        "cycling": "Driving",
+    }
+    animation_model = Path("frontend/public") / courier_animation[
+        "clip_url"
+    ].removeprefix("./")
+    assert animation_model.is_file()
     barrier_visual = actors["actor_obstacle_wall"].properties["visual_model"]
     assert barrier_visual["license"] == "CC0-1.0"
     assert barrier_visual["source_url"].endswith("/concrete_road_barrier_02")
@@ -83,14 +114,17 @@ def test_obstacle_delivery_uses_range_data_and_completes(tmp_path: Path) -> None
         assert len(barrel_visual["instances"]) == 2
     assert scene.simulation_config["controller_deadline"] == 0.05
     assert scene.simulation_config["controller_reset_deadline"] == 0.2
+    assert scene.simulation_config["timestep"] == 0.005
+    assert scene.simulation_config["controller_update_rate_hz"] == 100.0
     assert scene.simulation_config["visual_environment"]["preset"] == (
         "cinematic_blue_hour_delivery"
     )
     dynamic_events = scene.simulation_config["dynamic_events"]
     assert [event["actor_id"] for event in dynamic_events] == [
-        "actor_dynamic_delivery_van",
+        "actor_dynamic_forklift",
         "actor_dynamic_courier",
     ]
+    assert dynamic_events[0]["keyframes"][2]["position"] == [1.15, 1.45, 1.0]
     assert all(len(event["keyframes"]) >= 6 for event in dynamic_events)
     assert scene.simulation_config["navigation"]["route"] == [
         [x, y, 1.5] for x, y in plan_route((0.0, 0.0), (4.0, 3.0))
@@ -110,11 +144,12 @@ def test_obstacle_delivery_uses_range_data_and_completes(tmp_path: Path) -> None
         [sample for sample in attached.sensors if sample.to_dict()["sensor_type"] == "rangefinder"]
     ) == 12
     assert len(session._controller_observation().rangefinders) == 12
-    state = session.step(steps=21_000)
+    state = session.step(steps=9_600)
 
     controller = loaded.controller
     payload = next(item for item in state.actors if item.actor_id == "actor_003")
     assert state.controller.status == "active"
+    assert state.controller.step_count == 4_800
     assert state.delivery_tasks[0].status == "completed"
     assert controller.phase == "complete"
     assert controller.avoidance_events > 0

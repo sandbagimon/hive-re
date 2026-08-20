@@ -34,11 +34,89 @@ POLY_HAVEN_BARREL = {
     "author": "Serhii Khromov",
     "resolution": "2K",
 }
+POLY_HAVEN_CARDBOARD_BOX = {
+    "url": "./models/polyhaven/cardboard_box_01/cardboard_box_01_2k.gltf",
+    "source_url": "https://polyhaven.com/a/cardboard_box_01",
+    "license": "CC0-1.0",
+    "author": "Pacid Bhuyan",
+    "resolution": "2K",
+}
+POLY_HAVEN_FIRE_HYDRANT = {
+    "url": "./models/polyhaven/fire_hydrant/fire_hydrant_2k.gltf",
+    "source_url": "https://polyhaven.com/a/fire_hydrant",
+    "license": "CC0-1.0",
+    "author": "Pacid Bhuyan",
+    "resolution": "2K",
+}
+POLY_HAVEN_PLASTIC_CRATE = {
+    "url": "./models/polyhaven/plastic_crate_02/plastic_crate_02_2k.gltf",
+    "source_url": "https://polyhaven.com/a/plastic_crate_02",
+    "license": "CC0-1.0",
+    "author": "Pacid Bhuyan",
+    "resolution": "2K",
+}
+POLY_HAVEN_JACARANDA_TREE = {
+    "url": "./models/polyhaven/jacaranda_tree/jacaranda_tree_2k.gltf",
+    "source_url": "https://polyhaven.com/a/jacaranda_tree",
+    "license": "CC0-1.0",
+    "author": "Pacid Bhuyan",
+    "resolution": "2K",
+}
+POLY_HAVEN_WOODEN_CRATE = {
+    "url": "./models/polyhaven/wooden_crate_02/wooden_crate_02_2k.gltf",
+    "source_url": "https://polyhaven.com/a/wooden_crate_02",
+    "license": "CC0-1.0",
+    "author": "Pacid Bhuyan",
+    "resolution": "2K",
+}
+SKETCHFAB_FORKLIFT = {
+    "url": "./models/sketchfab/forklift/forklift.glb",
+    "source_url": (
+        "https://sketchfab.com/3d-models/"
+        "forklift-truck-060f3f8bc7de4e6ca2f348d414702e9d"
+    ),
+    "license": "CC-BY-4.0",
+    "author": "louis-muir",
+    "resolution": "Objaverse Web GLB",
+}
+MESH2MOTION_COURIER = {
+    "url": "./models/mesh2motion/courier/human-jay.glb",
+    "source_url": (
+        "https://github.com/Mesh2Motion/mesh2motion-app/blob/main/"
+        "static/models-variation/human-jay.glb"
+    ),
+    "license": "CC0-1.0",
+    "author": "Mesh2Motion contributors",
+    "resolution": "Web GLB",
+    "animation": {
+        "clip_url": (
+            "./models/mesh2motion/courier/human-base-animations.glb"
+        ),
+        "source_url": (
+            "https://github.com/Mesh2Motion/mesh2motion-app/blob/main/"
+            "static/animations/human-base-animations.glb"
+        ),
+        "license": "CC0-1.0",
+        "author": "Quaternius and Mesh2Motion contributors",
+        "locomotion": "walking",
+        "clips": {
+            "idle": "Idle_A",
+            "walking": "Walk",
+            # The same loader can select a seated/riding clip when a scene switches
+            # locomotion to cycling. This library names that pose "Driving".
+            "cycling": "Driving",
+        },
+        "reference_speed": 1.3,
+        "stop_speed": 0.05,
+        "min_playback_rate": 0.55,
+        "max_playback_rate": 1.8,
+    },
+}
 
 
 def _with_visual_model(
     actor: Actor,
-    model: dict[str, str],
+    model: dict[str, object],
     *,
     instance_size: list[float],
     instance_heights: tuple[float, ...],
@@ -108,10 +186,16 @@ def create_obstacle_delivery_scene():
     ground = next(actor for actor in scene.actors if actor.id == "actor_001")
     ground.name = "Rain-darkened Urban Delivery Street"
     ground.properties["visual_style"] = "cinematic_wet_asphalt"
-    ground.properties["size"] = [5.5, 4.5, 0.05]
+    ground.properties["size"] = [6.5, 5.5, 0.05]
     ground.properties["rgba"] = [0.12, 0.15, 0.18, 1.0]
     scene.simulation_config.update(
         {
+            # 200 Hz physics is stable for this controller while avoiding the
+            # unnecessary 500 Hz Python/visual synchronization cost of the base demo.
+            "timestep": 0.005,
+            # Hold each Python action for two physics steps. Local avoidance still
+            # runs at 100 Hz, well above the 50 Hz rangefinder publication rate.
+            "controller_update_rate_hz": 100.0,
             "duration": 48.0,
             "wind": [0.1, -0.08, 0.0],
             # Incremental planning normally completes far below this budget. The extra margin
@@ -134,43 +218,43 @@ def create_obstacle_delivery_scene():
             },
             "dynamic_events": [
                 {
-                    "id": "event_van_blocks_pickup_exit",
+                    "id": "event_forklift_blocks_pickup_exit",
                     "type": "kinematic_actor",
-                    "actor_id": "actor_dynamic_delivery_van",
-                    "label": "Delivery van reversing across the live route",
-                    "activation_time": 12.8,
+                    "actor_id": "actor_dynamic_forklift",
+                    "label": "Forklift crossing the live route",
+                    "activation_time": 11.0,
                     "completion_time": 19.0,
                     "interpolation": "smoothstep",
                     "keyframes": [
                         {
                             "time": 0.0,
-                            "position": [-2.25, 1.45, 0.72],
-                            "rotation": [0.0, 0.0, 0.0],
+                            "position": [1.15, -1.2, 1.0],
+                            "rotation": [0.0, 0.0, math.pi / 2.0],
                         },
                         {
-                            "time": 12.8,
-                            "position": [-2.25, 1.45, 0.72],
-                            "rotation": [0.0, 0.0, 0.0],
+                            "time": 11.0,
+                            "position": [1.15, -1.2, 1.0],
+                            "rotation": [0.0, 0.0, math.pi / 2.0],
                         },
                         {
-                            "time": 14.4,
-                            "position": [1.15, 1.45, 0.72],
-                            "rotation": [0.0, 0.0, 0.0],
+                            "time": 13.0,
+                            "position": [1.15, 1.45, 1.0],
+                            "rotation": [0.0, 0.0, math.pi / 2.0],
                         },
                         {
-                            "time": 17.1,
-                            "position": [1.15, 1.45, 0.72],
-                            "rotation": [0.0, 0.0, 0.0],
+                            "time": 17.0,
+                            "position": [1.15, 1.45, 1.0],
+                            "rotation": [0.0, 0.0, math.pi / 2.0],
                         },
                         {
                             "time": 19.0,
-                            "position": [-2.25, 1.45, 0.72],
-                            "rotation": [0.0, 0.0, 0.0],
+                            "position": [1.15, -1.2, 1.0],
+                            "rotation": [0.0, 0.0, math.pi / 2.0],
                         },
                         {
                             "time": 48.0,
-                            "position": [-2.25, 1.45, 0.72],
-                            "rotation": [0.0, 0.0, 0.0],
+                            "position": [1.15, -1.2, 1.0],
+                            "rotation": [0.0, 0.0, math.pi / 2.0],
                         },
                     ],
                 },
@@ -179,39 +263,39 @@ def create_obstacle_delivery_scene():
                     "type": "kinematic_actor",
                     "actor_id": "actor_dynamic_courier",
                     "label": "Courier entering the final approach",
-                    "activation_time": 19.2,
-                    "completion_time": 26.0,
+                    "activation_time": 20.0,
+                    "completion_time": 28.0,
                     "interpolation": "smoothstep",
                     "keyframes": [
                         {
                             "time": 0.0,
-                            "position": [5.35, 2.85, 0.82],
-                            "rotation": [0.0, 0.0, math.pi],
+                            "position": [5.35, -2.0, 0.82],
+                            "rotation": [0.0, 0.0, math.pi / 2.0],
                         },
                         {
-                            "time": 19.2,
-                            "position": [5.35, 2.85, 0.82],
-                            "rotation": [0.0, 0.0, math.pi],
+                            "time": 20.0,
+                            "position": [5.35, -2.0, 0.82],
+                            "rotation": [0.0, 0.0, math.pi / 2.0],
                         },
                         {
-                            "time": 21.0,
-                            "position": [2.75, 2.85, 0.82],
-                            "rotation": [0.0, 0.0, math.pi],
-                        },
-                        {
-                            "time": 23.5,
-                            "position": [2.75, 2.85, 0.82],
-                            "rotation": [0.0, 0.0, math.pi],
+                            "time": 22.0,
+                            "position": [2.75, -2.0, 0.82],
+                            "rotation": [0.0, 0.0, math.pi / 2.0],
                         },
                         {
                             "time": 26.0,
-                            "position": [5.35, 2.85, 0.82],
-                            "rotation": [0.0, 0.0, math.pi],
+                            "position": [2.75, -2.0, 0.82],
+                            "rotation": [0.0, 0.0, -math.pi / 2.0],
+                        },
+                        {
+                            "time": 28.0,
+                            "position": [5.35, -2.0, 0.82],
+                            "rotation": [0.0, 0.0, -math.pi / 2.0],
                         },
                         {
                             "time": 48.0,
-                            "position": [5.35, 2.85, 0.82],
-                            "rotation": [0.0, 0.0, math.pi],
+                            "position": [5.35, -2.0, 0.82],
+                            "rotation": [0.0, 0.0, -math.pi / 2.0],
                         },
                     ],
                 },
@@ -291,27 +375,110 @@ def create_obstacle_delivery_scene():
                 visual_style="residential_dropoff",
                 physics_material="default",
             ),
-            _box(
-                "actor_dynamic_delivery_van",
-                "Unmapped Reversing Delivery Van",
-                [-2.25, 1.45, 0.72],
-                [0.72, 0.34, 0.72],
-                dynamic=True,
-                mass=96.0,
-                rgba=[0.88, 0.19, 0.1, 1.0],
-                visual_style="dynamic_delivery_van",
-                physics_material="rubber",
+            _with_rotation(
+                _with_visual_model(
+                    _box(
+                        "actor_dynamic_forklift",
+                        "Unmapped Crossing Forklift",
+                        [1.15, -1.2, 1.0],
+                        # Approximate the solid chassis rather than treating the open
+                        # space between the full-length forks as a filled box.
+                        [0.9, 0.5, 1.0],
+                        dynamic=True,
+                        mass=2_600.0,
+                        rgba=[0.88, 0.62, 0.08, 1.0],
+                        visual_style="dynamic_forklift",
+                        physics_material="rubber",
+                    ),
+                    SKETCHFAB_FORKLIFT,
+                    instance_size=[2.9, 1.1, 2.0],
+                    instance_heights=(0.0,),
+                    rotation=[math.pi / 2.0, 0.0, 0.0],
+                ),
+                [0.0, 0.0, math.pi / 2.0],
             ),
-            _box(
-                "actor_dynamic_courier",
-                "Unmapped Crossing Courier",
-                [5.35, 2.85, 0.82],
-                [0.25, 0.22, 0.82],
-                dynamic=True,
-                mass=82.0,
-                rgba=[0.08, 0.23, 0.34, 1.0],
-                visual_style="dynamic_courier",
-                physics_material="rubber",
+            _with_rotation(
+                _with_visual_model(
+                    _box(
+                        "actor_dynamic_courier",
+                        "Unmapped Crossing Courier",
+                        # Keep the pedestrian in the south service lane so the
+                        # forklift remains the obstacle that crosses the flight path.
+                        [5.35, -2.0, 0.82],
+                        [0.25, 0.22, 0.82],
+                        dynamic=True,
+                        mass=82.0,
+                        rgba=[0.08, 0.23, 0.34, 1.0],
+                        visual_style="dynamic_courier",
+                        physics_material="rubber",
+                    ),
+                    MESH2MOTION_COURIER,
+                    instance_size=[0.48, 0.4, 1.62],
+                    instance_heights=(0.0,),
+                    rotation=[math.pi / 2.0, 0.0, 0.0],
+                ),
+                [0.0, 0.0, math.pi / 2.0],
+            ),
+            # Cinematic street-furniture props with PBR glTF models
+            _with_visual_model(
+                _box(
+                    "actor_prop_cardboard_boxes",
+                    "Stacked Cardboard Boxes",
+                    [-1.0, -0.8, 0.18],
+                    [0.36, 0.28, 0.18],
+                    dynamic=False,
+                    rgba=[0.55, 0.38, 0.22, 1.0],
+                    visual_style="known_obstacle",
+                ),
+                POLY_HAVEN_CARDBOARD_BOX,
+                instance_size=[0.42, 0.32, 0.3],
+                instance_heights=(0.0, 0.32),
+                rotation=[math.pi / 2.0, 0.0, 0.0],
+            ),
+            _with_visual_model(
+                _box(
+                    "actor_prop_fire_hydrant",
+                    "Street Fire Hydrant",
+                    [-0.8, 2.0, 0.38],
+                    [0.22, 0.22, 0.38],
+                    dynamic=False,
+                    rgba=[0.72, 0.12, 0.08, 1.0],
+                    visual_style="known_obstacle",
+                ),
+                POLY_HAVEN_FIRE_HYDRANT,
+                instance_size=[0.35, 0.35, 0.62],
+                instance_heights=(0.0,),
+                rotation=[math.pi / 2.0, 0.0, 0.0],
+            ),
+            _with_visual_model(
+                _box(
+                    "actor_prop_plastic_crates",
+                    "Stacked Plastic Crates",
+                    [3.5, 3.8, 0.22],
+                    [0.4, 0.3, 0.22],
+                    dynamic=False,
+                    rgba=[0.18, 0.35, 0.48, 1.0],
+                    visual_style="known_obstacle",
+                ),
+                POLY_HAVEN_PLASTIC_CRATE,
+                instance_size=[0.5, 0.36, 0.3],
+                instance_heights=(0.0, 0.32),
+                rotation=[math.pi / 2.0, 0.0, 0.0],
+            ),
+            _with_visual_model(
+                _box(
+                    "actor_prop_wooden_crate",
+                    "Wooden Cargo Crate",
+                    [2.6, -0.7, 0.3],
+                    [0.5, 0.36, 0.3],
+                    dynamic=False,
+                    rgba=[0.42, 0.28, 0.16, 1.0],
+                    visual_style="known_obstacle",
+                ),
+                POLY_HAVEN_WOODEN_CRATE,
+                instance_size=[0.6, 0.42, 0.42],
+                instance_heights=(0.0,),
+                rotation=[math.pi / 2.0, 0.0, 0.0],
             ),
         ]
     )

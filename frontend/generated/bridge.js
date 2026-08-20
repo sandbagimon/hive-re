@@ -63,7 +63,7 @@ export class EditorBridgeClient {
     }
     async call(method, ...args) {
         if (!this.config)
-            return { ok: false, error: `SimLab API unavailable: ${method}` };
+            return { ok: false, error: `Backend API unavailable: ${method}` };
         try {
             await this.ensureProject();
             return await this.dispatch(method, args);
@@ -118,7 +118,7 @@ export class EditorBridgeClient {
     onConsoleMessage(callback) {
         this.consoleCallbacks.push(callback);
         if (this.connectionError)
-            callback(`SimLab API unavailable: ${this.connectionError}`);
+            callback(`Backend API unavailable: ${this.connectionError}`);
     }
     async ensureProject() {
         if (!this.config)
@@ -144,7 +144,7 @@ export class EditorBridgeClient {
         try {
             await this.projectInitialization;
             if (this.connectionError)
-                this.emitConsole('SimLab API connected.');
+                this.emitConsole('Backend API connected.');
             this.connectionError = null;
         }
         catch (error) {

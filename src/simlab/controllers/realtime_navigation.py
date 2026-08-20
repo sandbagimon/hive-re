@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import heapq
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal
 
 Point2D = tuple[float, float]
@@ -18,6 +18,7 @@ class GridSpec:
     minimum_y: float
     maximum_y: float
     resolution: float
+    _maximum_cell: GridCell = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         values = (
@@ -33,10 +34,18 @@ class GridSpec:
             raise ValueError("Grid maximum bounds must exceed minimum bounds")
         if self.resolution <= 0:
             raise ValueError("Grid resolution must be greater than zero")
+        object.__setattr__(
+            self,
+            "_maximum_cell",
+            (
+                round((self.maximum_x - self.minimum_x) / self.resolution),
+                round((self.maximum_y - self.minimum_y) / self.resolution),
+            ),
+        )
 
     @property
     def maximum_cell(self) -> GridCell:
-        return self.cell((self.maximum_x, self.maximum_y), clamp=True)
+        return self._maximum_cell
 
     def cell(self, point: Point2D, *, clamp: bool = False) -> GridCell:
         cell = (
@@ -141,6 +150,8 @@ class LiveOccupancyGrid:
         self.static_cells = rectangle_cells(spec, static_obstacles, clearance)
         self._observed_at: dict[GridCell, float] = {}
         self.revision = 0
+        self._blocked_cache_revision = -1
+        self._blocked_cache: frozenset[GridCell] = frozenset()
 
     @property
     def observed_cell_count(self) -> int:
@@ -218,6 +229,8 @@ class LiveOccupancyGrid:
         return changed
 
     def blocked_cells(self) -> frozenset[GridCell]:
+        if self._blocked_cache_revision == self.revision:
+            return self._blocked_cache
         blocked = set(self.static_cells)
         radius = self.clearance + self.observed_obstacle_radius
         cell_radius = math.ceil(radius / self.spec.resolution)
@@ -229,7 +242,9 @@ class LiveOccupancyGrid:
                     candidate = (occupied[0] + x_offset, occupied[1] + y_offset)
                     if self.spec.contains(candidate):
                         blocked.add(candidate)
-        return frozenset(blocked)
+        self._blocked_cache = frozenset(blocked)
+        self._blocked_cache_revision = self.revision
+        return self._blocked_cache
 
 
 class IncrementalAStarPlanner:

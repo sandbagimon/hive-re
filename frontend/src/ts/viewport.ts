@@ -4,7 +4,11 @@ import { TransformControls } from '../vendor/TransformControls.js';
 
 import { sourceGeometry } from './geometry-contract.js';
 import { decodeGeometryBundle, type BundledGeometry } from './geometry-bundle.js';
-import { createFittedPbrVisual } from './pbr-model-loader.js';
+import { playbackRateForSpeed } from './actor-animation.js';
+import {
+  createFittedPbrVisual,
+  type FittedPbrAnimation,
+} from './pbr-model-loader.js';
 import { loadPhotographicEnvironment } from './photographic-environment.js';
 import {
   applyProceduralSurface,
@@ -30,6 +34,15 @@ import type {
 
 type TransformMode = 'translate' | 'rotate' | 'scale';
 type CameraView = 'iso' | 'front' | 'right' | 'top';
+
+interface ActorVisualAnimationState {
+  animation: FittedPbrAnimation;
+  lastPosition: any;
+  lastSimulationTime: number | null;
+  playbackRate: number;
+  targetPlaybackRate: number;
+  motionBlend: number;
+}
 
 const requiredElement = <T extends Element>(selector: string): T => {
   const element = document.querySelector<T>(selector);
@@ -330,6 +343,8 @@ const rotorAnimationStates = new Map<string, RotorAnimationState>();
 const actorRenderSignatures = new Map<string, string>();
 const actorLoadRevisions = new Map<string, number>();
 const photorealModelStates = new Map<string, 'loading' | 'loaded' | 'failed'>();
+const actorVisualAnimationStates = new Map<string, ActorVisualAnimationState>();
+const actorVisualAnimationLoadStates = new Map<string, 'loading' | 'ready' | 'failed'>();
 const attachmentVisuals = new Map<string, {
   line: any;
   parentMarker: any;
@@ -499,15 +514,16 @@ function materialForActor(actor: Actor): any {
   const highFidelityCoating = style === 'insulated_delivery_bag'
     || style === 'cinematic_wet_asphalt'
     || style === 'dynamic_delivery_van'
+    || style === 'dynamic_forklift'
     || style?.startsWith('landing_pad_');
   const material = highFidelityCoating
     ? new THREE.MeshPhysicalMaterial({
       ...options,
       clearcoat: style === 'cinematic_wet_asphalt' ? 0.72
-        : style === 'dynamic_delivery_van' ? 0.82
+        : style === 'dynamic_delivery_van' || style === 'dynamic_forklift' ? 0.82
           : style?.startsWith('landing_pad_') ? 0.58 : 0.08,
       clearcoatRoughness: style === 'cinematic_wet_asphalt' ? 0.2
-        : style === 'dynamic_delivery_van' ? 0.16
+        : style === 'dynamic_delivery_van' || style === 'dynamic_forklift' ? 0.16
           : style?.startsWith('landing_pad_') ? 0.3 : 0.72,
       ior: 1.48,
       sheen: style === 'insulated_delivery_bag' ? 0.28 : 0,
@@ -1392,6 +1408,74 @@ function addDynamicDeliveryVanDetails(mesh: any): void {
   addVisualDetail(mesh, new THREE.BoxGeometry(1.52, 0.08, 0.1), dark, [0, 0, -0.7]);
 }
 
+function addDynamicForkliftDetails(mesh: any): void {
+  mesh.material.transparent = true;
+  mesh.material.opacity = 0;
+  mesh.material.depthWrite = false;
+  mesh.material.colorWrite = false;
+  const yellow = new THREE.MeshPhysicalMaterial({
+    color: 0xd6a51b,
+    roughness: 0.34,
+    metalness: 0.28,
+    clearcoat: 0.52,
+    clearcoatRoughness: 0.28,
+  });
+  const steel = new THREE.MeshStandardMaterial({
+    color: 0x171b1e,
+    roughness: 0.3,
+    metalness: 0.78,
+  });
+  const rubber = new THREE.MeshStandardMaterial({ color: 0x090b0c, roughness: 0.96 });
+  const addBox = (
+    size: [number, number, number],
+    position: [number, number, number],
+    material: any,
+  ): any => addVisualDetail(mesh, new THREE.BoxGeometry(...size), material, position);
+
+  addBox([1.45, 1.0, 0.55], [-0.34, 0, -0.48], yellow.clone());
+  addBox([0.56, 1.02, 0.84], [-0.84, 0, -0.16], yellow.clone());
+  addBox([0.54, 0.62, 0.18], [-0.28, 0, -0.08], steel.clone());
+  for (const x of [-0.66, 0.32]) {
+    for (const y of [-0.54, 0.54]) {
+      const wheel = addVisualDetail(
+        mesh,
+        new THREE.CylinderGeometry(x > 0 ? 0.31 : 0.25, x > 0 ? 0.31 : 0.25, 0.18, 28),
+        rubber.clone(),
+        [x, y, -0.68],
+      );
+      addVisualDetail(
+        wheel,
+        new THREE.CylinderGeometry(0.11, 0.11, 0.19, 20),
+        new THREE.MeshStandardMaterial({ color: 0x596067, roughness: 0.28, metalness: 0.86 }),
+        [0, 0, 0],
+      );
+    }
+  }
+  for (const y of [-0.42, 0.42]) {
+    addBox([0.1, 0.1, 1.72], [0.62, y, 0.03], steel.clone());
+    addBox([1.25, 0.11, 0.08], [1.22, y * 0.76, -0.86], steel.clone());
+    for (const x of [-0.55, 0.25]) {
+      addBox([0.07, 0.07, 1.28], [x, y, 0.18], steel.clone());
+    }
+  }
+  for (const z of [-0.45, 0.05, 0.55]) {
+    addBox([0.12, 0.92, 0.08], [0.62, 0, z], steel.clone());
+  }
+  addBox([0.9, 0.94, 0.08], [-0.15, 0, 0.84], steel.clone());
+  const beacon = addVisualDetail(
+    mesh,
+    new THREE.CylinderGeometry(0.055, 0.055, 0.09, 18),
+    new THREE.MeshStandardMaterial({
+      color: 0xffb12b,
+      emissive: 0xff8a16,
+      emissiveIntensity: 2.8,
+      roughness: 0.16,
+    }),
+    [-0.48, 0, 0.93],
+  );
+  beacon.userData.dynamicEventPulse = true;
+}
+
 function addDynamicCourierDetails(mesh: any): void {
   mesh.material.transparent = true;
   mesh.material.opacity = 0;
@@ -1464,6 +1548,33 @@ function addDynamicCourierDetails(mesh: any): void {
     [0.03, 0, 0.68],
   );
   beacon.userData.dynamicEventPulse = true;
+}
+
+function addPbrCourierAccessories(mesh: any): void {
+  const pack = addVisualDetail(
+    mesh,
+    roundedRectangleGeometry(0.34, 0.16, 0.48, 0.035),
+    new THREE.MeshPhysicalMaterial({
+      color: 0xe36a2e,
+      roughness: 0.58,
+      metalness: 0.04,
+      clearcoat: 0.18,
+      clearcoatRoughness: 0.48,
+    }),
+    [0, -0.2, 0.08],
+  );
+  pack.userData.courierPack = true;
+  const logo = addVisualDetail(
+    mesh,
+    new THREE.PlaneGeometry(0.26, 0.12),
+    new THREE.MeshBasicMaterial({
+      map: facadeSignTexture('CITY FOOD', 'COURIER', '#ffba62'),
+      toneMapped: false,
+    }),
+    [0, -0.285, 0.1],
+  );
+  logo.rotation.x = Math.PI / 2;
+  logo.userData.courierPack = true;
 }
 
 function addLandingPadDetails(mesh: any, actor: Actor, label: string, accent: string): void {
@@ -1551,6 +1662,135 @@ function updatePhotorealModelDataset(): void {
       : states.length > 0 ? 'loading' : 'none';
 }
 
+function updateGltfAnimationDataset(): void {
+  const loadStates = [...actorVisualAnimationLoadStates.values()];
+  const animations = [...actorVisualAnimationStates.values()];
+  canvas.dataset.gltfAnimatedActorCount = animations.length.toString();
+  canvas.dataset.gltfAnimatedActorActive = animations
+    .filter((state) => state.targetPlaybackRate > 0).length.toString();
+  canvas.dataset.gltfAnimationClips = animations
+    .map((state) => state.animation.locomotionClipName)
+    .join(',');
+  canvas.dataset.gltfAnimationModes = animations
+    .map((state) => state.animation.config.locomotion)
+    .join(',');
+  canvas.dataset.gltfAnimationStatus = loadStates.some((state) => state === 'failed')
+    ? 'failed'
+    : loadStates.length > 0 && loadStates.every((state) => state === 'ready')
+      ? 'ready'
+      : loadStates.length > 0 ? 'loading' : 'none';
+}
+
+function stopFittedPbrAnimation(animation: FittedPbrAnimation): void {
+  for (const instance of animation.instances) {
+    instance.mixer.stopAllAction();
+    instance.mixer.uncacheRoot(instance.root);
+  }
+}
+
+function unregisterActorVisualAnimation(actorId: string): void {
+  const state = actorVisualAnimationStates.get(actorId);
+  if (state) stopFittedPbrAnimation(state.animation);
+  actorVisualAnimationStates.delete(actorId);
+  actorVisualAnimationLoadStates.delete(actorId);
+  updateGltfAnimationDataset();
+}
+
+function registerActorVisualAnimation(
+  actorId: string,
+  animation: FittedPbrAnimation,
+): void {
+  const previous = actorVisualAnimationStates.get(actorId);
+  if (previous) stopFittedPbrAnimation(previous.animation);
+  actorVisualAnimationStates.set(actorId, {
+    animation,
+    lastPosition: new THREE.Vector3(),
+    lastSimulationTime: null,
+    playbackRate: 0,
+    targetPlaybackRate: 0,
+    motionBlend: 0,
+  });
+  actorVisualAnimationLoadStates.set(actorId, 'ready');
+  updateGltfAnimationDataset();
+}
+
+function resetActorVisualAnimations(): void {
+  for (const state of actorVisualAnimationStates.values()) {
+    state.lastSimulationTime = null;
+    state.playbackRate = 0;
+    state.targetPlaybackRate = 0;
+    state.motionBlend = 0;
+    for (const instance of state.animation.instances) {
+      instance.mixer.stopAllAction();
+      instance.locomotionAction.reset().play();
+      instance.locomotionAction.setEffectiveTimeScale(0);
+      instance.locomotionAction.setEffectiveWeight(instance.idleAction ? 0 : 1);
+      if (instance.idleAction) {
+        instance.idleAction.reset().play();
+        instance.idleAction.setEffectiveTimeScale(1);
+        instance.idleAction.setEffectiveWeight(1);
+      }
+      instance.mixer.update(0);
+    }
+  }
+  updateGltfAnimationDataset();
+}
+
+function updateActorVisualAnimationMotion(
+  actorId: string,
+  position: [number, number, number],
+  simulationTime: number,
+): void {
+  const state = actorVisualAnimationStates.get(actorId);
+  if (!state) return;
+  const nextPosition = new THREE.Vector3(...position);
+  if (
+    state.lastSimulationTime !== null
+    && simulationTime > state.lastSimulationTime + 1e-8
+  ) {
+    const speed = nextPosition.distanceTo(state.lastPosition)
+      / (simulationTime - state.lastSimulationTime);
+    state.targetPlaybackRate = playbackRateForSpeed(speed, state.animation.config);
+  } else if (
+    state.lastSimulationTime !== null
+    && simulationTime < state.lastSimulationTime
+  ) {
+    state.targetPlaybackRate = 0;
+  }
+  state.lastPosition.copy(nextPosition);
+  state.lastSimulationTime = simulationTime;
+}
+
+function advanceActorVisualAnimations(deltaSeconds: number): void {
+  for (const state of actorVisualAnimationStates.values()) {
+    state.playbackRate = THREE.MathUtils.damp(
+      state.playbackRate,
+      state.targetPlaybackRate,
+      10,
+      deltaSeconds,
+    );
+    state.motionBlend = THREE.MathUtils.damp(
+      state.motionBlend,
+      state.targetPlaybackRate > 0 ? 1 : 0,
+      12,
+      deltaSeconds,
+    );
+    if (state.targetPlaybackRate === 0 && state.playbackRate < 1e-3) {
+      state.playbackRate = 0;
+    }
+    for (const instance of state.animation.instances) {
+      instance.locomotionAction.setEffectiveTimeScale(state.playbackRate);
+      instance.locomotionAction.setEffectiveWeight(
+        instance.idleAction ? state.motionBlend : 1,
+      );
+      if (instance.idleAction) {
+        instance.idleAction.setEffectiveWeight(1 - state.motionBlend);
+      }
+      instance.mixer.update(deltaSeconds);
+    }
+  }
+}
+
 function addConstructionFenceExtension(mesh: any, actor: Actor): void {
   if (actor.properties.visual_style !== 'known_obstacle') return;
   const size = actor.properties.size ?? [0.25, 0.8, 1.2];
@@ -1632,6 +1872,10 @@ function addPhotorealActorVisual(mesh: any, actor: Actor, loadRevision: number):
   if (!config) return false;
   photorealModelStates.set(actor.id, 'loading');
   updatePhotorealModelDataset();
+  if (config.animation) {
+    actorVisualAnimationLoadStates.set(actor.id, 'loading');
+    updateGltfAnimationDataset();
+  }
 
   // The primitive stays raycastable and remains the physics/collider-debug proxy, but it does
   // not compete visually with the authored glTF surface.
@@ -1647,38 +1891,48 @@ function addPhotorealActorVisual(mesh: any, actor: Actor, loadRevision: number):
   void createFittedPbrVisual(
     config,
     renderer.capabilities.getMaxAnisotropy(),
-  ).then((visual) => {
+  ).then((result) => {
     if (!actorLoadIsCurrent(actor.id, mesh, loadRevision)) {
-      disposeObject(visual);
+      if (result.animation) stopFittedPbrAnimation(result.animation);
+      disposeObject(result.object);
       return;
     }
+    const visual = result.object;
     visual.userData.actorDetail = true;
     visual.userData.actorId = actor.id;
     mesh.add(visual);
+    if (actor.properties.visual_style === 'dynamic_courier') {
+      addPbrCourierAccessories(mesh);
+    }
+    if (result.animation) registerActorVisualAnimation(actor.id, result.animation);
     photorealModelStates.set(actor.id, 'loaded');
     updatePhotorealModelDataset();
     updateSelectionMaterials();
     updateSelectionOutline();
-  }).catch(() => {
+  }).catch((error) => {
     if (!actorLoadIsCurrent(actor.id, mesh, loadRevision)) return;
-    // A local asset failure should degrade to the existing procedural obstacle, never to an
-    // invisible physics body.
+    console.warn(`Failed to load visual model for ${actor.id}`, error);
+    // A local asset failure degrades to the actor's existing procedural visual, never to an
+    // invisible physics body or a generic replacement.
     mesh.material.opacity = 1;
     mesh.material.depthWrite = true;
     mesh.material.colorWrite = true;
     mesh.material.transparent = false;
     mesh.material.needsUpdate = true;
     mesh.castShadow = true;
-    const style = actor.properties.visual_style;
-    addObstacleDetails(
-      mesh,
-      actor,
-      style === 'unmapped_obstacle' ? 0xff5ce1
-        : style === 'known_obstacle' ? 0xffc247 : 0xffb647,
-      style === 'unmapped_obstacle',
-    );
+    delete mesh.userData.photorealProxy;
+    const fallbackActor: Actor = {
+      ...actor,
+      properties: { ...actor.properties },
+    };
+    delete fallbackActor.properties.visual_model;
+    addActorVisualDetails(mesh, fallbackActor, loadRevision);
     photorealModelStates.set(actor.id, 'failed');
     updatePhotorealModelDataset();
+    if (config.animation) {
+      actorVisualAnimationLoadStates.set(actor.id, 'failed');
+      updateGltfAnimationDataset();
+    }
   });
   return true;
 }
@@ -1710,6 +1964,8 @@ function addActorVisualDetails(mesh: any, actor: Actor, loadRevision: number): v
     addResidentialDropoffDetails(mesh, actor);
   } else if (visualStyle === 'dynamic_delivery_van') {
     addDynamicDeliveryVanDetails(mesh);
+  } else if (visualStyle === 'dynamic_forklift') {
+    addDynamicForkliftDetails(mesh);
   } else if (visualStyle === 'dynamic_courier') {
     addDynamicCourierDetails(mesh);
   }
@@ -2073,6 +2329,7 @@ function updateShadowFrustum(): void {
 function removeActorObject(actorId: string): void {
   const object = actorMeshes.get(actorId);
   if (!object) return;
+  unregisterActorVisualAnimation(actorId);
   if (transformControls.object === object) transformControls.detach();
   object.traverse((child) => {
     const linkId = child.userData?.linkId;
@@ -2419,6 +2676,8 @@ function syncNavigationVisual(sceneData: Scene): void {
     : navigation?.route ?? [];
   const status = runtimeNavigation?.status ?? 'ready';
   const signature = JSON.stringify({ route, status });
+  canvas.dataset.navigationReplans = String(runtimeNavigation?.replan_count ?? 0);
+  canvas.dataset.navigationRouteRevision = String(runtimeNavigation?.route_revision ?? 0);
   if (signature === navigationRenderSignature) return;
   for (const child of [...navigationGroup.children]) {
     navigationGroup.remove(child);
@@ -2426,8 +2685,6 @@ function syncNavigationVisual(sceneData: Scene): void {
   }
   navigationRenderSignature = signature;
   canvas.dataset.navigationStatus = status;
-  canvas.dataset.navigationReplans = String(runtimeNavigation?.replan_count ?? 0);
-  canvas.dataset.navigationRouteRevision = String(runtimeNavigation?.route_revision ?? 0);
   if (route.length < 2) return;
   const color = status === 'blocked' ? 0xff4d4f
     : status === 'planning' ? 0xffbf3f
@@ -2587,6 +2844,24 @@ export function selectViewportLink(linkId: string | null): void {
   updateHud();
 }
 
+// Viewport shell toggles (Grid / Fog buttons in the viewport toolbar). These are
+// presentation-only switches; all simulation and framing logic stays untouched.
+let disabledFog: typeof scene.fog = null;
+
+export function setViewportFeature(feature: 'grid' | 'fog', enabled: boolean): void {
+  if (feature === 'grid') {
+    grid.visible = enabled;
+    return;
+  }
+  if (!enabled) {
+    if (scene.fog) disabledFog = scene.fog;
+    scene.fog = null;
+  } else if (disabledFog) {
+    scene.fog = disabledFog;
+    disabledFog = null;
+  }
+}
+
 function updateSelectionMaterials(): void {
   for (const [id, object] of actorMeshes.entries()) {
     const actor = currentScene.actors.find((item) => item.id === id);
@@ -2647,17 +2922,27 @@ function updateHud(): void {
 export function applySimulationState(state: SimulationState | null): void {
   simulationState = state;
   if (!state) {
+    resetActorVisualAnimations();
     setViewportScene(currentScene);
     return;
   }
   transformControls.detach();
+  const animatedActorsInFrame = new Set<string>();
   for (const actorState of state.actors) {
     const mesh = actorMeshes.get(actorState.id);
     if (!mesh) continue;
+    if (actorVisualAnimationStates.has(actorState.id)) {
+      animatedActorsInFrame.add(actorState.id);
+      updateActorVisualAnimationMotion(actorState.id, actorState.position, state.time);
+    }
     mesh.position.set(...actorState.position);
     const [w, x, y, z] = actorState.quaternion;
     mesh.quaternion.set(x, y, z, w);
   }
+  for (const [actorId, animation] of actorVisualAnimationStates.entries()) {
+    if (!animatedActorsInFrame.has(actorId)) animation.targetPlaybackRate = 0;
+  }
+  updateGltfAnimationDataset();
   const worldPosition = new THREE.Vector3();
   const worldQuaternion = new THREE.Quaternion();
   const parentQuaternion = new THREE.Quaternion();
@@ -2871,6 +3156,9 @@ let lastViewportFrame = 0;
 function animate(frameTime = performance.now()): void {
   requestAnimationFrame(animate);
   if (frameTime - lastViewportFrame < viewportFrameInterval) return;
+  const deltaSeconds = lastViewportFrame > 0
+    ? Math.min((frameTime - lastViewportFrame) / 1000, 0.1)
+    : 0;
   lastViewportFrame = frameTime;
   resize();
   const activeSky = cityEnvironmentVisible ? citySky
@@ -2891,6 +3179,7 @@ function animate(frameTime = performance.now()): void {
     const base = Number(object.userData.baseEmissiveIntensity);
     object.material.emissiveIntensity = base * (0.72 + 0.38 * Math.sin(pulseTime * 2.3));
   });
+  advanceActorVisualAnimations(deltaSeconds);
   orbitControls.update();
   updateColliderDebugMarkers();
   updateAttachmentVisuals();

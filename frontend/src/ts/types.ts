@@ -2,6 +2,7 @@ export type Vector3 = [number, number, number];
 export type Quaternion = [number, number, number, number];
 export type ActorType = 'object' | 'robot' | 'terrain' | 'camera' | 'light';
 export type PrimitiveType = 'box' | 'sphere' | 'cylinder' | 'ellipsoid' | 'plane';
+export type AssetCategory = 'primitive' | 'robot' | 'prop' | 'environment';
 export type MaterialId = 'default' | 'rubber' | 'wood' | 'metal' | 'ice';
 export type MassMode = 'mass' | 'density';
 export type SimulationStatus = 'stopped' | 'running' | 'paused' | 'fault';
@@ -15,6 +16,7 @@ export type ActorVisualStyle =
   | 'restaurant_pickup'
   | 'residential_dropoff'
   | 'dynamic_delivery_van'
+  | 'dynamic_forklift'
   | 'dynamic_courier'
   | 'known_obstacle'
   | 'unmapped_obstacle'
@@ -55,13 +57,33 @@ export interface ActorVisualModelInstance {
   size: Vector3;
 }
 
+export type ActorLocomotionMode = 'walking' | 'cycling';
+
+export interface ActorVisualAnimation {
+  clip_url?: string;
+  source_url?: string;
+  license?: 'CC0-1.0' | 'CC-BY-4.0';
+  author?: string;
+  locomotion: ActorLocomotionMode;
+  clips: {
+    idle?: string;
+    walking?: string;
+    cycling?: string;
+  };
+  reference_speed: number;
+  stop_speed?: number;
+  min_playback_rate?: number;
+  max_playback_rate?: number;
+}
+
 export interface ActorVisualModel {
   url: string;
   source_url: string;
-  license: 'CC0-1.0';
+  license: 'CC0-1.0' | 'CC-BY-4.0';
   author: string;
   resolution: string;
   instances: ActorVisualModelInstance[];
+  animation?: ActorVisualAnimation;
 }
 
 export interface ActorProperties {
@@ -286,6 +308,7 @@ export interface AssetMetadata {
   id: string;
   name: string;
   type: ActorType;
+  category?: AssetCategory;
   primitive?: PrimitiveType;
   source_format?: 'openusd';
   license?: string;

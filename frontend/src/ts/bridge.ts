@@ -100,7 +100,7 @@ export class EditorBridgeClient {
   }
 
   async call<T>(method: BridgeMethod, ...args: unknown[]): Promise<RpcResult<T>> {
-    if (!this.config) return { ok: false, error: `SimLab API unavailable: ${method}` };
+    if (!this.config) return { ok: false, error: `Backend API unavailable: ${method}` };
     try {
       await this.ensureProject();
       return await this.dispatch<T>(method, args);
@@ -154,7 +154,7 @@ export class EditorBridgeClient {
 
   onConsoleMessage(callback: (message: string) => void): void {
     this.consoleCallbacks.push(callback);
-    if (this.connectionError) callback(`SimLab API unavailable: ${this.connectionError}`);
+    if (this.connectionError) callback(`Backend API unavailable: ${this.connectionError}`);
   }
 
   private async ensureProject(): Promise<void> {
@@ -179,7 +179,7 @@ export class EditorBridgeClient {
     }
     try {
       await this.projectInitialization;
-      if (this.connectionError) this.emitConsole('SimLab API connected.');
+      if (this.connectionError) this.emitConsole('Backend API connected.');
       this.connectionError = null;
     } catch (error) {
       this.connectionError = error instanceof Error ? error.message : String(error);

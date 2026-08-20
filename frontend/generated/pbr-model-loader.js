@@ -1,26 +1,42 @@
 import * as THREE from '../vendor/three.module.js';
-const modelCache = new Map();
+import { clone as cloneSkeleton } from '../vendor/SkeletonUtils.js';
+import { selectIdleClipName, selectLocomotionClipName, } from './actor-animation.js';
+const gltfCache = new Map();
 let loaderPromise = null;
 const materialTextureSlots = [
     'alphaMap',
     'aoMap',
     'bumpMap',
+    'clearcoatMap',
+    'clearcoatNormalMap',
+    'clearcoatRoughnessMap',
     'emissiveMap',
+    'iridescenceMap',
+    'iridescenceThicknessMap',
     'map',
     'metalnessMap',
     'normalMap',
     'roughnessMap',
+    'sheenColorMap',
+    'sheenRoughnessMap',
+    'specularColorMap',
+    'specularIntensityMap',
+    'thicknessMap',
+    'transmissionMap',
 ];
-function templateForUrl(url) {
-    const cached = modelCache.get(url);
+function gltfForUrl(url) {
+    const cached = gltfCache.get(url);
     if (cached)
         return cached;
     loaderPromise ??= import('../vendor/GLTFLoader.js').then(({ GLTFLoader }) => new GLTFLoader());
     const loading = loaderPromise
         .then((activeLoader) => activeLoader.loadAsync(url))
-        .then((gltf) => gltf.scene);
-    modelCache.set(url, loading);
-    void loading.catch(() => modelCache.delete(url));
+        .then((gltf) => ({
+        scene: gltf.scene,
+        animations: Array.isArray(gltf.animations) ? gltf.animations : [],
+    }));
+    gltfCache.set(url, loading);
+    void loading.catch(() => gltfCache.delete(url));
     return loading;
 }
 function cloneTexture(texture, resources, anisotropy) {
@@ -50,7 +66,9 @@ function cloneMaterial(material, resources, anisotropy) {
     return cloned;
 }
 function cloneTemplate(template, resources, anisotropy) {
-    const cloned = template.clone(true);
+    // Object3D.clone() leaves a SkinnedMesh pointing at the source skeleton. SkeletonUtils
+    // remaps every cloned skin to its cloned bones before we isolate GPU resources below.
+    const cloned = cloneSkeleton(template);
     cloned.traverse((child) => {
         if (child.geometry) {
             let geometry = resources.geometries.get(child.geometry);
@@ -90,11 +108,56 @@ function fittedInstance(template, instance, resources, anisotropy) {
     root.position.set(...instance.position);
     root.add(model);
     root.userData.photorealInstance = true;
-    return root;
+    return { root, model };
+}
+function animationForInstances(config, clips, instances) {
+    if (!config)
+        return null;
+    const availableNames = clips.map((clip) => String(clip.name ?? ''));
+    const locomotionClipName = selectLocomotionClipName(availableNames, config);
+    if (!locomotionClipName) {
+        throw new Error(`No ${config.locomotion} animation clip found in glTF`);
+    }
+    const idleClipName = selectIdleClipName(availableNames, config);
+    const locomotionClip = clips.find((clip) => clip.name === locomotionClipName);
+    const idleClip = idleClipName
+        ? clips.find((clip) => clip.name === idleClipName) ?? null
+        : null;
+    return {
+        config,
+        idleClipName,
+        locomotionClipName,
+        instances: instances.map(({ model }) => {
+            const mixer = new THREE.AnimationMixer(model);
+            const locomotionAction = mixer.clipAction(locomotionClip);
+            const idleAction = idleClip ? mixer.clipAction(idleClip) : null;
+            locomotionAction.play();
+            locomotionAction.setEffectiveTimeScale(0);
+            locomotionAction.setEffectiveWeight(idleAction ? 0 : 1);
+            if (idleAction) {
+                idleAction.play();
+                idleAction.setEffectiveTimeScale(1);
+                idleAction.setEffectiveWeight(1);
+            }
+            mixer.update(0);
+            return {
+                root: model,
+                mixer,
+                idleAction,
+                locomotionAction,
+            };
+        }),
+    };
 }
 export async function createFittedPbrVisual(config, anisotropy) {
     const url = new URL(config.url, document.baseURI).href;
-    const template = await templateForUrl(url);
+    const animationUrl = config.animation?.clip_url
+        ? new URL(config.animation.clip_url, document.baseURI).href
+        : url;
+    const [template, animationSource] = await Promise.all([
+        gltfForUrl(url),
+        animationUrl === url ? gltfForUrl(url) : gltfForUrl(animationUrl),
+    ]);
     const resources = {
         geometries: new Map(),
         materials: new Map(),
@@ -103,8 +166,14 @@ export async function createFittedPbrVisual(config, anisotropy) {
     const visual = new THREE.Group();
     visual.name = `PBR visual: ${config.url}`;
     visual.userData.photorealVisual = true;
+    const fitted = [];
     for (const instance of config.instances) {
-        visual.add(fittedInstance(template, instance, resources, anisotropy));
+        const item = fittedInstance(template.scene, instance, resources, anisotropy);
+        fitted.push(item);
+        visual.add(item.root);
     }
-    return visual;
+    return {
+        object: visual,
+        animation: animationForInstances(config.animation, animationSource.animations, fitted),
+    };
 }

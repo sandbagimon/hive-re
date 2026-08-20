@@ -42,6 +42,15 @@ def test_typescript_editor_assets_are_an_independent_frontend() -> None:
     assert (root / "vendor" / "THREE_LICENSE.txt").exists()
 
 
+def test_agent_conversation_window_is_declared() -> None:
+    html = Path("frontend/src/index.html").read_text(encoding="utf-8")
+
+    assert 'data-panel="agent"' in html
+    assert 'id="agent-conversation"' in html
+    assert 'aria-label="Agent message composer"' in html
+    assert 'data-panel-title="Agent"' in html
+
+
 def test_editor_ui_and_bridge_commands_are_declared() -> None:
     root = Path("frontend/src")
     html = (root / "index.html").read_text(encoding="utf-8")
@@ -55,7 +64,7 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert 'id="scene-tree"' in html
     assert 'id="property-inspector"' in html
     assert 'id="console-output"' in html
-    assert 'data-command="save"' in html
+    assert 'data-menu-command="save"' in html
     assert 'data-command="import-openusd"' in html
     assert 'data-command="import-openusd-folder"' in html
     assert 'data-command="run"' in html
@@ -107,7 +116,7 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "setAttachmentCommands" in bridge
     assert "/attachments" in bridge
     assert "data-controller-status" in app
-    assert 'data-status="fault"' in style
+    assert "data-status='fault'" in style
     assert "result.data?.state" in app
     assert "data-joint-jog" in app
     assert "updateRuntimeInspector" in app
@@ -136,15 +145,15 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "simulationStatus === 'running' ? 'running' : 'paused'" in app
     assert "loadTrajectory" in bridge
     assert "TrajectorySimulationState" in types
-    assert 'id="trajectory-panel"' in html
+    assert 'data-panel="trajectory-editor"' in html
     assert "data-keyframe-add" in app
     assert "data-keyframe-target" in app
     assert "trajectoryFromDraft" in app
     assert "data-trajectory-clip" in app
     assert "data-trajectory-save" in app
     assert "store.upsertTrajectory" in app
-    assert 'id="recording-panel"' in html
-    assert 'id="controller-panel"' in html
+    assert 'data-panel="recording"' in html
+    assert 'data-panel="controller"' in html
     assert "data-recording-joint" in app
     assert "data-recording-sensor" in app
     assert "['joint_state', 'imu', 'contact', 'rangefinder']" in app
@@ -195,15 +204,26 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "addRestaurantPickupDetails" in viewport
     assert "addResidentialDropoffDetails" in viewport
     assert "addDynamicDeliveryVanDetails" in viewport
+    assert "addDynamicForkliftDetails" in viewport
+    assert "dynamic_forklift" in types
     assert "addDynamicCourierDetails" in viewport
     assert "dynamic_events" in types
     assert "visual_model" in types
+    assert "ActorVisualAnimation" in types
+    assert "walking" in types
+    assert "cycling" in types
     pbr_model_loader = (root / "ts" / "pbr-model-loader.ts").read_text(
         encoding="utf-8"
     )
     assert "GLTFLoader" in pbr_model_loader
-    assert "modelCache" in pbr_model_loader
+    assert "gltfCache" in pbr_model_loader
+    assert "SkeletonUtils" in pbr_model_loader
+    assert "AnimationMixer" in pbr_model_loader
+    assert "clip_url" in pbr_model_loader
     assert "instance.size" in pbr_model_loader
+    assert "playbackRateForSpeed" in viewport
+    assert "advanceActorVisualAnimations" in viewport
+    assert "gltfAnimationStatus" in viewport
     photographic_environment = (
         root / "ts" / "photographic-environment.ts"
     ).read_text(encoding="utf-8")

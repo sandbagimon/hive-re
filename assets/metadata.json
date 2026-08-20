@@ -4,6 +4,7 @@
       "id": "primitive_box",
       "name": "Box",
       "type": "object",
+      "category": "primitive",
       "primitive": "box",
       "default_properties": {
         "physics": {
@@ -36,6 +37,7 @@
       "id": "primitive_sphere",
       "name": "Sphere",
       "type": "object",
+      "category": "primitive",
       "primitive": "sphere",
       "default_properties": {
         "physics": {
@@ -66,6 +68,7 @@
       "id": "primitive_cylinder",
       "name": "Cylinder",
       "type": "object",
+      "category": "primitive",
       "primitive": "cylinder",
       "default_properties": {
         "physics": {
@@ -97,6 +100,7 @@
       "id": "primitive_ground",
       "name": "Ground",
       "type": "object",
+      "category": "primitive",
       "primitive": "box",
       "default_properties": {
         "physics": {
@@ -142,6 +146,7 @@
       "id": "primitive_table",
       "name": "Table",
       "type": "object",
+      "category": "primitive",
       "primitive": "box",
       "default_properties": {
         "physics": {
@@ -187,6 +192,7 @@
       "id": "primitive_ramp",
       "name": "Ramp",
       "type": "object",
+      "category": "primitive",
       "primitive": "box",
       "default_properties": {
         "physics": {
@@ -232,6 +238,7 @@
       "id": "openusd_pipes_53332058a0",
       "name": "Pipes",
       "type": "object",
+      "category": "prop",
       "source_format": "openusd",
       "default_properties": {
         "geometry": {
@@ -281,6 +288,7 @@
       "id": "openusd_pillar_wires_82f150c76d",
       "name": "pillar_wires",
       "type": "object",
+      "category": "prop",
       "source_format": "openusd",
       "default_properties": {
         "geometry": {
@@ -330,6 +338,7 @@
       "id": "openusd_vehicle_hanger_adjust_454a0d18a9",
       "name": "Vehicle_Hanger_Adjust",
       "type": "object",
+      "category": "prop",
       "source_format": "openusd",
       "default_properties": {
         "geometry": {
@@ -379,6 +388,7 @@
       "id": "openusd_robot_arm_export_800c300551",
       "name": "Robot_Arm_Export",
       "type": "object",
+      "category": "prop",
       "source_format": "openusd",
       "default_properties": {
         "geometry": {
@@ -428,6 +438,7 @@
       "id": "openusd_external_two_joint_arm_b6c7a81772",
       "name": "Two-Joint Robot Arm",
       "type": "robot",
+      "category": "robot",
       "source_format": "openusd",
       "default_properties": {
         "source": "assets/imported/openusd_external_two_joint_arm_b6c7a81772/source/external_two_joint_arm.usda",
@@ -443,6 +454,7 @@
       "id": "openusd_franka_quality_4b35c27245",
       "name": "Franka Panda (High Quality)",
       "type": "robot",
+      "category": "robot",
       "source_format": "openusd",
       "default_properties": {
         "source": "assets/imported/openusd_franka_quality_4b35c27245/source/franka_quality.usdc",
@@ -458,6 +470,7 @@
       "id": "openusd_iris_09f8390b45",
       "name": "Pegasus Iris Quadcopter",
       "type": "robot",
+      "category": "robot",
       "source_format": "openusd",
       "license": "BSD-3-Clause",
       "source_url": "https://github.com/PegasusSimulator/PegasusSimulator/tree/main/extensions/pegasus.simulator/pegasus/simulator/assets/Robots/Iris",
@@ -544,6 +557,7 @@
       "id": "openusd_houhai_2km_b463d22fff",
       "name": "Shenzhen Houhai 2km",
       "type": "object",
+      "category": "environment",
       "source_format": "openusd",
       "default_properties": {
         "geometry": {
@@ -593,6 +607,7 @@
       "id": "openusd_anime_test_dad6ac2df7",
       "name": "anime_test",
       "type": "object",
+      "category": "prop",
       "source_format": "openusd",
       "default_properties": {
         "geometry": {
@@ -642,6 +657,7 @@
       "id": "openusd_sea_65c0de78e0",
       "name": "sea",
       "type": "object",
+      "category": "environment",
       "source_format": "openusd",
       "default_properties": {
         "geometry": {
@@ -691,6 +707,7 @@
       "id": "openusd_fan_9a5b42ae1b",
       "name": "fan",
       "type": "object",
+      "category": "prop",
       "source_format": "openusd",
       "default_properties": {
         "geometry": {

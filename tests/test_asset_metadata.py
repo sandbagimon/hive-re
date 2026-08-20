@@ -19,6 +19,26 @@ def test_physics_playground_assets_are_declared() -> None:
     assert assets["primitive_box"]["default_properties"]["physics"]["mass_mode"] == "density"
 
 
+def test_assets_have_library_categories() -> None:
+    metadata = json.loads(Path("assets/metadata.json").read_text(encoding="utf-8"))
+    assets = metadata["assets"]
+
+    assert all(
+        asset.get("category") in {"primitive", "robot", "prop", "environment"}
+        for asset in assets
+    )
+    assert {
+        asset["id"] for asset in assets if asset["category"] == "robot"
+    } == {
+        "openusd_external_two_joint_arm_b6c7a81772",
+        "openusd_franka_quality_4b35c27245",
+        "openusd_iris_09f8390b45",
+    }
+    assert {
+        asset["id"] for asset in assets if asset["category"] == "environment"
+    } == {"openusd_houhai_2km_b463d22fff", "openusd_sea_65c0de78e0"}
+
+
 def test_complete_openusd_robot_arm_is_declared() -> None:
     metadata = json.loads(Path("assets/metadata.json").read_text(encoding="utf-8"))
     robots = {asset["id"]: asset for asset in metadata["assets"] if asset["type"] == "robot"}

@@ -107,6 +107,7 @@ class SimulationResource:
     project_id: str
     application: WebApplication
     scene_json: str
+    subscribers: int = 0
 
 
 @dataclass(slots=True)
@@ -381,6 +382,21 @@ class ResourceManager:
             return self.simulations[simulation_id]
         except KeyError as exc:
             raise KeyError(f"Unknown simulation: {simulation_id}") from exc
+
+    def register_subscriber(self, simulation_id: str) -> None:
+        with self._lock:
+            simulation = self.get_simulation(simulation_id)
+            simulation.subscribers += 1
+
+    def unregister_subscriber(self, simulation_id: str) -> None:
+        with self._lock:
+            try:
+                simulation = self.get_simulation(simulation_id)
+            except KeyError:
+                return
+            simulation.subscribers = max(0, simulation.subscribers - 1)
+            if simulation.subscribers == 0:
+                simulation.application.pause_if_running()
 
     def delete_simulation(self, simulation_id: str) -> None:
         with self._lock:

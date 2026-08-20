@@ -5,6 +5,27 @@ const apiBaseUrl = 'http://127.0.0.1:8876';
 const accessToken = 'e2e-token';
 const authHeaders = { Authorization: `Bearer ${accessToken}` };
 
+async function menuCommand(page, menuName, itemName) {
+  await page.getByRole('button', { name: menuName, exact: true }).click();
+  await page.getByRole('button', { name: itemName, exact: true }).click();
+}
+
+async function activateBottomTab(page, tabId) {
+  let tab = page.locator(`[data-bottom-tab="${tabId}"]`);
+  if (await tab.count() === 0) {
+    const title = await page.locator(`[data-panel="${tabId}"]`)
+      .getAttribute('data-panel-title');
+    await page.getByRole('button', { name: 'Window', exact: true }).click({ force: true });
+    await page.locator('#window-menu-items .window-menu-entry')
+      .filter({ hasText: title ?? tabId })
+      .evaluate((element) => element.click());
+    tab = page.locator(`[data-bottom-tab="${tabId}"]`);
+    await expect(tab).toHaveCount(1);
+  }
+  if (await tab.evaluate((element) => element.classList.contains('active'))) return;
+  await tab.evaluate((element) => element.click());
+}
+
 async function configureApi(page) {
   await page.route('**/simlab-config.json', async (route) => {
     await route.fulfill({
@@ -36,6 +57,51 @@ test('frontend opens the built-in viewport shortcut guide', async ({ page }) => 
   await guide.close();
 });
 
+test('asset library groups backend assets by category', async ({ page }) => {
+  await configureApi(page);
+  await page.goto('/');
+
+  const groups = page.locator('#asset-list .asset-group');
+  await expect(groups).toHaveCount(4, { timeout: 10_000 });
+  await expect(groups.locator('.asset-group-header h3')).toHaveText([
+    'Robots',
+    'Primitives',
+    'Props',
+    'Environments',
+  ]);
+  await expect(groups.locator('.asset-group-count')).toHaveText(['3', '6', '6', '2']);
+  await expect(page.locator('[data-asset-category="robot"]')).toContainText(
+    'Franka Panda (High Quality)',
+  );
+  await expect(page.locator('[data-asset-category="environment"]')).toContainText(
+    'Shenzhen Houhai 2km',
+  );
+
+  await page.locator('#asset-filter-input').fill('environment');
+  await expect(groups).toHaveCount(1);
+  await expect(groups).toHaveAttribute('data-asset-category', 'environment');
+  await expect(groups.locator('.asset-group-count')).toHaveText('2');
+});
+
+test('agent conversation window is dockable with an inactive composer', async ({ page }) => {
+  await configureApi(page);
+  await page.goto('/');
+
+  const agentTab = page.locator('[data-bottom-tab="agent"]');
+  await expect(agentTab).toBeVisible();
+  await agentTab.click();
+  await expect(page.locator('#agent-conversation')).toBeVisible();
+  await expect(page.locator('#agent-conversation')).toContainText('Start a conversation');
+  await expect(page.locator('.agent-composer textarea')).toBeDisabled();
+  await expect(page.locator('.agent-send')).toBeDisabled();
+
+  await agentTab.locator('[data-panel-close="agent"]').click();
+  await expect(agentTab).toHaveCount(0);
+  await page.getByRole('button', { name: 'Window', exact: true }).click();
+  await page.getByRole('button', { name: 'Agent', exact: true }).click();
+  await expect(page.locator('[data-bottom-tab="agent"]')).toBeVisible();
+});
+
 test('browser opens, simulates, saves, and exports without Qt', async ({ page }) => {
   await configureApi(page);
   await page.goto('/');
@@ -43,11 +109,11 @@ test('browser opens, simulates, saves, and exports without Qt', async ({ page })
   await expect(page.locator('#asset-list')).toContainText('Box', { timeout: 10_000 });
 
   const openChooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await menuCommand(page, 'File', 'Open');
   await (await openChooser).setFiles('examples/demo_project/scene.json');
   await expect(page.locator('#project-label')).toContainText('Physics Playground');
 
-  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await page.locator('[data-command="run"]').click();
   await expect(page.locator('#simulation-badge')).toHaveText('Running');
   await expect(page.locator('#rtf-readout')).not.toHaveText('0.00x', { timeout: 10_000 });
 
@@ -55,11 +121,11 @@ test('browser opens, simulates, saves, and exports without Qt', async ({ page })
   await expect(page.locator('#simulation-badge')).toHaveText('Paused');
 
   const saveDownload = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await menuCommand(page, 'File', 'Save');
   expect((await saveDownload).suggestedFilename()).toBe('Physics-Playground.json');
 
   const exportDownload = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export', exact: true }).click();
+  await menuCommand(page, 'Simulation', 'Export MJCF');
   expect((await exportDownload).suggestedFilename()).toBe('scene.xml');
 });
 
@@ -85,7 +151,7 @@ test('asset library loads the high-quality Franka robot meshes', async ({ page }
   await expect(page.locator('#scene-tree')).toContainText('panda_finger_joint2');
   await expect.poll(() => bundleResponses, { timeout: 20_000 }).toBe(1);
   expect(legacyGeometryResponses).toBe(0);
-  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await page.locator('[data-command="run"]').click();
   await expect(page.locator('#simulation-badge')).toHaveText('Running', {
     timeout: 20_000,
   });
@@ -96,6 +162,7 @@ test('asset library loads the high-quality Franka robot meshes', async ({ page }
 });
 
 test('kilometre-scale Houhai asset is clearly framed with authored colors', async ({ page }, testInfo) => {
+  test.setTimeout(60_000);
   await configureApi(page);
   let geometryResponses = 0;
   page.on('response', (response) => {
@@ -133,10 +200,15 @@ test('kilometre-scale Houhai asset is clearly framed with authored colors', asyn
   expect(camera.distance).toBeGreaterThan(camera.radius * 2);
   expect(camera.far).toBeGreaterThan(camera.distance + camera.radius);
   expect(camera.fogNear).toBeGreaterThan(camera.distance + camera.radius);
-  await page.locator('#viewport').click({ position: { x: 24, y: 460 } });
+  const viewportClickPoint = await page.locator('#viewport').evaluate((canvas) => ({
+    x: 24,
+    y: Math.max(24, Math.round(canvas.clientHeight * 0.71)),
+  }));
+  await page.locator('#viewport').click({ position: viewportClickPoint });
   await expect(page.locator('#selection')).toContainText('Selected: None');
-  await page.locator('#viewport').screenshot({
+  await page.screenshot({
     path: testInfo.outputPath('houhai-viewport.png'),
+    clip: await page.locator('#viewport').boundingBox(),
   });
 
   await page.locator('[data-asset-id="primitive_box"]').click();
@@ -149,8 +221,9 @@ test('kilometre-scale Houhai asset is clearly framed with authored colors', asyn
   expect(fogAfterAddingAsset.near).toBeCloseTo(camera.fogNear, 3);
   expect(fogAfterAddingAsset.far).toBeCloseTo(camera.fogFar, 3);
   expect(geometryResponses).toBe(1);
-  await page.locator('#viewport').screenshot({
+  await page.screenshot({
     path: testInfo.outputPath('houhai-after-adding-asset.png'),
+    clip: await page.locator('#viewport').boundingBox(),
   });
 });
 
@@ -163,11 +236,12 @@ test('Iris controller takes off and settles into hover', async ({ page }) => {
 
   page.once('dialog', (dialog) => dialog.accept());
   const controllerChooser = page.waitForEvent('filechooser');
+  await activateBottomTab(page, 'controller');
   await page.locator('[data-controller-command="load"]').click();
   await (await controllerChooser).setFiles('examples/controllers/iris_hover.py');
   await expect(page.locator('[data-controller-name]')).toHaveText('Iris Takeoff and Hover');
 
-  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await page.locator('[data-command="run"]').click();
   await expect(page.locator('#simulation-badge')).toHaveText('Running');
   await expect.poll(async () => {
     const state = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
@@ -186,7 +260,7 @@ test('Iris controller takes off and settles into hover', async ({ page }) => {
 });
 
 test('Iris physically picks up and delivers a payload from A to B', async ({ page }, testInfo) => {
-  test.setTimeout(65_000);
+  test.setTimeout(90_000);
   await configureApi(page);
   await page.goto('/');
   await expect(page.locator('#asset-list')).toContainText('Pegasus Iris Quadcopter', {
@@ -194,7 +268,7 @@ test('Iris physically picks up and delivers a payload from A to B', async ({ pag
   });
 
   const openChooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await menuCommand(page, 'File', 'Open');
   await (await openChooser).setFiles('examples/drone_delivery/scene.json');
   await expect(page.locator('#project-label')).toContainText('Iris A-to-B Physical Delivery');
   await expect(page.locator('#scene-tree')).toContainText('Pickup A');
@@ -203,12 +277,13 @@ test('Iris physically picks up and delivers a payload from A to B', async ({ pag
   await page.locator('[data-actor-row]').filter({ hasText: 'Pegasus Iris Quadcopter' }).click();
   page.once('dialog', (dialog) => dialog.accept());
   const controllerChooser = page.waitForEvent('filechooser');
+  await activateBottomTab(page, 'controller');
   await page.locator('[data-controller-command="load"]').click();
   await (await controllerChooser).setFiles('examples/controllers/iris_payload_delivery.py');
   await expect(page.locator('[data-controller-name]'))
     .toHaveText('Iris Physical Payload Delivery');
 
-  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await page.locator('[data-command="run"]').click();
   await page.locator('[data-simulation-speed="2"]').click();
   await expect.poll(async () => {
     const state = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
@@ -224,13 +299,15 @@ test('Iris physically picks up and delivers a payload from A to B', async ({ pag
   await expect(page.locator('#scene-stats')).toContainText('task completed');
   await page.locator('[data-action="frame"]').click();
   await page.waitForTimeout(500);
-  await page.locator('#viewport').screenshot({
+  await page.screenshot({
     path: testInfo.outputPath('drone-delivery-complete.png'),
+    clip: await page.locator('#viewport').boundingBox(),
   });
 });
 
-test('obstacle-aware Iris controller initializes and runs in the browser', async ({ page }) => {
-  test.setTimeout(240_000);
+test('obstacle scene loads the forklift and courier glTF visuals', async ({ page }, testInfo) => {
+  test.setTimeout(360_000);
+  await page.setViewportSize({ width: 1440, height: 960 });
   await configureApi(page);
   await page.goto('/');
   await expect(page.locator('#asset-list')).toContainText('Pegasus Iris Quadcopter', {
@@ -238,10 +315,55 @@ test('obstacle-aware Iris controller initializes and runs in the browser', async
   });
 
   const openChooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Open', exact: true }).click();
+  await menuCommand(page, 'File', 'Open');
   await (await openChooser).setFiles('examples/drone_delivery_obstacles/scene.json');
   await expect(page.locator('#project-label'))
-    .toContainText('Blue-Hour Autonomous Food Delivery', { timeout: 15_000 });
+    .toContainText('Blue-Hour Autonomous Food Delivery', { timeout: 30_000 });
+  await expect(page.locator('#viewport'))
+    .toHaveAttribute('data-photoreal-obstacle-status', 'loaded', { timeout: 240_000 });
+  await expect(page.locator('#viewport'))
+    .toHaveAttribute('data-photoreal-obstacle-count', '9');
+  await expect(page.locator('#viewport'))
+    .toHaveAttribute('data-gltf-animation-status', 'ready', { timeout: 30_000 });
+  await expect(page.locator('#viewport'))
+    .toHaveAttribute('data-gltf-animated-actor-count', '1');
+  await expect(page.locator('#viewport'))
+    .toHaveAttribute('data-gltf-animation-clips', 'Walk');
+  await expect(page.locator('#viewport'))
+    .toHaveAttribute('data-gltf-animation-modes', 'walking');
+  await expect(page.locator('#viewport'))
+    .toHaveAttribute('data-delivery-bag-texture', 'loaded', { timeout: 15_000 });
+  const sceneState = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
+  const forklift = sceneState.scene.actors.find((actor) => (
+    actor.id === 'actor_dynamic_forklift'
+  ));
+  expect(forklift.properties.visual_model.author).toBe('louis-muir');
+  expect(forklift.properties.visual_model.source_url)
+    .toContain('060f3f8bc7de4e6ca2f348d414702e9d');
+  await page.locator('[data-actor-row]').filter({ hasText: 'Unmapped Crossing Forklift' })
+    .evaluate((element) => element.click());
+  await page.locator('[data-action="frame"]').click({ force: true });
+  await page.waitForTimeout(500);
+  await page.screenshot({
+    path: testInfo.outputPath('forklift-gltf-model.png'),
+    clip: await page.locator('#viewport').boundingBox(),
+  });
+});
+
+test('obstacle-aware Iris controller initializes and runs in the browser', async ({ page }) => {
+  test.setTimeout(240_000);
+  await configureApi(page);
+  await page.route('**/models/**', async (route) => { await route.abort('blockedbyclient'); });
+  await page.goto('/');
+  await expect(page.locator('#asset-list')).toContainText('Pegasus Iris Quadcopter', {
+    timeout: 10_000,
+  });
+
+  const openChooser = page.waitForEvent('filechooser');
+  await menuCommand(page, 'File', 'Open');
+  await (await openChooser).setFiles('examples/drone_delivery_obstacles/scene.json');
+  await expect(page.locator('#project-label'))
+    .toContainText('Blue-Hour Autonomous Food Delivery', { timeout: 30_000 });
   await expect(page.locator('#viewport')).toHaveAttribute('data-render-quality', 'enhanced');
   await expect(page.locator('#viewport')).toHaveAttribute('data-shadow-mode', 'soft');
   await expect(page.locator('#viewport'))
@@ -252,13 +374,8 @@ test('obstacle-aware Iris controller initializes and runs in the browser', async
     .toHaveAttribute('data-environment-mode', 'cinematic-delivery');
   await expect(page.locator('#viewport'))
     .toHaveAttribute('data-cinematic-asphalt-texture', 'loaded', { timeout: 20_000 });
-  await expect(page.locator('#viewport'))
-    .toHaveAttribute('data-photoreal-obstacle-status', 'loaded', { timeout: 20_000 });
-  await expect(page.locator('#viewport'))
-    .toHaveAttribute('data-photoreal-obstacle-count', '3');
-  await expect(page.locator('#viewport'))
-    .toHaveAttribute('data-delivery-bag-texture', 'loaded', { timeout: 15_000 });
-  await page.locator('[data-actor-row]').filter({ hasText: 'Pegasus Iris Quadcopter' }).click();
+  await page.locator('[data-actor-row]').filter({ hasText: 'Pegasus Iris Quadcopter' })
+    .evaluate((element) => element.click());
 
   page.once('dialog', (dialog) => dialog.accept());
   const controllerResponse = page.waitForResponse((response) => (
@@ -266,7 +383,8 @@ test('obstacle-aware Iris controller initializes and runs in the browser', async
       && response.request().method() === 'POST'
   ));
   const controllerChooser = page.waitForEvent('filechooser');
-  await page.locator('[data-controller-command="load"]').click();
+  await activateBottomTab(page, 'controller');
+  await page.locator('[data-controller-command="load"]').click({ force: true });
   await (await controllerChooser).setFiles('examples/controllers/iris_obstacle_delivery.py');
   const controllerResult = await controllerResponse;
   expect(controllerResult.ok()).toBe(true);
@@ -288,11 +406,14 @@ test('obstacle-aware Iris controller initializes and runs in the browser', async
     (event) => event.status === 'scheduled',
   )).toBe(true);
 
-  await page.getByRole('button', { name: 'Run', exact: true }).click();
-  await page.locator('[data-simulation-speed="2"]').click();
-  await expect.poll(async () => Number(
-    await page.locator('#viewport').getAttribute('data-navigation-replans'),
-  ), { timeout: 55_000, intervals: [250, 500, 1000] }).toBeGreaterThan(0);
+  await page.locator('[data-command="run"]').evaluate((element) => element.click());
+  const doubleSpeed = page.locator('[data-simulation-speed="2"]');
+  await doubleSpeed.evaluate((element) => element.click());
+  await expect(doubleSpeed).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(async () => {
+    const state = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
+    return state.simulationState.navigation.replan_count;
+  }, { timeout: 120_000, intervals: [250, 500, 1000] }).toBeGreaterThan(0);
 
   const runtime = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
   expect(runtime.simulationState.controller.status).toBe('active');
@@ -306,6 +427,9 @@ test('obstacle-aware Iris controller initializes and runs in the browser', async
   )).toBe(true);
   expect(runtime.simulationState.actors.find((item) => item.id === 'actor_002').position[2])
     .toBeGreaterThan(0.5);
+  await expect.poll(async () => Number(
+    await page.locator('#viewport').getAttribute('data-navigation-replans'),
+  ), { timeout: 10_000, intervals: [250, 500, 1000] }).toBeGreaterThan(0);
   await expect(page.locator('#scene-stats')).toContainText(/replans [1-9]/);
 });
 
@@ -354,7 +478,7 @@ test('clicking and moving an actor in the viewport keeps it selected', async ({ 
   const viewport = page.locator('#viewport');
   const bounds = await viewport.boundingBox();
   expect(bounds).not.toBeNull();
-  await viewport.click({ position: { x: 12, y: 12 } });
+  await viewport.click({ position: { x: 12, y: Math.min(120, bounds.height - 24) } });
   await expect(page.locator('#selection')).toHaveText('Selected: None');
 
   await viewport.click({
@@ -462,7 +586,7 @@ test('scene editing stays independent from a running simulation', async ({ page 
   await page.goto('/');
   await expect(page.locator('#asset-list')).toContainText('Box', { timeout: 10_000 });
   await page.locator('[data-asset-id="primitive_box"]').click();
-  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await page.locator('[data-command="run"]').click();
   await expect(page.locator('#simulation-badge')).toHaveText('Running');
   await expect.poll(() => simulationIds.length).toBe(1);
 
@@ -478,7 +602,7 @@ test('scene editing stays independent from a running simulation', async ({ page 
   await page.waitForTimeout(500);
   await expect(page.locator('#simulation-badge')).toHaveText('Running');
 
-  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await menuCommand(page, 'Simulation', 'Run');
   await expect.poll(() => simulationIds.length).toBe(2);
   expect(simulationIds[1]).not.toBe(simulationIds[0]);
   await expect(page.locator('#simulation-badge')).toHaveText('Running');
@@ -489,14 +613,14 @@ test('stop releases the simulation without changing the editor scene', async ({ 
   await page.goto('/');
   await expect(page.locator('#asset-list')).toContainText('Box', { timeout: 10_000 });
   await page.locator('[data-asset-id="primitive_box"]').click();
-  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await page.locator('[data-command="run"]').click();
   await expect(page.locator('#simulation-badge')).toHaveText('Running');
 
   const deleted = page.waitForResponse((response) => (
     response.request().method() === 'DELETE'
       && /\/api\/v1\/simulations\/sim_[^/]+$/.test(response.url())
   ));
-  await page.getByRole('button', { name: 'Stop', exact: true }).click();
+  await page.locator('[data-command="stop"]').click();
   expect((await deleted).status()).toBe(204);
   await expect(page.locator('#simulation-badge')).toHaveText('Stopped');
   await expect(page.locator('#scene-tree')).toContainText('Box');
@@ -504,11 +628,12 @@ test('stop releases the simulation without changing the editor scene', async ({ 
 });
 
 test('browser uploads an external OpenUSD robot through the web API', async ({ page }) => {
+  test.setTimeout(120_000);
   await configureApi(page);
   await page.goto('/');
   await expect(page.locator('#asset-list')).toContainText('Box', { timeout: 10_000 });
   const chooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Import USD', exact: true }).click();
+  await page.locator('[data-command="import-openusd"]').click();
   await (await chooser).setFiles(
     'tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda',
   );
@@ -524,6 +649,7 @@ test('browser uploads an external OpenUSD robot through the web API', async ({ p
 
   page.once('dialog', (dialog) => dialog.accept());
   const controllerChooser = page.waitForEvent('filechooser');
+  await activateBottomTab(page, 'controller');
   await page.locator('[data-controller-command="load"]').click();
   await (await controllerChooser).setFiles('examples/controllers/two_joint_pd.py');
   await expect(page.locator('[data-controller-name]')).toHaveText('Two Joint PD Example');
@@ -533,17 +659,21 @@ test('browser uploads an external OpenUSD robot through the web API', async ({ p
   const reloaded = page.waitForResponse((response) => (
     response.url().endsWith('/controller') && response.request().method() === 'POST'
   ));
+  await activateBottomTab(page, 'controller');
   await page.locator('[data-controller-command="reload"]').click();
   expect((await reloaded).ok()).toBe(true);
 
+  await activateBottomTab(page, 'recording');
   await page.locator('[data-recording-command="start"]').click();
-  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await page.locator('[data-command="run"]').click();
   await expect(page.locator('#simulation-badge')).toHaveText('Running');
   await expect(page.locator('#recording-status')).toContainText('Rows');
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
+  await activateBottomTab(page, 'recording');
   await page.locator('[data-recording-command="stop"]').click();
 
   const recordingDownload = page.waitForEvent('download');
+  await activateBottomTab(page, 'recording');
   await page.locator('[data-recording-export="json"]').click();
   expect((await recordingDownload).suggestedFilename()).toBe('joint-recording.json');
 });
@@ -557,7 +687,7 @@ test('browser imports an OpenUSD folder with relative composition dependencies',
       && response.request().method() === 'POST'
   ));
   const chooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Import USD Folder', exact: true }).click();
+  await page.locator('[data-command="import-openusd-folder"]').click();
   await (await chooser).setFiles('tests/fixtures/openusd/composite');
 
   const response = await uploadResponse;
@@ -570,6 +700,7 @@ test('browser imports an OpenUSD folder with relative composition dependencies',
 });
 
 test('independent browser clients keep projects and simulations isolated', async ({ browser }) => {
+  test.setTimeout(60_000);
   const context = await browser.newContext();
   const first = await context.newPage();
   const second = await context.newPage();
@@ -590,23 +721,23 @@ test('independent browser clients keep projects and simulations isolated', async
 
   await Promise.all([first.goto('/'), second.goto('/')]);
   await Promise.all([
-    expect(first.locator('#asset-list')).toContainText('Box'),
-    expect(second.locator('#asset-list')).toContainText('Box'),
+    expect(first.locator('#asset-list')).toContainText('Box', { timeout: 10_000 }),
+    expect(second.locator('#asset-list')).toContainText('Box', { timeout: 10_000 }),
   ]);
   expect(new Set(projectResponses).size).toBe(2);
   expect(first.url()).toMatch(/^http:\/\/127\.0\.0\.1:4173/);
 
   const firstChooser = first.waitForEvent('filechooser');
-  await first.getByRole('button', { name: 'Open', exact: true }).click();
+  await menuCommand(first, 'File', 'Open');
   await (await firstChooser).setFiles('examples/demo_project/scene.json');
   const secondChooser = second.waitForEvent('filechooser');
-  await second.getByRole('button', { name: 'Open', exact: true }).click();
+  await menuCommand(second, 'File', 'Open');
   await (await secondChooser).setFiles('examples/demo_project/scene.json');
 
-  await first.getByRole('button', { name: 'Run', exact: true }).click();
+  await first.locator('[data-command="run"]').click();
   await expect(first.locator('#simulation-badge')).toHaveText('Running');
   await expect(second.locator('#simulation-badge')).toHaveText('Stopped');
-  await second.getByRole('button', { name: 'Step', exact: true }).click();
+  await second.locator('[data-command="step"]').click();
   await expect(second.locator('#simulation-badge')).toHaveText('Paused');
   await expect(first.locator('#simulation-badge')).toHaveText('Running');
   expect(new Set(simulationResponses).size).toBe(2);

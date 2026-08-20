@@ -340,6 +340,30 @@ class MuJoCoSimulationSession:
         self._joint_position_actuators = self._map_joint_position_actuators(scene)
         self._quadrotor_models = quadrotor_models_from_scene(scene)
         self._validate_quadrotor_bindings()
+        self._quadrotor_force_bindings = tuple(
+            (
+                self._link_ids[model.body_link_id],
+                tuple(
+                    (
+                        rotor,
+                        self._link_ids[rotor.link_id],
+                        self._actuator_ids[rotor.actuator_id],
+                    )
+                    for rotor in model.rotors
+                ),
+            )
+            for model in self._quadrotor_models
+        )
+        self._quadrotor_affected_body_ids = tuple(
+            {
+                affected_body_id
+                for airframe_body_id, rotors in self._quadrotor_force_bindings
+                for affected_body_id in (
+                    airframe_body_id,
+                    *(rotor_body_id for _, rotor_body_id, _ in rotors),
+                )
+            }
+        )
         self._trajectory_player = JointTrajectoryPlayer()
         self._state_recorder = JointStateRecorder(self._read_recording_max_samples(scene))
         sensor_definitions = [
@@ -388,6 +412,8 @@ class MuJoCoSimulationSession:
         )
         self._rangefinder_addresses = self._map_rangefinder_sensor_channels()
         self._physics_step_index = 0
+        self._controller_period_steps = self._read_controller_period_steps(scene)
+        self._next_controller_step = 0
         self._controller_runner = ControllerRunner(
             deadline=self._read_controller_deadline(scene),
             reset_deadline=self._read_controller_reset_deadline(scene),
@@ -488,6 +514,7 @@ class MuJoCoSimulationSession:
         self._navigation_state = NavigationSimulationState()
         if self._controller_runner.enabled:
             self._controller_runner.reset(self._controller_observation())
+            self._next_controller_step = self._physics_step_index
             self._sync_python_controller_state()
         return self.state()
 
@@ -502,6 +529,7 @@ class MuJoCoSimulationSession:
         self._controller_runner.attach(controller, name=name)
         self._navigation_state = NavigationSimulationState()
         self._controller_runner.reset(self._controller_observation())
+        self._next_controller_step = self._physics_step_index
         self._sync_python_controller_state()
         return self.state()
 
@@ -1267,6 +1295,9 @@ class MuJoCoSimulationSession:
     def _apply_python_controller(self) -> None:
         if not self._controller_runner.enabled:
             return
+        if self._physics_step_index < self._next_controller_step:
+            return
+        self._next_controller_step = self._physics_step_index + self._controller_period_steps
         action = self._controller_runner.step(self._controller_observation())
         if action is not None:
             try:
@@ -1317,44 +1348,69 @@ class MuJoCoSimulationSession:
                     )
 
     def _apply_quadrotor_forces(self) -> None:
-        if not self._quadrotor_models:
+        if not self._quadrotor_force_bindings:
             return
-        affected_body_ids = {self._link_ids[model.body_link_id] for model in self._quadrotor_models}
-        affected_body_ids.update(
-            self._link_ids[rotor.link_id]
-            for model in self._quadrotor_models
-            for rotor in model.rotors
-        )
-        for body_id in affected_body_ids:
+        for body_id in self._quadrotor_affected_body_ids:
             self.data.xfrc_applied[body_id] = 0.0
-        for model in self._quadrotor_models:
-            body_id = self._link_ids[model.body_link_id]
+        for body_id, rotors in self._quadrotor_force_bindings:
             body_center = self.data.xipos[body_id]
-            net_force = np.zeros(3, dtype=np.float64)
-            net_torque = np.zeros(3, dtype=np.float64)
-            for rotor in model.rotors:
-                rotor_body_id = self._link_ids[rotor.link_id]
-                actuator_id = self._actuator_ids[rotor.actuator_id]
+            center_x = float(body_center[0])
+            center_y = float(body_center[1])
+            center_z = float(body_center[2])
+            force_x = force_y = force_z = 0.0
+            torque_x = torque_y = torque_z = 0.0
+            for rotor, rotor_body_id, actuator_id in rotors:
                 angular_velocity = float(self.data.ctrl[actuator_id])
                 angular_velocity = max(
                     rotor.min_angular_velocity,
                     min(rotor.max_angular_velocity, angular_velocity),
                 )
                 squared_velocity = angular_velocity * angular_velocity
-                rotation = self.data.xmat[rotor_body_id].reshape((3, 3))
-                axis = rotation @ rotor.axis
+                rotation = self.data.xmat[rotor_body_id]
+                local_x, local_y, local_z = rotor.axis
+                axis_x = (
+                    float(rotation[0]) * local_x
+                    + float(rotation[1]) * local_y
+                    + float(rotation[2]) * local_z
+                )
+                axis_y = (
+                    float(rotation[3]) * local_x
+                    + float(rotation[4]) * local_y
+                    + float(rotation[5]) * local_z
+                )
+                axis_z = (
+                    float(rotation[6]) * local_x
+                    + float(rotation[7]) * local_y
+                    + float(rotation[8]) * local_z
+                )
                 thrust = rotor.thrust_coefficient * squared_velocity
                 reaction_torque = rotor.direction * rotor.torque_coefficient * squared_velocity
-                force = axis * thrust
-                lever = self.data.xpos[rotor_body_id] - body_center
-                net_force += force
-                net_torque += np.cross(lever, force)
-                net_torque += axis * reaction_torque
+                rotor_force_x = axis_x * thrust
+                rotor_force_y = axis_y * thrust
+                rotor_force_z = axis_z * thrust
+                force_x += rotor_force_x
+                force_y += rotor_force_y
+                force_z += rotor_force_z
+                rotor_position = self.data.xpos[rotor_body_id]
+                lever_x = float(rotor_position[0]) - center_x
+                lever_y = float(rotor_position[1]) - center_y
+                lever_z = float(rotor_position[2]) - center_z
+                torque_x += lever_y * rotor_force_z - lever_z * rotor_force_y
+                torque_y += lever_z * rotor_force_x - lever_x * rotor_force_z
+                torque_z += lever_x * rotor_force_y - lever_y * rotor_force_x
+                torque_x += axis_x * reaction_torque
+                torque_y += axis_y * reaction_torque
+                torque_z += axis_z * reaction_torque
             # The aerodynamic wrench belongs to the airframe. Applying reaction
             # torque directly to low-inertia, freely rotating visual rotor links
             # accelerates their hinges without bound and destabilizes MuJoCo.
-            self.data.xfrc_applied[body_id, :3] += net_force
-            self.data.xfrc_applied[body_id, 3:] += net_torque
+            wrench = self.data.xfrc_applied[body_id]
+            wrench[0] += force_x
+            wrench[1] += force_y
+            wrench[2] += force_z
+            wrench[3] += torque_x
+            wrench[4] += torque_y
+            wrench[5] += torque_z
 
     def _sync_python_controller_state(self) -> None:
         runner_state = self._controller_runner.state
@@ -1381,6 +1437,29 @@ class MuJoCoSimulationSession:
         if not math.isfinite(value) or value <= 0:
             raise ValueError("simulation_config.controller_deadline must be finite and > 0")
         return value
+
+    def _read_controller_period_steps(self, scene: Scene) -> int:
+        physics_rate = 1.0 / self.timestep
+        raw_value = scene.simulation_config.get("controller_update_rate_hz", physics_rate)
+        if isinstance(raw_value, bool):
+            raise ValueError(
+                "simulation_config.controller_update_rate_hz must be finite and > 0"
+            )
+        update_rate = float(raw_value)
+        if not math.isfinite(update_rate) or update_rate <= 0:
+            raise ValueError(
+                "simulation_config.controller_update_rate_hz must be finite and > 0"
+            )
+        ratio = physics_rate / update_rate
+        period_steps = round(ratio)
+        if period_steps < 1 or not math.isclose(
+            ratio, period_steps, rel_tol=0.0, abs_tol=1e-9
+        ):
+            raise ValueError(
+                "simulation_config.controller_update_rate_hz must be an exact divisor "
+                f"of physics rate {physics_rate:g} Hz"
+            )
+        return period_steps
 
     @staticmethod
     def _read_controller_reset_deadline(scene: Scene) -> float | None:

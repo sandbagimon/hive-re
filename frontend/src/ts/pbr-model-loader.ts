@@ -1,32 +1,78 @@
 import * as THREE from '../vendor/three.module.js';
+import { clone as cloneSkeleton } from '../vendor/SkeletonUtils.js';
 
-import type { ActorVisualModel } from './types.js';
+import {
+  selectIdleClipName,
+  selectLocomotionClipName,
+} from './actor-animation.js';
+import type {
+  ActorVisualAnimation,
+  ActorVisualModel,
+} from './types.js';
 
-const modelCache = new Map<string, Promise<any>>();
+interface LoadedGltf {
+  scene: any;
+  animations: any[];
+}
+
+export interface FittedPbrAnimationInstance {
+  root: any;
+  mixer: any;
+  idleAction: any | null;
+  locomotionAction: any;
+}
+
+export interface FittedPbrAnimation {
+  config: ActorVisualAnimation;
+  idleClipName: string | null;
+  locomotionClipName: string;
+  instances: FittedPbrAnimationInstance[];
+}
+
+export interface FittedPbrVisual {
+  object: any;
+  animation: FittedPbrAnimation | null;
+}
+
+const gltfCache = new Map<string, Promise<LoadedGltf>>();
 let loaderPromise: Promise<any> | null = null;
 
 const materialTextureSlots = [
   'alphaMap',
   'aoMap',
   'bumpMap',
+  'clearcoatMap',
+  'clearcoatNormalMap',
+  'clearcoatRoughnessMap',
   'emissiveMap',
+  'iridescenceMap',
+  'iridescenceThicknessMap',
   'map',
   'metalnessMap',
   'normalMap',
   'roughnessMap',
+  'sheenColorMap',
+  'sheenRoughnessMap',
+  'specularColorMap',
+  'specularIntensityMap',
+  'thicknessMap',
+  'transmissionMap',
 ] as const;
 
-function templateForUrl(url: string): Promise<any> {
-  const cached = modelCache.get(url);
+function gltfForUrl(url: string): Promise<LoadedGltf> {
+  const cached = gltfCache.get(url);
   if (cached) return cached;
   loaderPromise ??= import('../vendor/GLTFLoader.js').then(
     ({ GLTFLoader }) => new GLTFLoader(),
   );
-  const loading: Promise<any> = loaderPromise
+  const loading = loaderPromise
     .then((activeLoader) => activeLoader.loadAsync(url))
-    .then((gltf: any) => gltf.scene);
-  modelCache.set(url, loading);
-  void loading.catch(() => modelCache.delete(url));
+    .then((gltf: any) => ({
+      scene: gltf.scene,
+      animations: Array.isArray(gltf.animations) ? gltf.animations : [],
+    }));
+  gltfCache.set(url, loading);
+  void loading.catch(() => gltfCache.delete(url));
   return loading;
 }
 
@@ -66,7 +112,9 @@ function cloneTemplate(
   resources: CloneResources,
   anisotropy: number,
 ): any {
-  const cloned = template.clone(true);
+  // Object3D.clone() leaves a SkinnedMesh pointing at the source skeleton. SkeletonUtils
+  // remaps every cloned skin to its cloned bones before we isolate GPU resources below.
+  const cloned = cloneSkeleton(template);
   cloned.traverse((child: any) => {
     if (child.geometry) {
       let geometry = resources.geometries.get(child.geometry);
@@ -93,12 +141,17 @@ function cloneTemplate(
   return cloned;
 }
 
+interface FittedInstance {
+  root: any;
+  model: any;
+}
+
 function fittedInstance(
   template: any,
   instance: ActorVisualModel['instances'][number],
   resources: CloneResources,
   anisotropy: number,
-): any {
+): FittedInstance {
   const root = new THREE.Group();
   const model = cloneTemplate(template, resources, anisotropy);
   model.rotation.set(...instance.rotation);
@@ -118,15 +171,65 @@ function fittedInstance(
   root.position.set(...instance.position);
   root.add(model);
   root.userData.photorealInstance = true;
-  return root;
+  return { root, model };
+}
+
+function animationForInstances(
+  config: ActorVisualAnimation | undefined,
+  clips: any[],
+  instances: FittedInstance[],
+): FittedPbrAnimation | null {
+  if (!config) return null;
+  const availableNames = clips.map((clip) => String(clip.name ?? ''));
+  const locomotionClipName = selectLocomotionClipName(availableNames, config);
+  if (!locomotionClipName) {
+    throw new Error(`No ${config.locomotion} animation clip found in glTF`);
+  }
+  const idleClipName = selectIdleClipName(availableNames, config);
+  const locomotionClip = clips.find((clip) => clip.name === locomotionClipName);
+  const idleClip = idleClipName
+    ? clips.find((clip) => clip.name === idleClipName) ?? null
+    : null;
+
+  return {
+    config,
+    idleClipName,
+    locomotionClipName,
+    instances: instances.map(({ model }) => {
+      const mixer = new THREE.AnimationMixer(model);
+      const locomotionAction = mixer.clipAction(locomotionClip);
+      const idleAction = idleClip ? mixer.clipAction(idleClip) : null;
+      locomotionAction.play();
+      locomotionAction.setEffectiveTimeScale(0);
+      locomotionAction.setEffectiveWeight(idleAction ? 0 : 1);
+      if (idleAction) {
+        idleAction.play();
+        idleAction.setEffectiveTimeScale(1);
+        idleAction.setEffectiveWeight(1);
+      }
+      mixer.update(0);
+      return {
+        root: model,
+        mixer,
+        idleAction,
+        locomotionAction,
+      };
+    }),
+  };
 }
 
 export async function createFittedPbrVisual(
   config: ActorVisualModel,
   anisotropy: number,
-): Promise<any> {
+): Promise<FittedPbrVisual> {
   const url = new URL(config.url, document.baseURI).href;
-  const template = await templateForUrl(url);
+  const animationUrl = config.animation?.clip_url
+    ? new URL(config.animation.clip_url, document.baseURI).href
+    : url;
+  const [template, animationSource] = await Promise.all([
+    gltfForUrl(url),
+    animationUrl === url ? gltfForUrl(url) : gltfForUrl(animationUrl),
+  ]);
   const resources: CloneResources = {
     geometries: new Map(),
     materials: new Map(),
@@ -135,8 +238,18 @@ export async function createFittedPbrVisual(
   const visual = new THREE.Group();
   visual.name = `PBR visual: ${config.url}`;
   visual.userData.photorealVisual = true;
+  const fitted: FittedInstance[] = [];
   for (const instance of config.instances) {
-    visual.add(fittedInstance(template, instance, resources, anisotropy));
+    const item = fittedInstance(template.scene, instance, resources, anisotropy);
+    fitted.push(item);
+    visual.add(item.root);
   }
-  return visual;
+  return {
+    object: visual,
+    animation: animationForInstances(
+      config.animation,
+      animationSource.animations,
+      fitted,
+    ),
+  };
 }

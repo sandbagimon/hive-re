@@ -28,8 +28,8 @@
       "properties": {
         "primitive": "box",
         "size": [
+          6.5,
           5.5,
-          4.5,
           0.05
         ],
         "rgba": [
@@ -756,20 +756,20 @@
       }
     },
     {
-      "id": "actor_dynamic_delivery_van",
-      "name": "Unmapped Reversing Delivery Van",
+      "id": "actor_dynamic_forklift",
+      "name": "Unmapped Crossing Forklift",
       "type": "object",
       "asset_id": "primitive_box",
       "transform": {
         "position": [
-          -2.25,
-          1.45,
-          0.72
+          1.15,
+          -1.2,
+          1.0
         ],
         "rotation": [
           0.0,
           0.0,
-          0.0
+          1.5707963267948966
         ],
         "scale": [
           1.0,
@@ -780,21 +780,21 @@
       "properties": {
         "primitive": "box",
         "size": [
-          0.72,
-          0.34,
-          0.72
+          0.9,
+          0.5,
+          1.0
         ],
         "rgba": [
           0.88,
-          0.19,
-          0.1,
+          0.62,
+          0.08,
           1.0
         ],
         "physics": {
           "dynamic": true,
           "material": "rubber",
           "mass_mode": "mass",
-          "mass": 96.0,
+          "mass": 2600.0,
           "friction": [
             0.72,
             0.008,
@@ -812,7 +812,33 @@
             2.0
           ]
         },
-        "visual_style": "dynamic_delivery_van"
+        "visual_style": "dynamic_forklift",
+        "visual_model": {
+          "url": "./models/sketchfab/forklift/forklift.glb",
+          "source_url": "https://sketchfab.com/3d-models/forklift-truck-060f3f8bc7de4e6ca2f348d414702e9d",
+          "license": "CC-BY-4.0",
+          "author": "louis-muir",
+          "resolution": "Objaverse Web GLB",
+          "instances": [
+            {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0.0,
+                0.0
+              ],
+              "size": [
+                2.9,
+                1.1,
+                2.0
+              ]
+            }
+          ]
+        }
       }
     },
     {
@@ -823,13 +849,13 @@
       "transform": {
         "position": [
           5.35,
-          2.85,
+          -2.0,
           0.82
         ],
         "rotation": [
           0.0,
           0.0,
-          0.0
+          1.5707963267948966
         ],
         "scale": [
           1.0,
@@ -872,12 +898,432 @@
             2.0
           ]
         },
-        "visual_style": "dynamic_courier"
+        "visual_style": "dynamic_courier",
+        "visual_model": {
+          "url": "./models/mesh2motion/courier/human-jay.glb",
+          "source_url": "https://github.com/Mesh2Motion/mesh2motion-app/blob/main/static/models-variation/human-jay.glb",
+          "license": "CC0-1.0",
+          "author": "Mesh2Motion contributors",
+          "resolution": "Web GLB",
+          "animation": {
+            "clip_url": "./models/mesh2motion/courier/human-base-animations.glb",
+            "source_url": "https://github.com/Mesh2Motion/mesh2motion-app/blob/main/static/animations/human-base-animations.glb",
+            "license": "CC0-1.0",
+            "author": "Quaternius and Mesh2Motion contributors",
+            "locomotion": "walking",
+            "clips": {
+              "idle": "Idle_A",
+              "walking": "Walk",
+              "cycling": "Driving"
+            },
+            "reference_speed": 1.3,
+            "stop_speed": 0.05,
+            "min_playback_rate": 0.55,
+            "max_playback_rate": 1.8
+          },
+          "instances": [
+            {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0.0,
+                0.0
+              ],
+              "size": [
+                0.48,
+                0.4,
+                1.62
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "actor_prop_cardboard_boxes",
+      "name": "Stacked Cardboard Boxes",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -1.0,
+          -0.8,
+          0.18
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          0.36,
+          0.28,
+          0.18
+        ],
+        "rgba": [
+          0.55,
+          0.38,
+          0.22,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "known_obstacle",
+        "visual_model": {
+          "url": "./models/polyhaven/cardboard_box_01/cardboard_box_01_2k.gltf",
+          "source_url": "https://polyhaven.com/a/cardboard_box_01",
+          "license": "CC0-1.0",
+          "author": "Pacid Bhuyan",
+          "resolution": "2K",
+          "instances": [
+            {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0.0,
+                0.0
+              ],
+              "size": [
+                0.42,
+                0.32,
+                0.3
+              ]
+            },
+            {
+              "position": [
+                0.0,
+                0.0,
+                0.32
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0.0,
+                0.0
+              ],
+              "size": [
+                0.42,
+                0.32,
+                0.3
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "actor_prop_fire_hydrant",
+      "name": "Street Fire Hydrant",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -0.8,
+          2.0,
+          0.38
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          0.22,
+          0.22,
+          0.38
+        ],
+        "rgba": [
+          0.72,
+          0.12,
+          0.08,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "known_obstacle",
+        "visual_model": {
+          "url": "./models/polyhaven/fire_hydrant/fire_hydrant_2k.gltf",
+          "source_url": "https://polyhaven.com/a/fire_hydrant",
+          "license": "CC0-1.0",
+          "author": "Pacid Bhuyan",
+          "resolution": "2K",
+          "instances": [
+            {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0.0,
+                0.0
+              ],
+              "size": [
+                0.35,
+                0.35,
+                0.62
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "actor_prop_plastic_crates",
+      "name": "Stacked Plastic Crates",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          3.5,
+          3.8,
+          0.22
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          0.4,
+          0.3,
+          0.22
+        ],
+        "rgba": [
+          0.18,
+          0.35,
+          0.48,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "known_obstacle",
+        "visual_model": {
+          "url": "./models/polyhaven/plastic_crate_02/plastic_crate_02_2k.gltf",
+          "source_url": "https://polyhaven.com/a/plastic_crate_02",
+          "license": "CC0-1.0",
+          "author": "Pacid Bhuyan",
+          "resolution": "2K",
+          "instances": [
+            {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0.0,
+                0.0
+              ],
+              "size": [
+                0.5,
+                0.36,
+                0.3
+              ]
+            },
+            {
+              "position": [
+                0.0,
+                0.0,
+                0.32
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0.0,
+                0.0
+              ],
+              "size": [
+                0.5,
+                0.36,
+                0.3
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "actor_prop_wooden_crate",
+      "name": "Wooden Cargo Crate",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          2.6,
+          -0.7,
+          0.3
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          0.5,
+          0.36,
+          0.3
+        ],
+        "rgba": [
+          0.42,
+          0.28,
+          0.16,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "known_obstacle",
+        "visual_model": {
+          "url": "./models/polyhaven/wooden_crate_02/wooden_crate_02_2k.gltf",
+          "source_url": "https://polyhaven.com/a/wooden_crate_02",
+          "license": "CC0-1.0",
+          "author": "Pacid Bhuyan",
+          "resolution": "2K",
+          "instances": [
+            {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "rotation": [
+                1.5707963267948966,
+                0.0,
+                0.0
+              ],
+              "size": [
+                0.6,
+                0.42,
+                0.42
+              ]
+            }
+          ]
+        }
       }
     }
   ],
   "simulation_config": {
-    "timestep": 0.002,
+    "timestep": 0.005,
     "duration": 48.0,
     "integrator": "implicitfast",
     "wind": [
@@ -889,6 +1335,7 @@
     "air_viscosity": 1.8e-05,
     "controller_deadline": 0.05,
     "max_catch_up_steps": 32,
+    "controller_update_rate_hz": 100.0,
     "controller_reset_deadline": 0.2,
     "visual_environment": {
       "preset": "cinematic_blue_hour_delivery",
@@ -919,90 +1366,90 @@
     },
     "dynamic_events": [
       {
-        "id": "event_van_blocks_pickup_exit",
+        "id": "event_forklift_blocks_pickup_exit",
         "type": "kinematic_actor",
-        "actor_id": "actor_dynamic_delivery_van",
-        "label": "Delivery van reversing across the live route",
-        "activation_time": 12.8,
+        "actor_id": "actor_dynamic_forklift",
+        "label": "Forklift crossing the live route",
+        "activation_time": 11.0,
         "completion_time": 19.0,
         "interpolation": "smoothstep",
         "keyframes": [
           {
             "time": 0.0,
             "position": [
-              -2.25,
-              1.45,
-              0.72
+              1.15,
+              -1.2,
+              1.0
             ],
             "rotation": [
               0.0,
               0.0,
-              0.0
+              1.5707963267948966
             ]
           },
           {
-            "time": 12.8,
+            "time": 11.0,
             "position": [
-              -2.25,
-              1.45,
-              0.72
+              1.15,
+              -1.2,
+              1.0
             ],
             "rotation": [
               0.0,
               0.0,
-              0.0
+              1.5707963267948966
             ]
           },
           {
-            "time": 14.4,
+            "time": 13.0,
             "position": [
               1.15,
               1.45,
-              0.72
+              1.0
             ],
             "rotation": [
               0.0,
               0.0,
-              0.0
+              1.5707963267948966
             ]
           },
           {
-            "time": 17.1,
+            "time": 17.0,
             "position": [
               1.15,
               1.45,
-              0.72
+              1.0
             ],
             "rotation": [
               0.0,
               0.0,
-              0.0
+              1.5707963267948966
             ]
           },
           {
             "time": 19.0,
             "position": [
-              -2.25,
-              1.45,
-              0.72
+              1.15,
+              -1.2,
+              1.0
             ],
             "rotation": [
               0.0,
               0.0,
-              0.0
+              1.5707963267948966
             ]
           },
           {
             "time": 48.0,
             "position": [
-              -2.25,
-              1.45,
-              0.72
+              1.15,
+              -1.2,
+              1.0
             ],
             "rotation": [
               0.0,
               0.0,
-              0.0
+              1.5707963267948966
             ]
           }
         ]
@@ -1012,86 +1459,86 @@
         "type": "kinematic_actor",
         "actor_id": "actor_dynamic_courier",
         "label": "Courier entering the final approach",
-        "activation_time": 19.2,
-        "completion_time": 26.0,
+        "activation_time": 20.0,
+        "completion_time": 28.0,
         "interpolation": "smoothstep",
         "keyframes": [
           {
             "time": 0.0,
             "position": [
               5.35,
-              2.85,
+              -2.0,
               0.82
             ],
             "rotation": [
               0.0,
               0.0,
-              3.141592653589793
+              1.5707963267948966
             ]
           },
           {
-            "time": 19.2,
+            "time": 20.0,
             "position": [
               5.35,
-              2.85,
+              -2.0,
               0.82
             ],
             "rotation": [
               0.0,
               0.0,
-              3.141592653589793
+              1.5707963267948966
             ]
           },
           {
-            "time": 21.0,
+            "time": 22.0,
             "position": [
               2.75,
-              2.85,
+              -2.0,
               0.82
             ],
             "rotation": [
               0.0,
               0.0,
-              3.141592653589793
-            ]
-          },
-          {
-            "time": 23.5,
-            "position": [
-              2.75,
-              2.85,
-              0.82
-            ],
-            "rotation": [
-              0.0,
-              0.0,
-              3.141592653589793
+              1.5707963267948966
             ]
           },
           {
             "time": 26.0,
             "position": [
-              5.35,
-              2.85,
+              2.75,
+              -2.0,
               0.82
             ],
             "rotation": [
               0.0,
               0.0,
-              3.141592653589793
+              -1.5707963267948966
+            ]
+          },
+          {
+            "time": 28.0,
+            "position": [
+              5.35,
+              -2.0,
+              0.82
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              -1.5707963267948966
             ]
           },
           {
             "time": 48.0,
             "position": [
               5.35,
-              2.85,
+              -2.0,
               0.82
             ],
             "rotation": [
               0.0,
               0.0,
-              3.141592653589793
+              -1.5707963267948966
             ]
           }
         ]

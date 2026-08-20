@@ -507,6 +507,16 @@ class WebApplication:
         with self._lock:
             return self._running
 
+    def pause_if_running(self) -> bool:
+        """Pause a running simulation when its last subscriber disconnects."""
+        with self._lock:
+            if not self._running:
+                return False
+            self._running = False
+            self.simulation_service.pause()
+            self._publish("status", "paused")
+            return True
+
     def stop_simulation(self) -> None:
         with self._lock:
             self._stop_simulation()

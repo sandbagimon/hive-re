@@ -1,5 +1,6 @@
 {
-  "name": "simlab-editor",
+  "name": "beetemp-editor",
+  "description": "BeeTemp — internal codename placeholder (product name TBD; formerly simlab-editor)",
   "private": true,
   "type": "module",
   "version": "0.1.0",
@@ -9,7 +10,7 @@
     "preview:frontend": "vite preview --config frontend/vite.config.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build:modules": "tsc -p tsconfig.json",
-    "test:frontend": "npm run build:modules && node frontend-tests/store.mjs && node frontend-tests/simulation-store.mjs && node frontend-tests/trajectory-draft.mjs && node frontend-tests/robot-kinematics.mjs && node frontend-tests/geometry-bundle.mjs && node frontend-tests/vite-runtime-config.mjs",
+    "test:frontend": "npm run build:modules && node frontend-tests/actor-animation.mjs && node frontend-tests/asset-catalog.mjs && node frontend-tests/store.mjs && node frontend-tests/simulation-store.mjs && node frontend-tests/trajectory-draft.mjs && node frontend-tests/dock-tree.mjs && node frontend-tests/robot-kinematics.mjs && node frontend-tests/geometry-bundle.mjs && node frontend-tests/vite-runtime-config.mjs",
     "test:web": "npm run build && PLAYWRIGHT_BROWSERS_PATH=.venv/playwright-browsers playwright test"
   },
   "devDependencies": {

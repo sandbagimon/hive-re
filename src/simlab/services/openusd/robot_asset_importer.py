@@ -219,6 +219,7 @@ def import_openusd_robot_asset(
         "id": asset_id,
         "name": source_path.stem,
         "type": "robot",
+        "category": "robot",
         "source_format": "openusd",
         "default_properties": {
             "source": relative_source,

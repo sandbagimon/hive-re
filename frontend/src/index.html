@@ -1,125 +1,456 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>SimLab</title>
+    <title>Untitled Scene</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
     <div id="app-shell">
-      <header id="command-bar">
+      <header id="app-header">
         <div class="brand-block">
-          <strong>SimLab</strong>
-          <span id="project-label">Untitled Scene</span>
-        </div>
-        <nav class="command-group documentation-commands" aria-label="Documentation">
-          <a
-            class="command-link"
-            data-documentation="viewport-controls"
-            href="./docs/viewport-controls.html"
-            target="_blank"
-            rel="noopener"
-            title="Open viewport controls and keyboard shortcuts"
-          >Shortcuts</a>
-        </nav>
-        <nav class="command-group" aria-label="Project commands">
-          <button type="button" data-command="new">New</button>
-          <button type="button" data-command="open">Open</button>
-          <button type="button" data-command="save">Save</button>
-          <button type="button" data-command="save-as">Save As</button>
-          <button type="button" data-command="import-openusd">Import USD</button>
-          <button type="button" data-command="import-openusd-folder">Import USD Folder</button>
-        </nav>
-        <nav class="command-group" aria-label="Edit commands">
-          <button type="button" data-command="undo" id="undo-button" title="Undo">↶</button>
-          <button type="button" data-command="redo" id="redo-button" title="Redo">↷</button>
-        </nav>
-        <nav class="command-group simulation-commands" aria-label="Simulation commands">
-          <button type="button" data-command="export">Export</button>
-          <button type="button" data-command="run" class="primary">Run</button>
-          <button type="button" data-command="pause">Pause</button>
-          <button type="button" data-command="stop">Stop</button>
-          <button type="button" data-command="step">Step</button>
-          <button type="button" data-command="reset">Reset</button>
-        </nav>
-        <div id="clock-controls" aria-label="Simulation speed">
-          <div class="speed-segments">
-            <button type="button" data-simulation-speed="0.25">.25x</button>
-            <button type="button" data-simulation-speed="0.5">.5x</button>
-            <button type="button" data-simulation-speed="1" class="active">1x</button>
-            <button type="button" data-simulation-speed="2">2x</button>
+          <span class="brand-mark" aria-hidden="true">S</span>
+          <div class="brand-copy">
+            <strong>Sim Studio</strong>
+            <span id="project-label">Untitled Scene</span>
           </div>
-          <output id="rtf-readout" title="Actual real-time factor">0.00x</output>
         </div>
-        <div id="simulation-badge" data-status="stopped">Stopped</div>
+
+        <span class="header-divider" aria-hidden="true"></span>
+
+        <nav id="menu-bar" aria-label="Main menu">
+          <div class="menu" data-menu="file">
+            <button type="button" class="menu-trigger">File</button>
+            <div class="menu-dropdown" hidden>
+              <button type="button" class="menu-item" data-menu-command="new">New</button>
+              <button type="button" class="menu-item" data-menu-command="open">Open</button>
+              <button type="button" class="menu-item" data-menu-command="save">Save</button>
+              <button type="button" class="menu-item" data-menu-command="save-as">Save As</button>
+            </div>
+          </div>
+          <div class="menu menu-optional" data-menu="edit">
+            <button type="button" class="menu-trigger">Edit</button>
+            <div class="menu-dropdown" hidden>
+              <button type="button" class="menu-item" data-menu-command="undo" id="undo-button">Undo</button>
+              <button type="button" class="menu-item" data-menu-command="redo" id="redo-button">Redo</button>
+            </div>
+          </div>
+          <div class="menu menu-optional" data-menu="view">
+            <button type="button" class="menu-trigger">View</button>
+            <div class="menu-dropdown" hidden>
+              <div class="menu-category">Layout Preset</div>
+              <button type="button" class="menu-item" data-menu-action="preset-default">Default</button>
+              <button type="button" class="menu-item" data-menu-action="preset-authoring">Scene Authoring</button>
+              <button type="button" class="menu-item" data-menu-action="preset-motion">Motion &amp; Control</button>
+              <button type="button" class="menu-item" data-menu-action="preset-telemetry">Telemetry &amp; Capture</button>
+              <div class="menu-separator"></div>
+              <button type="button" class="menu-item" data-menu-action="reset-layout">Reset Layout</button>
+            </div>
+          </div>
+          <div class="menu" data-menu="simulation">
+            <button type="button" class="menu-trigger">Simulation</button>
+            <div class="menu-dropdown" hidden>
+              <button type="button" class="menu-item" data-menu-command="export">Export MJCF</button>
+              <button type="button" class="menu-item" data-menu-command="run">Run</button>
+              <button type="button" class="menu-item" data-menu-command="pause">Pause</button>
+              <button type="button" class="menu-item" data-menu-command="stop">Stop</button>
+              <button type="button" class="menu-item" data-menu-command="step">Step</button>
+              <button type="button" class="menu-item" data-menu-command="reset">Reset</button>
+            </div>
+          </div>
+          <div class="menu menu-optional" data-menu="window">
+            <button type="button" class="menu-trigger">Window</button>
+            <div class="menu-dropdown menu-dropdown-window" hidden>
+              <div id="window-menu-items"></div>
+            </div>
+          </div>
+          <div class="menu menu-optional" data-menu="help">
+            <button type="button" class="menu-trigger">Help</button>
+            <div class="menu-dropdown" hidden>
+              <button type="button" class="menu-item" data-menu-action="open-shortcuts">Shortcuts</button>
+              <button type="button" class="menu-item" data-menu-action="open-library">Window Library (Ctrl K)</button>
+            </div>
+          </div>
+        </nav>
+
+        <div id="sim-toolbar">
+          <button type="button" id="run-toggle-button" class="primary transport-button" data-command="run" title="Run simulation">
+            <svg class="run-icon run-icon-play" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 4 12 8-12 8z"></path></svg>
+            <svg class="run-icon run-icon-pause" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M8 5v14M16 5v14"></path></svg>
+            <span id="run-toggle-label">Run</span>
+          </button>
+          <button type="button" id="sim-stop-button" class="header-icon-button" data-command="stop" title="Stop simulation" aria-label="Stop simulation">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"></rect></svg>
+          </button>
+          <button type="button" id="sim-step-button" class="header-icon-button" data-command="step" title="Step one frame" aria-label="Step one frame">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 5 9 7-9 7zM18 5v14"></path></svg>
+          </button>
+          <button type="button" id="sim-reset-button" class="header-icon-button" data-command="reset" title="Reset simulation" aria-label="Reset simulation">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7v5h5"></path><path d="M6.1 17a8 8 0 1 0-.9-8.7L4 12"></path></svg>
+          </button>
+          <div id="clock-controls" aria-label="Simulation speed">
+            <div class="speed-segments">
+              <button type="button" data-simulation-speed="0.25">.25x</button>
+              <button type="button" data-simulation-speed="0.5">.5x</button>
+              <button type="button" data-simulation-speed="1" class="active">1x</button>
+              <button type="button" data-simulation-speed="2">2x</button>
+            </div>
+            <output id="rtf-readout" title="Actual real-time factor">0.00x</output>
+          </div>
+          <span class="toolbar-divider"></span>
+          <div id="simulation-badge" data-status="stopped">Stopped</div>
+        </div>
+
+        <div class="header-right">
+          <svg class="layout-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M9 4v16M9 10h12"></path></svg>
+          <select id="layout-preset" title="Layout preset" aria-label="Layout preset">
+            <option value="default">Default</option>
+            <option value="authoring">Scene Authoring</option>
+            <option value="motion">Motion &amp; Control</option>
+            <option value="telemetry">Telemetry &amp; Capture</option>
+          </select>
+          <button type="button" id="add-window-button" title="Add window (Ctrl/⌘ K)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+            <span>Add Window</span>
+          </button>
+          <nav class="command-group documentation-commands" aria-label="Documentation">
+            <a
+              class="command-link"
+              data-documentation="viewport-controls"
+              href="./docs/viewport-controls.html"
+              target="_blank"
+              rel="noopener"
+              title="Open viewport controls and keyboard shortcuts"
+            ><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M7 9h.01M11 9h.01M15 9h.01M7 13h.01M11 13h5M7 17h10"></path></svg><span>Shortcuts</span></a>
+          </nav>
+        </div>
       </header>
 
-      <main id="workspace">
-        <aside id="left-sidebar">
-          <section class="panel-section asset-section">
-            <header><h2>Assets</h2></header>
-            <div id="asset-list" class="asset-list"></div>
-          </section>
-          <section class="panel-section scene-section">
-            <header><h2>Scene</h2><span id="actor-count">0</span></header>
-            <div id="scene-tree" class="scene-tree"></div>
-          </section>
-        </aside>
+      <main id="dock-root"></main>
 
-        <section id="viewport-panel">
-          <canvas id="viewport"></canvas>
-          <div id="hud">
-            <div id="scene-name">Untitled Scene</div>
-            <div id="scene-stats">0 actors</div>
-            <div id="selection">Selected: None</div>
-          </div>
-          <div id="viewport-toolbar" aria-label="Viewport tools">
-            <button class="tool-button active" type="button" data-tool="translate" title="Translate">↔</button>
-            <button class="tool-button" type="button" data-tool="rotate" title="Rotate">↻</button>
-            <button class="tool-button" type="button" data-tool="scale" title="Scale">⤢</button>
-            <span class="toolbar-divider"></span>
-            <button class="tool-button" type="button" data-action="collider-debug" aria-pressed="false" title="Collider debug">◇</button>
-            <button class="tool-button" type="button" data-action="frame" title="Frame selected">⌗</button>
-            <button class="tool-button" type="button" data-camera="iso" title="Isometric view">◆</button>
-            <button class="tool-button" type="button" data-camera="front" title="Front view">▤</button>
-            <button class="tool-button" type="button" data-camera="right" title="Right view">◧</button>
-            <button class="tool-button" type="button" data-camera="top" title="Top view">▣</button>
-          </div>
-          <div id="collider-legend" hidden>
-            <span><i class="legend-swatch dynamic"></i>Dynamic</span>
-            <span><i class="legend-swatch static"></i>Static</span>
-            <span><i class="legend-swatch center"></i>Center of mass</span>
+      <footer id="status-bar">
+        <span class="status-item"><i class="status-dot ok" id="status-backend-dot"></i><span id="status-backend">backend</span></span>
+        <span class="status-item"><i class="status-dot" id="status-sim-dot"></i><span id="status-sim-state">stopped</span></span>
+        <span class="status-item" id="status-time">t 0.00s</span>
+        <span class="status-item" id="status-rtf">rtf 0.00x</span>
+        <span class="status-item" id="status-controller" hidden></span>
+        <span class="status-item status-rec" id="status-rec" hidden>● rec</span>
+        <span class="status-spacer"></span>
+        <span class="status-item status-errors" id="status-errors" hidden></span>
+        <span class="status-item" id="status-actors">0 actors</span>
+        <span class="status-item" id="status-windows">0 windows</span>
+        <span class="status-item" id="status-engine">MuJoCo</span>
+      </footer>
+
+      <div id="panel-staging" hidden>
+        <!-- Project -->
+        <section class="panel" data-panel="project" data-panel-title="Project" data-panel-group="Scene">
+          <div class="panel-scroll">
+            <section class="tool-section">
+              <h3 class="section-title">Scene File</h3>
+              <div class="project-summary-card">
+                <div><strong id="project-panel-name">Untitled Scene</strong><span id="project-panel-state">saved</span></div>
+                <p id="project-panel-summary">0 actors in scene</p>
+              </div>
+            </section>
+            <section class="tool-section">
+              <h3 class="section-title">File Actions</h3>
+              <div class="window-actions-grid">
+                <button type="button" data-menu-command="new">New</button>
+                <button type="button" data-menu-command="open">Open</button>
+                <button type="button" data-menu-command="save">Save</button>
+                <button type="button" data-menu-command="save-as">Save As</button>
+              </div>
+              <p class="window-hint">Scenes are plain JSON files. Ctrl+S saves and Ctrl+Shift+S saves a copy.</p>
+            </section>
+            <section class="tool-section">
+              <h3 class="section-title">Contents</h3>
+              <div class="readout-grid">
+                <div class="readout"><span>Actors</span><strong id="project-actor-count">0</strong></div>
+                <div class="readout"><span>Articulated</span><strong id="project-robot-count">0</strong></div>
+              </div>
+            </section>
           </div>
         </section>
 
-        <aside id="inspector-panel">
-          <header><h2>Properties</h2></header>
-          <div id="property-inspector"></div>
-          <section id="controller-panel" hidden>
-            <header><h2>Controller</h2><span id="controller-panel-status">Detached</span></header>
-            <div id="controller-controls"></div>
-          </section>
-          <section id="trajectory-panel" hidden>
-            <header><h2>Trajectory</h2><span id="trajectory-status">Stopped</span></header>
-            <div id="trajectory-controls"></div>
-          </section>
-          <section id="recording-panel" hidden>
-            <header><h2>Recording</h2><span id="recording-status">Idle</span></header>
-            <div id="recording-controls"></div>
-          </section>
-          <section id="validation-panel" hidden>
-            <header><h2>Validation</h2><span id="validation-count">0</span></header>
-            <div id="validation-list"></div>
-          </section>
-        </aside>
-      </main>
+        <!-- Assets -->
+        <section class="panel" data-panel="assets" data-panel-title="Assets" data-panel-group="Scene">
+          <div class="panel-section-pad">
+            <h3 class="section-title">Import</h3>
+            <div class="window-actions-grid">
+              <button type="button" data-command="import-openusd">USD / ZIP</button>
+              <button type="button" data-command="import-openusd-folder">USD Folder</button>
+            </div>
+            <label class="asset-filter" for="asset-filter-input">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>
+              <input id="asset-filter-input" type="search" placeholder="Filter backend assets…" autocomplete="off" />
+            </label>
+          </div>
+          <div id="asset-list" class="asset-list"></div>
+        </section>
 
-      <section id="console-panel">
-        <header><h2>Console</h2><button type="button" data-command="clear-console">Clear</button></header>
-        <div id="console-output"></div>
-      </section>
+        <!-- Scene Tree -->
+        <section class="panel" data-panel="scene-tree" data-panel-title="Scene Tree" data-panel-group="Scene">
+          <div class="panel-body-fill">
+            <header class="inline-header"><h2>Actors</h2><span id="actor-count">0</span></header>
+            <div id="scene-tree" class="scene-tree"></div>
+          </div>
+        </section>
+
+        <!-- Viewport -->
+        <section class="panel panel-fill viewport-shell" data-panel="viewport" data-panel-title="Viewport" data-panel-group="Viewport">
+          <div id="viewport-toolbar" aria-label="Viewport tools">
+            <div class="vp-tool-group">
+              <button class="tool-button active" type="button" data-tool="translate" title="Move (W)">Move</button>
+              <button class="tool-button" type="button" data-tool="rotate" title="Rotate (E)">Rotate</button>
+              <button class="tool-button" type="button" data-tool="scale" title="Scale (R)">Scale</button>
+            </div>
+            <span class="vp-toolbar-spacer"></span>
+            <div class="vp-tool-group">
+              <button class="tool-button" type="button" data-camera="iso" title="Isometric view (0)">ISO</button>
+              <button class="tool-button" type="button" data-camera="front" title="Front view (1)">Front</button>
+              <button class="tool-button" type="button" data-camera="right" title="Right view (3)">Right</button>
+              <button class="tool-button" type="button" data-camera="top" title="Top view (7)">Top</button>
+              <span class="toolbar-divider"></span>
+              <button class="tool-button" type="button" data-action="frame" title="Frame selected (F)">Focus</button>
+              <button class="tool-button" type="button" data-action="collider-debug" aria-pressed="false" title="Collision &amp; center-of-mass debug (C)">Collision</button>
+              <button class="tool-button" type="button" data-viewport-option="grid" aria-pressed="true" title="Toggle grid">Grid</button>
+              <button class="tool-button" type="button" data-viewport-option="fog" aria-pressed="true" title="Toggle distance fog">Fog</button>
+            </div>
+          </div>
+          <div id="viewport-canvas-wrap">
+            <canvas id="viewport"></canvas>
+            <div id="hud">
+              <div id="scene-name">Untitled Scene</div>
+              <div id="scene-stats">0 actors</div>
+              <div id="selection">Selected: None</div>
+            </div>
+            <div id="collider-legend" hidden>
+              <span><i class="legend-swatch dynamic"></i>Dynamic</span>
+              <span><i class="legend-swatch static"></i>Static</span>
+              <span><i class="legend-swatch center"></i>Center of mass</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Properties -->
+        <section class="panel" data-panel="properties" data-panel-title="Properties" data-panel-group="Authoring">
+          <div id="property-inspector"></div>
+        </section>
+
+        <!-- Materials -->
+        <section class="panel" data-panel="materials" data-panel-title="Materials" data-panel-group="Authoring">
+          <div class="panel-scroll">
+            <h3 class="section-title">Physics Presets</h3>
+            <div class="material-presets">
+              <button type="button" data-material-preset="default">Default</button>
+              <button type="button" data-material-preset="rubber">Rubber</button>
+              <button type="button" data-material-preset="wood">Wood</button>
+              <button type="button" data-material-preset="metal">Metal</button>
+              <button type="button" data-material-preset="ice">Ice</button>
+            </div>
+            <p class="window-hint">Presets synchronize density, friction, roughness and metalness with the viewport.</p>
+          </div>
+        </section>
+
+        <!-- Simulation -->
+        <section class="panel" data-panel="sim-control" data-panel-title="Simulation" data-panel-group="Simulation">
+          <div class="panel-scroll">
+            <section class="tool-section">
+              <h3 class="section-title">State</h3>
+              <div class="sim-state-card">
+                <span id="panel-sim-badge" class="mini-badge">stopped</span>
+                <span id="panel-sim-detail">Physics idle at the initial state</span>
+              </div>
+            </section>
+            <section class="tool-section">
+              <h3 class="section-title">Transport</h3>
+              <div class="window-actions-grid">
+                <button type="button" id="panel-run-toggle" class="primary" data-menu-command="run" aria-label="Run simulation from panel">Run</button>
+                <button type="button" data-menu-command="stop" aria-label="Stop simulation from panel">Stop</button>
+                <button type="button" data-menu-command="step" aria-label="Step simulation from panel">Step</button>
+                <button type="button" data-menu-command="reset" aria-label="Reset simulation from panel">Reset</button>
+              </div>
+            </section>
+            <section class="tool-section">
+              <h3 class="section-title">Clock</h3>
+              <div class="readout-grid">
+                <div class="readout"><span>Sim Time</span><strong id="panel-sim-time">0.00s</strong></div>
+                <div class="readout"><span>Actual RTF</span><strong id="panel-sim-rtf">0.00x</strong></div>
+              </div>
+            </section>
+            <section class="tool-section">
+              <h3 class="section-title">Export</h3>
+              <button type="button" class="block-button" data-menu-command="export" aria-label="Export MJCF from panel">Export MJCF</button>
+              <p class="window-hint">Run, Step and Export perform physics preflight first.</p>
+            </section>
+          </div>
+        </section>
+
+        <!-- Time Scale -->
+        <section class="panel" data-panel="sim-speed" data-panel-title="Time Scale" data-panel-group="Simulation">
+          <div class="panel-scroll">
+            <section class="tool-section">
+              <h3 class="section-title">Time Scale</h3>
+              <div id="panel-clock-controls" class="panel-clock" aria-label="Simulation speed">
+                <div class="speed-segments">
+                  <button type="button" data-panel-speed="0.25">.25x</button>
+                  <button type="button" data-panel-speed="0.5">.5x</button>
+                  <button type="button" data-panel-speed="1" class="active">1x</button>
+                  <button type="button" data-panel-speed="2">2x</button>
+                </div>
+              </div>
+            </section>
+            <section class="tool-section">
+              <h3 class="section-title">Measured Throughput</h3>
+              <div class="readout-grid">
+                <div class="readout"><span>Requested</span><strong id="panel-target-speed">1x</strong></div>
+                <div class="readout"><span>Actual RTF</span><strong id="panel-rtf-readout">0.00x</strong></div>
+              </div>
+              <div class="throughput-meter" role="meter" aria-label="Real-time factor against requested speed" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="throughput-meter-fill"></span></div>
+              <p id="throughput-hint" class="window-hint">RTF is measured while the simulation runs.</p>
+            </section>
+          </div>
+        </section>
+
+        <!-- Arm Control -->
+        <section class="panel" data-panel="arm-control" data-panel-title="Arm Control" data-panel-group="Robot">
+          <div id="arm-control-body"></div>
+        </section>
+
+        <!-- Quadrotor -->
+        <section class="panel" data-panel="drone-control" data-panel-title="Quadrotor" data-panel-group="Robot">
+          <div id="drone-control-body"></div>
+        </section>
+
+        <!-- Trajectory Editor (editor + player) -->
+        <section class="panel panel-fill" data-panel="trajectory-editor" data-panel-title="Trajectory Editor" data-panel-group="Robot">
+          <header class="inline-header"><h2>Playback</h2><span id="trajectory-status">Stopped</span></header>
+          <div id="trajectory-player-body"></div>
+          <div id="trajectory-editor-body"></div>
+        </section>
+
+        <!-- Python Controller -->
+        <section class="panel" data-panel="controller" data-panel-title="Python Controller" data-panel-group="Robot">
+          <header class="inline-header"><h2>Controller</h2><span id="controller-panel-status">Detached</span></header>
+          <div id="controller-controls"></div>
+        </section>
+
+        <!-- Sensors -->
+        <section class="panel" data-panel="sensors" data-panel-title="Sensors" data-panel-group="Data">
+          <div id="sensor-view-body"></div>
+        </section>
+
+        <!-- Data Recorder -->
+        <section class="panel" data-panel="recording" data-panel-title="Data Recorder" data-panel-group="Data">
+          <header class="inline-header"><h2>Recording</h2><span id="recording-status">Idle</span></header>
+          <div id="recording-controls"></div>
+        </section>
+
+        <!-- Agent -->
+        <section class="panel panel-fill agent-panel" data-panel="agent" data-panel-title="Agent" data-panel-group="Agent">
+          <header class="inline-header agent-header">
+            <h2>Conversation</h2>
+            <span class="mini-badge">Preview</span>
+          </header>
+          <div class="agent-shell">
+            <div id="agent-conversation" class="agent-conversation" aria-live="polite">
+              <div class="agent-empty-state">
+                <span class="agent-mark" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8l-5 4v-4H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z"></path><path d="M8 10h.01M12 10h.01M16 10h.01"></path></svg>
+                </span>
+                <strong>Start a conversation</strong>
+                <p>The agent will use the current scene context to help you build, inspect, and debug.</p>
+                <span class="agent-availability"><i></i>Conversation backend not connected</span>
+              </div>
+            </div>
+            <div class="agent-composer" aria-label="Agent message composer">
+              <textarea rows="3" aria-label="Message Agent" placeholder="Ask the agent about this scene…" disabled></textarea>
+              <div class="agent-composer-footer">
+                <span class="agent-context">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"></path><path d="M12 12l8-4.5M12 12v9M12 12 4 7.5"></path></svg>
+                  Scene context
+                </span>
+                <button type="button" class="primary agent-send" title="Agent conversations are not connected yet" aria-label="Send message" disabled>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 14-7-4 14-3-6z"></path><path d="M12 13 19 5"></path></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Preflight -->
+        <section class="panel panel-fill" data-panel="validation" data-panel-title="Preflight" data-panel-group="Diagnostics">
+          <header class="inline-header"><h2>Preflight</h2><span id="validation-count">0</span></header>
+          <div id="validation-list"></div>
+        </section>
+
+        <!-- Console -->
+        <section class="panel panel-fill" data-panel="console" data-panel-title="Console" data-panel-group="Diagnostics">
+          <header class="inline-header">
+            <h2>Console</h2>
+            <button type="button" data-command="clear-console">Clear</button>
+          </header>
+          <div id="console-output"></div>
+        </section>
+
+        <!-- Shortcuts -->
+        <section class="panel" data-panel="shortcuts" data-panel-title="Shortcuts" data-panel-group="Diagnostics">
+          <div class="help-content">
+            <section>
+              <h3>鼠标与选择</h3>
+              <ul>
+                <li><b>左键单击</b>选择 Actor、关节或传感器，选中对象在 ViewPort 高亮。</li>
+                <li><b>W / E / R</b>切换移动、旋转、缩放工具。</li>
+                <li><b>Delete</b>删除当前选中的 Actor。</li>
+                <li><b>F</b>聚焦当前选择对象，并自动适配大型场景裁剪面。</li>
+              </ul>
+            </section>
+            <section>
+              <h3>视口相机</h3>
+              <ul>
+                <li><b>旋转</b>按住右键并拖动。</li>
+                <li><b>平移</b>按住中键拖动，或 Shift + 右键拖动。</li>
+                <li><b>缩放</b>滚动滚轮 / 双指触控板。</li>
+                <li><b>标准视图</b>1 前视、3 右视、7 顶视、0 等轴测。</li>
+              </ul>
+            </section>
+            <section>
+              <h3>工作区</h3>
+              <p>每个工具都是一个窗口：拖动 Tab 可移动窗口，悬停目标区域出现五向投放提示（居中加入 Tab 堆、四边分裂新区域）；区域之间拖动分割条调整大小；Ctrl+K 打开窗口库；顶栏可切换布局预设。</p>
+            </section>
+            <section>
+              <h3>其他快捷键</h3>
+              <ul>
+                <li><b>Ctrl + K</b>打开窗口库（添加窗口）。</li>
+                <li><b>Ctrl + Z / Ctrl + Shift + Z</b>撤销 / 重做。</li>
+                <li><b>Ctrl + S / Ctrl + Shift + S</b>保存 / 另存为。</li>
+                <li><b>C</b>切换碰撞体与质心调试显示。</li>
+              </ul>
+            </section>
+            <p class="window-hint">
+              完整说明见
+              <a href="./docs/viewport-controls.html" target="_blank" rel="noopener">Shortcuts 文档页</a>。
+            </p>
+          </div>
+        </section>
+      </div>
     </div>
+
+    <div id="panel-library" hidden>
+      <div class="panel-library-scrim">
+        <div class="panel-library-dialog" role="dialog" aria-modal="true" aria-label="Window library">
+          <header class="panel-library-header">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>
+            <input id="panel-library-search" type="text" placeholder="Search panels by name or group…" autocomplete="off" />
+            <button type="button" id="panel-library-close" title="Close" aria-label="Close window library">✕</button>
+          </header>
+          <div id="panel-library-groups" class="panel-library-groups"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="toast" role="status" hidden></div>
     <script type="module" src="./ts/app.ts"></script>
   </body>

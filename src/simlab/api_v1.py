@@ -361,6 +361,7 @@ def create_v1_router(manager: ResourceManager, access_token: str | None) -> APIR
             return
         simulation = manager.get_simulation(simulation_id)
         await websocket.accept()
+        manager.register_subscriber(simulation_id)
         snapshot_data = manager.snapshot(simulation_id)
         latest = int(snapshot_data["sequence"])
         if after_sequence == 0 or latest - after_sequence > 512:
@@ -402,7 +403,9 @@ def create_v1_router(manager: ResourceManager, access_token: str | None) -> APIR
                     last_heartbeat = now
                 await asyncio.sleep(0.016)
         except Exception:
-            return
+            pass
+        finally:
+            manager.unregister_subscriber(simulation_id)
 
     return router
 

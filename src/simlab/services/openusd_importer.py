@@ -209,6 +209,7 @@ def import_openusd_asset(source: str | Path, project_root: str | Path) -> OpenUs
         "id": asset_id,
         "name": source_path.stem,
         "type": "object",
+        "category": "prop",
         "source_format": "openusd",
         "default_properties": {
             "geometry": {

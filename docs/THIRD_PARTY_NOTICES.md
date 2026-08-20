@@ -19,6 +19,24 @@ This file records third-party components directly used or distributed by SimLab.
 - Purpose: local editor viewport and transform controls.
 - License: MIT; the vendored license is at `frontend/src/vendor/THREE_LICENSE.txt`.
 
+## Mesh2Motion courier model and animations
+
+- Source: <https://github.com/Mesh2Motion/mesh2motion-app>
+- Files: `frontend/public/models/mesh2motion/courier/*.glb`.
+- Purpose: skinned courier visual plus idle, walking, and seated riding-compatible glTF clips.
+- License: CC0 1.0 Universal; provenance and file hashes are recorded in
+  `frontend/public/models/mesh2motion/README.md`.
+
+## Sketchfab Forklift Truck model
+
+- Source: <https://sketchfab.com/3d-models/forklift-truck-060f3f8bc7de4e6ca2f348d414702e9d>
+- Creator: louis-muir.
+- File: `frontend/public/models/sketchfab/forklift/forklift.glb`.
+- Purpose: textured forklift visual for the obstacle-aware delivery example.
+- License: Creative Commons Attribution 4.0 International (`CC-BY-4.0`).
+- Distribution: downloaded through the Objaverse 1.0 mirror; attribution, object ID,
+  and file hash are recorded in `frontend/public/models/sketchfab/forklift/README.md`.
+
 ## Overture Maps and OpenStreetMap data
 
 - Sources: <https://overturemaps.org/> and <https://www.openstreetmap.org/>.
