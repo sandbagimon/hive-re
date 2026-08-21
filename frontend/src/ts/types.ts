@@ -343,9 +343,21 @@ export interface LocalSceneMaterial {
   roughness: number;
   metalness: number;
   opacity: number;
+  normal_scale: number;
   texture_scale: [number, number];
+  texture_offset: [number, number];
+  texture_rotation: number;
+  emissive_color: [number, number, number];
+  emissive_intensity: number;
+  source_model: 'displayColor' | 'USD' | 'MDL:OmniPBR';
   textures: Partial<Record<
-    'base_color' | 'normal' | 'roughness' | 'metalness' | 'orm',
+    | 'base_color'
+    | 'normal'
+    | 'roughness'
+    | 'metalness'
+    | 'orm'
+    | 'opacity'
+    | 'emissive',
     string
   >>;
 }
@@ -359,7 +371,7 @@ export interface LocalSceneTexture {
 
 export interface LocalSceneManifest {
   format: 'simlab-local-scene';
-  version: 2;
+  version: 3;
   scene_id: string;
   name: string;
   bounds: { min: Vector3; max: Vector3 };

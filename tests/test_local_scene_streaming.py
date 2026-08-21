@@ -61,6 +61,8 @@ def Xform "World"
             def Shader "Shader"
             {
                 uniform token info:id = "OmniPBR"
+                asset info:mdl:sourceAsset = @materials/OpaqueMdl.mdl@
+                token info:mdl:sourceAsset:subIdentifier = "OpaqueMdl"
                 bool inputs:enable_opacity = 0
                 float inputs:opacity_constant = 0
             }
@@ -70,12 +72,53 @@ def Xform "World"
 '''
 
 TEXTURE_BYTES = b"fixture-original-park-texture"
+MDL_TEXTURE_BYTES = {
+    "BaseColor.png": b"fixture-mdl-base-color",
+    "Normal.png": b"fixture-mdl-normal",
+    "ORM.png": b"fixture-mdl-orm",
+    "Emissive.png": b"fixture-mdl-emissive",
+}
+MDL_FIXTURE = '''mdl 1.4;
+import ::OmniPBR::OmniPBR;
+export material OpaqueMdl(*) = ::OmniPBR::OmniPBR(
+    diffuse_color_constant: color(0.2f, 0.2f, 0.2f),
+    diffuse_texture: texture_2d("./OpaqueMdl/BaseColor.png" /* asset */),
+    diffuse_tint: color(0.8f, 0.7f, 0.6f),
+    reflection_roughness_constant: 0.45f,
+    reflectionroughness_texture: texture_2d(),
+    metallic_constant: 0.25f,
+    metallic_texture: texture_2d(),
+    enable_ORM_texture: true,
+    ORM_texture: texture_2d("./OpaqueMdl/ORM.png"),
+    enable_opacity: false,
+    opacity_constant: 0.f,
+    enable_emission: true,
+    emissive_color: color(0.1f, 0.2f, 0.3f),
+    emissive_mask_texture: texture_2d("./OpaqueMdl/Emissive.png"),
+    emissive_intensity: 2.f,
+    bump_factor: 0.8f,
+    normalmap_texture: texture_2d("./OpaqueMdl/Normal.png"),
+    texture_translate: float2(0.1f, 0.2f),
+    texture_rotate: 0.25f,
+    texture_scale: float2(4.f, 5.f));
+'''
+
+
+def _write_park_fixture(source: Path, content: str = PARK_FIXTURE) -> None:
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(content, encoding="utf-8")
+    (source.parent / "road.png").write_bytes(TEXTURE_BYTES)
+    mdl_root = source.parent / "materials"
+    texture_root = mdl_root / "OpaqueMdl"
+    texture_root.mkdir(parents=True)
+    (mdl_root / "OpaqueMdl.mdl").write_text(MDL_FIXTURE, encoding="utf-8")
+    for filename, payload in MDL_TEXTURE_BYTES.items():
+        (texture_root / filename).write_bytes(payload)
 
 
 def test_park_cache_builds_stream_chunks_and_box_collision_proxy(tmp_path: Path) -> None:
     source = tmp_path / "park.usda"
-    source.write_text(PARK_FIXTURE, encoding="utf-8")
-    (tmp_path / "road.png").write_bytes(TEXTURE_BYTES)
+    _write_park_fixture(source)
     cache = tmp_path / "cache"
 
     manifest = build_park_cache(source, cache, "fixture-fingerprint")
@@ -83,6 +126,7 @@ def test_park_cache_builds_stream_chunks_and_box_collision_proxy(tmp_path: Path)
     persisted = json.loads((cache / "manifest.json").read_text(encoding="utf-8"))
     assert persisted == manifest
     assert manifest["format"] == "simlab-local-scene"
+    assert manifest["version"] == 3
     assert manifest["statistics"]["chunk_count"] == 1
     assert manifest["statistics"]["collision_box_count"] == 1
     chunk = cache / f"{manifest['chunks'][0]['id']}.simbin"
@@ -90,7 +134,9 @@ def test_park_cache_builds_stream_chunks_and_box_collision_proxy(tmp_path: Path)
     assert len(header["geometries"]) == 2
     assert all(item.startswith("mat_") for item in header["geometries"])
     assert manifest["statistics"]["material_count"] == 2
-    assert manifest["statistics"]["texture_count"] == 1
+    assert manifest["statistics"]["texture_count"] == 5
+    assert manifest["statistics"]["mdl_material_count"] == 1
+    assert manifest["statistics"]["mdl_source_count"] == 1
     road_material = next(
         item for item in manifest["materials"].values()
         if item["name"] == "Road"
@@ -102,6 +148,22 @@ def test_park_cache_builds_stream_chunks_and_box_collision_proxy(tmp_path: Path)
         if item["name"] == "OpaqueMdl"
     )
     assert opaque_material["opacity"] == 1.0
+    assert opaque_material["source_model"] == "MDL:OmniPBR"
+    assert opaque_material["base_color"][:3] == pytest.approx([0.8, 0.7, 0.6])
+    assert opaque_material["roughness"] == pytest.approx(0.45)
+    assert opaque_material["metalness"] == pytest.approx(0.25)
+    assert opaque_material["normal_scale"] == pytest.approx(0.8)
+    assert opaque_material["texture_scale"] == [4.0, 5.0]
+    assert opaque_material["texture_offset"] == pytest.approx([0.1, 0.2])
+    assert opaque_material["texture_rotation"] == pytest.approx(0.25)
+    assert opaque_material["emissive_color"] == pytest.approx([0.1, 0.2, 0.3])
+    assert opaque_material["emissive_intensity"] == pytest.approx(2.0)
+    assert set(opaque_material["textures"]) == {
+        "base_color",
+        "emissive",
+        "normal",
+        "orm",
+    }
     texture = manifest["textures"][texture_id]
     assert (cache / "textures" / texture["filename"]).read_bytes() == TEXTURE_BYTES
     collision = (cache / "collision.obj").read_text(encoding="utf-8")
@@ -112,10 +174,9 @@ def test_park_cache_builds_stream_chunks_and_box_collision_proxy(tmp_path: Path)
 def test_material_texture_recovers_pack_relative_path(tmp_path: Path) -> None:
     pack_root = tmp_path / "pack"
     source = pack_root / "Scenes" / "Assets" / "park.usda"
-    source.parent.mkdir(parents=True)
-    source.write_text(
+    _write_park_fixture(
+        source,
         PARK_FIXTURE.replace("@road.png@", "@./Assets/Textures/road.png@"),
-        encoding="utf-8",
     )
     texture = pack_root / "Scenes" / "Assets" / "Textures" / "road.png"
     texture.parent.mkdir(parents=True)
@@ -123,16 +184,14 @@ def test_material_texture_recovers_pack_relative_path(tmp_path: Path) -> None:
 
     manifest = build_park_cache(source, tmp_path / "cache", "fixture", pack_root)
 
-    assert manifest["statistics"]["texture_count"] == 1
+    assert manifest["statistics"]["texture_count"] == 5
     assert manifest["statistics"]["missing_texture_count"] == 0
 
 
 def test_local_scene_api_publishes_ready_asset_manifest_and_chunk(tmp_path: Path) -> None:
     pack_root = tmp_path / "pack"
     source = pack_root / PARK_ENTRY
-    source.parent.mkdir(parents=True)
-    source.write_text(PARK_FIXTURE, encoding="utf-8")
-    (source.parent / "road.png").write_bytes(TEXTURE_BYTES)
+    _write_park_fixture(source)
     app = create_app(
         tmp_path / "data",
         seed_assets=tmp_path / "missing-assets",

@@ -37,7 +37,7 @@ The equivalent direct API command is:
 ```
 
 The first start prepares the cache in
-`.simlab-data/local-scenes/brownstone-park-v2/` on a daemon worker. The asset browser polls while
+`.simlab-data/local-scenes/brownstone-park-v3/` on a daemon worker. The asset browser polls while
 that work is in progress and adds **Architectural Brownstone Park (8GB)** to the Environment group
 when it is ready. Later starts reuse the cache while the entry file fingerprint is unchanged.
 
@@ -47,7 +47,8 @@ when it is ready. Later starts reuse the cache while the entry file fingerprint 
 local OpenUSD pack
   -> backend stage traversal and meter/up-axis normalization
   -> 24 m spatial chunks, capped at 350k vertices each
-  -> geometry grouped by original USD material plus allowlisted local PNG/JPG textures
+  -> USD material inputs plus direct OmniPBR .mdl argument extraction
+  -> geometry grouped by material plus allowlisted local PNG/JPG textures
   -> SIMGEOM1 binary buffers over authenticated HTTP
   -> Three.js progressive loading (3 concurrent requests) and frustum culling
 
@@ -67,9 +68,10 @@ clients cannot request arbitrary local paths.
 
 - This is a static visual background; USD animation and runtime stage edits are intentionally not
   streamed.
-- UsdPreviewSurface and common OmniPBR/MDL base-color, normal, roughness, metalness, and ORM inputs
-  are translated to Three.js materials. Unsupported shader nodes and texture references missing
-  from the downloaded pack use their authored constants or semantic color fallback.
+- UsdPreviewSurface inputs and direct OmniPBR wrapper calls in local `.mdl` files are translated to
+  Three.js materials, including base color, normal, ORM/AO, opacity, emissive parameters, and UV
+  transforms. Unsupported procedural MDL graphs and missing resources use authored constants or a
+  semantic color fallback; the backend does not execute arbitrary MDL code.
 - Dense painted grass/flower/shrub layers remain excluded from the visual cache.
 - Collision is deliberately approximate. Vegetation and sky geometry are excluded, while roads,
   paths, walls, buildings, street furniture, and similar structures become coarse boxes.

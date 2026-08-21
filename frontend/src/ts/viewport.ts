@@ -2007,7 +2007,14 @@ function geometryFromPayload(payload: VisualGeometryPayload): any {
   return geometry;
 }
 
-type MaterialTextureSlot = 'map' | 'normalMap' | 'roughnessMap' | 'metalnessMap';
+type MaterialTextureSlot =
+  | 'alphaMap'
+  | 'aoMap'
+  | 'emissiveMap'
+  | 'map'
+  | 'normalMap'
+  | 'roughnessMap'
+  | 'metalnessMap';
 
 function visualTextureUrls(payload: VisualGeometryPayload): string[] {
   return [
@@ -2089,6 +2096,8 @@ function loadLocalSceneTexture(
   textureId: string,
   colorTexture: boolean,
   scale: [number, number],
+  offset: [number, number],
+  rotation: number,
 ): Promise<any | null> {
   return localSceneTextureResolver(sceneId, textureId).then((url) => {
     if (!url) return null;
@@ -2101,6 +2110,9 @@ function loadLocalSceneTexture(
           texture.wrapS = THREE.RepeatWrapping;
           texture.wrapT = THREE.RepeatWrapping;
           texture.repeat.set(scale[0], scale[1]);
+          texture.offset.set(offset[0], offset[1]);
+          texture.center.set(0.5, 0.5);
+          texture.rotation = THREE.MathUtils.degToRad(rotation);
           texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
           resolve(texture);
         },
@@ -2167,6 +2179,12 @@ function addStreamedSceneActor(
         metalness: definition.metalness,
         opacity: definition.opacity,
         transparent: definition.opacity < 0.999,
+        normalScale: new THREE.Vector2(
+          definition.normal_scale,
+          definition.normal_scale,
+        ),
+        emissive: new THREE.Color(...definition.emissive_color),
+        emissiveIntensity: definition.emissive_intensity,
         dithering: true,
         envMapIntensity: 0.62,
       });
@@ -2178,30 +2196,49 @@ function addStreamedSceneActor(
       textureId: string,
       colorTexture: boolean,
       scale: [number, number],
+      offset: [number, number],
+      rotation: number,
     ): Promise<any | null> => {
       const key = [
         textureId,
         colorTexture ? 'srgb' : 'linear',
         scale[0],
         scale[1],
+        offset[0],
+        offset[1],
+        rotation,
       ].join(':');
       let promise = texturePromises.get(key);
       if (!promise) {
-        promise = loadLocalSceneTexture(sceneId, textureId, colorTexture, scale);
+        promise = loadLocalSceneTexture(
+          sceneId,
+          textureId,
+          colorTexture,
+          scale,
+          offset,
+          rotation,
+        );
         texturePromises.set(key, promise);
       }
       return promise;
     };
-    for (const [materialId, definition] of Object.entries(manifest.materials)) {
+    const initializedMaterialTextures = new Set<string>();
+    const initializeMaterialTextures = (materialId: string): void => {
+      if (initializedMaterialTextures.has(materialId)) return;
+      initializedMaterialTextures.add(materialId);
+      const definition = manifest.materials[materialId];
       const material = materials.get(materialId);
-      if (!material) continue;
+      if (!definition || !material) return;
       const assignments: Array<[string | undefined, MaterialTextureSlot, boolean]> = [
         [definition.textures.base_color, 'map', true],
         [definition.textures.normal, 'normalMap', false],
         [definition.textures.roughness, 'roughnessMap', false],
         [definition.textures.metalness, 'metalnessMap', false],
+        [definition.textures.opacity, 'alphaMap', false],
+        [definition.textures.emissive, 'emissiveMap', true],
       ];
       if (definition.textures.orm) {
+        assignments.push([definition.textures.orm, 'aoMap', false]);
         if (!definition.textures.roughness) {
           assignments.push([definition.textures.orm, 'roughnessMap', false]);
         }
@@ -2211,7 +2248,13 @@ function addStreamedSceneActor(
       }
       for (const [textureId, slot, colorTexture] of assignments) {
         if (!textureId) continue;
-        void texture(textureId, colorTexture, definition.texture_scale).then((loadedTexture) => {
+        void texture(
+          textureId,
+          colorTexture,
+          definition.texture_scale,
+          definition.texture_offset,
+          definition.texture_rotation,
+        ).then((loadedTexture) => {
           if (!loadedTexture) return;
           if (!actorLoadIsCurrent(actor.id, root, loadRevision)) {
             loadedTexture.dispose();
@@ -2220,10 +2263,11 @@ function addStreamedSceneActor(
           material[slot] = loadedTexture;
           if (slot === 'roughnessMap') material.roughness = 1;
           if (slot === 'metalnessMap') material.metalness = 1;
+          if (slot === 'alphaMap') material.transparent = true;
           material.needsUpdate = true;
         });
       }
-    }
+    };
     let cursor = 0;
     let loaded = 0;
     const loadNext = async (): Promise<void> => {
@@ -2234,6 +2278,7 @@ function addStreamedSceneActor(
         if (!buffer || !actorLoadIsCurrent(actor.id, root, loadRevision)) return;
         const bundle = decodeGeometryBundle(buffer);
         for (const [materialId, geometry] of bundle.entries()) {
+          initializeMaterialTextures(materialId);
           const mesh = new THREE.Mesh(
             geometryFromBundle(geometry),
             materials.get(materialId) ?? fallbackMaterial,
@@ -2467,13 +2512,31 @@ function disposeObject(object: any): void {
       : child.material ? [child.material] : [];
     for (const material of childMaterials) {
       materials.add(material);
-      for (const slot of ['map', 'bumpMap', 'normalMap', 'roughnessMap', 'metalnessMap']) {
+      for (const slot of [
+        'alphaMap',
+        'aoMap',
+        'bumpMap',
+        'emissiveMap',
+        'map',
+        'normalMap',
+        'roughnessMap',
+        'metalnessMap',
+      ]) {
         if (material[slot]) textures.add(material[slot]);
       }
     }
   });
   for (const material of materials) {
-    for (const slot of ['map', 'bumpMap', 'normalMap', 'roughnessMap', 'metalnessMap']) {
+    for (const slot of [
+      'alphaMap',
+      'aoMap',
+      'bumpMap',
+      'emissiveMap',
+      'map',
+      'normalMap',
+      'roughnessMap',
+      'metalnessMap',
+    ]) {
       if (material[slot]) textures.add(material[slot]);
     }
   }

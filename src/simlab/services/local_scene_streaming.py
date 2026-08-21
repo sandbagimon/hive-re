@@ -28,7 +28,7 @@ PARK_SCENE_ID = "brownstone-park"
 PARK_ENTRY = Path(
     "Demos/AEC/BrownstoneDemo/World_BrownstoneDemopack_Park(8Gb).usd"
 )
-CACHE_VERSION = 2
+CACHE_VERSION = 3
 TILE_SIZE_METERS = 24.0
 MAX_VERTICES_PER_CHUNK = 350_000
 MAX_COLLISION_BOXES = 192
@@ -338,7 +338,7 @@ def build_park_cache(
     )
     manifest: dict[str, Any] = {
         "format": "simlab-local-scene",
-        "version": 2,
+        "version": CACHE_VERSION,
         "scene_id": PARK_SCENE_ID,
         "name": "Architectural Brownstone Park (8GB)",
         "source": PARK_ENTRY.as_posix(),
@@ -356,6 +356,13 @@ def build_park_cache(
             "material_count": len(material_registry.materials),
             "texture_count": len(material_registry.textures),
             "missing_texture_count": material_registry.missing_texture_count,
+            "mdl_material_count": sum(
+                1
+                for material in material_registry.materials.values()
+                if material.get("source_model") == "MDL:OmniPBR"
+            ),
+            "mdl_source_count": len(material_registry.mdl_source_paths),
+            "missing_mdl_count": material_registry.missing_mdl_count,
         },
         "warnings": (
             warnings
@@ -365,6 +372,14 @@ def build_park_cache(
                     "were unavailable; their material constants were used instead."
                 ]
                 if material_registry.missing_texture_count
+                else []
+            )
+            + (
+                [
+                    f"{material_registry.missing_mdl_count} MDL source references "
+                    "were unavailable or outside the asset root."
+                ]
+                if material_registry.missing_mdl_count
                 else []
             )
         )[:100],
@@ -420,7 +435,8 @@ class LocalSceneService:
                 chunks = manifest.get("chunks", [])
                 textures = manifest.get("textures", {}).values()
                 if (
-                    manifest.get("source_fingerprint") == fingerprint
+                    manifest.get("version") == CACHE_VERSION
+                    and manifest.get("source_fingerprint") == fingerprint
                     and chunks
                     and all((self.cache_root / f"{item['id']}.simbin").is_file() for item in chunks)
                     and all(
