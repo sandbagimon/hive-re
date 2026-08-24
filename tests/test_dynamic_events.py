@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from simlab.models.actor import Actor
-from simlab.models.scene import Scene
-from simlab.models.transform import Transform
-from simlab.services.dynamic_events import KinematicActorEventScheduler
-from simlab.services.simulation_session import MuJoCoSimulationSession
-from simlab.simulation.runtime import EngineCapability, required_engine_capabilities
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.models.transform import Transform
+from beefoundrysim.services.dynamic_events import KinematicActorEventScheduler
+from beefoundrysim.services.simulation_session import MuJoCoSimulationSession
+from beefoundrysim.simulation.runtime import EngineCapability, required_engine_capabilities
 
 
 def _dynamic_event_scene() -> Scene:

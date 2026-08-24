@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://simlab.local/schemas/bridge-protocol.schema.json",
-  "title": "SimLabBridgeProtocol",
+  "$id": "https://beefoundrysim.local/schemas/bridge-protocol.schema.json",
+  "title": "BeeFoundrySimBridgeProtocol",
   "$defs": {
     "rpcResult": {
       "type": "object",

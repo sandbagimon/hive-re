@@ -30,7 +30,7 @@
 
 - `.\.venv\Scripts\python.exe -m pytest`：`8 passed`。
 - `.\.venv\Scripts\python.exe -m ruff check .`：通过。
-- 确认 `simlab` 从 `D:\orca-re\src\simlab\__init__.py` 加载。
+- 确认 `beefoundrysim` 从 `D:\orca-re\src\beefoundrysim\__init__.py` 加载。
 
 ## 已知限制
 

@@ -1,5 +1,5 @@
-from simlab.models.robotics import SensorNoise, SensorNoiseChannel
-from simlab.services.sensor_noise import SensorNoiseSampler
+from beefoundrysim.models.robotics import SensorNoise, SensorNoiseChannel
+from beefoundrysim.services.sensor_noise import SensorNoiseSampler
 
 
 def _noise() -> SensorNoise:

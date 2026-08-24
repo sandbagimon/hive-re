@@ -1,4 +1,4 @@
-from simlab.services.physics_materials import PHYSICS_MATERIALS, material_for_id
+from beefoundrysim.services.physics_materials import PHYSICS_MATERIALS, material_for_id
 
 
 def test_requested_physics_material_presets_are_available() -> None:

@@ -1,4 +1,4 @@
-# SimLab Product Plan
+# BeeFoundrySim Product Plan
 
 日期：2026-07-09
 状态：长期路线图
@@ -11,7 +11,7 @@
 
 ## 产品目标
 
-SimLab 的目标是做一个本地优先的机器人仿真编辑器。产品能力对标现代机器人仿真工作台，但所有实现都必须是 clean-room 的：独立品牌、独立 UI、独立资产、独立数据结构、独立业务逻辑，不复制任何 OrcaLab 的代码、素材、云服务、包名、协议、文案或视觉表达。
+BeeFoundrySim 的目标是做一个本地优先的机器人仿真编辑器。产品能力对标现代机器人仿真工作台，但所有实现都必须是 clean-room 的：独立品牌、独立 UI、独立资产、独立数据结构、独立业务逻辑，不复制任何 OrcaLab 的代码、素材、云服务、包名、协议、文案或视觉表达。
 
 核心技术路线：
 
@@ -53,7 +53,7 @@ SimLab 的目标是做一个本地优先的机器人仿真编辑器。产品能�
 - 支持通过以下命令启动：
 
 ```powershell
-python -m simlab.app
+python -m beefoundrysim.app
 ```
 
 - 主窗口已有：
@@ -198,7 +198,7 @@ python -m simlab.app
 长期目标架构：
 
 ```text
-SimLab Desktop
+BeeFoundrySim Desktop
 +-- PySide6 Application Shell
 |   +-- QWebEngine container
 |   +-- QtWebChannel JSON RPC bridge
@@ -269,7 +269,7 @@ SimLab Desktop
 
 验收标准：
 
-- `python -m simlab.app` 可打开 UI。
+- `python -m beefoundrysim.app` 可打开 UI。
 - 可添加 primitive actors。
 - 可保存和打开 `scene.json`。
 - 可导出 `exports/scene.xml`。
@@ -578,7 +578,7 @@ SimLab Desktop
 
 要实现：
 
-- 完整 `SimLabEnv`。
+- 完整 `BeeFoundrySimEnv`。
 - `reset()` / `step()` / `close()` 语义。
 - Observation spec。
 - Action spec。
@@ -660,7 +660,7 @@ SimLab Desktop
 
 目标：
 
-- 让 SimLab 成为完整工作台，而不是功能拼装 demo。
+- 让 BeeFoundrySim 成为完整工作台，而不是功能拼装 demo。
 
 要实现：
 
@@ -700,14 +700,14 @@ SimLab Desktop
 | M6 Timeline & Recording | 🔶 已开始 | 97% | physics-step recording、Bridge/export 与 Recording Panel 已完成 |
 | M7 Asset Pipeline | 🔶 部分完成 | 40% | OpenUSD mesh import，缺少 texture/material、asset library、thumbnails |
 | M8 Controller API | 🔶 已开始 | 90% | trajectory 多帧控制、持久化和重开 replay 已闭环 |
-| M9 Experiment/Env | 🔴 仅 stub | 5% | `SimLabEnv` 占位，不可训练 |
+| M9 Experiment/Env | 🔴 仅 stub | 5% | `BeeFoundrySimEnv` 占位，不可训练 |
 | M10 Diagnostics | 🔶 部分完成 | 75% | 外部 USD robot Save/Open/Replay 双窗口 Qt E2E 已通过 |
 | M11 Packaging | ❌ 未开始 | 0% | 无 installer、无版本信息 |
 | M12 Polish | ❌ 未开始 | 0% | 视觉设计系统、快捷键系统、documentation site |
 
 ### 与竞品的差距快照
 
-| 维度 | SimLab | OrcaLab | Isaac Sim/Lab | 差距等级 |
+| 维度 | BeeFoundrySim | OrcaLab | Isaac Sim/Lab | 差距等级 |
 |------|--------|---------|---------------|----------|
 | 场景编辑 | ✅ primitive + mesh | ✅ 宣称完整 | ✅ 成熟 | **小** |
 | 机器人模型 | 🔶 有中间模型，无 importer/runtime | ✅ 宣称多形态 | ✅ 成熟 | **大（阻塞）** |
@@ -723,7 +723,7 @@ SimLab Desktop
 
 ### 🚀 Gate 1 — Robot Simulation Closure（P0，目标 2026-Q3）
 
-**这是当前最关键的交付。** SimLab 还做不到真实机器人仿真闭环：不能导入机器人、不能控制关节、不能读取传感器。
+**这是当前最关键的交付。** BeeFoundrySim 还做不到真实机器人仿真闭环：不能导入机器人、不能控制关节、不能读取传感器。
 
 | 次序 | 任务 | 预估工作量 | 验收标准 |
 |------|------|-----------|----------|
@@ -758,7 +758,7 @@ save/reopen 行为一致。
 | 次序 | 任务 | 优先级 |
 |------|------|--------|
 | 3.1 | Joint state、IMU、contact/force 传感器（schema + runtime + UI） | P0 |
-| 3.2 | 完整 `SimLabEnv` contract（obs/action spec、reward、termination、seed） | P0 |
+| 3.2 | 完整 `BeeFoundrySimEnv` contract（obs/action spec、reward、termination、seed） | P0 |
 | 3.3 | Headless batch runner + metrics + seed matrix | P2 |
 | 3.4 | RGB/depth/segmentation 相机传感器（three.js 离屏渲染 MVP） | P2 |
 | 3.5 | ROS 2 bridge（clock、TF、joint states、commands） | P2 |
@@ -771,7 +771,7 @@ save/reopen 行为一致。
 | 次序 | 任务 | 优先级 |
 |------|------|--------|
 | 4.1 | MuJoCo MJX / vectorized runtime 评估 | P3 |
-| 4.2 | OpenUSD hierarchy round-trip（multi-body USD → SimLab → MJCF → USD） | P3 |
+| 4.2 | OpenUSD hierarchy round-trip（multi-body USD → BeeFoundrySim → MJCF → USD） | P3 |
 | 4.3 | 规模化合成数据管线（headless SDG + 断点续跑） | P3 |
 | 4.4 | SIL/HIL adapters（external clock、realtime deadline、hardware I/O） | P3 |
 | 4.5 | Windows/macOS packaging、installer、CI 矩阵 | P2 |
@@ -781,7 +781,7 @@ save/reopen 行为一致。
 
 1. **先关门再装修**：没有 robot import + controller，再多的面板也没法做真实机器人仿真。Gate 1 的 7 项任务是 P0 硬阻塞。
 2. **传感器和训练环境建立在 controller 之上**：不先打通 joint command / observation 闭环，传感器数据和 RL env 无法验证。
-3. **碰撞/层级/诊断是专业可用性门槛**：做到 Gate 2，SimLab 才算一个能日常使用的工具（不只是 demo）。
+3. **碰撞/层级/诊断是专业可用性门槛**：做到 Gate 2，BeeFoundrySim 才算一个能日常使用的工具（不只是 demo）。
 4. **规模化、高保真、ROS 2、分布式训练是差异化竞争**：但必须先有稳定基础；在 Gate 1-2 完成前不做过度工程化。
 5. **打包是最后一步**：先保证功能闭环，再解决分发。源码运行在开发阶段足够。
 
@@ -848,7 +848,7 @@ loader、Prim hierarchy、UsdPhysics articulation/joint/drive/collider/inertial 
 
 ### 📋 Iteration J - Experiment & Env API（P0 依赖 C6）
 
-日期：2026-Q4。目标：可训练 Gym-style 环境。交付：完整 `SimLabEnv`、`reset()/step()/close()`、observation/action spec、reward/termination hooks、seed control、headless batch runner。
+日期：2026-Q4。目标：可训练 Gym-style 环境。交付：完整 `BeeFoundrySimEnv`、`reset()/step()/close()`、observation/action spec、reward/termination hooks、seed control、headless batch runner。
 
 ## Definition of Done
 
@@ -873,7 +873,7 @@ loader、Prim hierarchy、UsdPhysics articulation/joint/drive/collider/inertial 
 
 ## 长期愿景
 
-SimLab 最终应成为一个本地优先、可扩展、可脚本化的机器人仿真工作台：
+BeeFoundrySim 最终应成为一个本地优先、可扩展、可脚本化的机器人仿真工作台：
 
 - 设计场景。
 - 导入机器人。

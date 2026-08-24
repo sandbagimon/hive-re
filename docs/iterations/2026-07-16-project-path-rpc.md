@@ -13,7 +13,7 @@
 - 增加 `saveProjectPath(sceneJson, path)`，校验后创建目录并写入 scene.json。
 - 原 `openProject` 和 `saveProject` 对话框路径复用显式 path RPC，避免行为分叉。
 - Bridge protocol schema 和 TypeScript PythonBridgeObject 同步新增两个 RPC。
-- `window.simlabEditor` automation API 暴露 save/open path，并同步 EditorStore markSaved/loadScene。
+- `window.beefoundrysimEditor` automation API 暴露 save/open path，并同步 EditorStore markSaved/loadScene。
 - Open path 时清空 trajectory draft cache，确保从文件 clip 重新 hydrate。
 
 ## 验证

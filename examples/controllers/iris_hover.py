@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 
-from simlab.services.controller_runtime import (
+from beefoundrysim.services.controller_runtime import (
     ControllerAction,
     ControllerObservation,
 )

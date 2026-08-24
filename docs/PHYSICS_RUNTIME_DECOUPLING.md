@@ -34,7 +34,7 @@ RuntimeBackendRegistry -- selection + plugin discovery
 
 ## 2. 稳定契约
 
-`src/simlab/simulation/runtime.py` 定义三类稳定对象：
+`src/beefoundrysim/simulation/runtime.py` 定义三类稳定对象：
 
 - `SimulationRuntimeSession`：完整的实时仿真应用接口；
 - `SimulationRuntimeBackend`：Preflight 和 Session Factory 插件接口；
@@ -131,8 +131,8 @@ class NewtonRuntimeBackend:
 外部包通过 entry point 注册，不需要修改 `SimulationService`、REST 路由或前端：
 
 ```toml
-[project.entry-points."simlab.runtime_backends"]
-newton = "simlab_newton.runtime:NewtonRuntimeBackend"
+[project.entry-points."beefoundrysim.runtime_backends"]
+newton = "beefoundrysim_newton.runtime:NewtonRuntimeBackend"
 ```
 
 最低兼容门槛是实现完整 Session 契约，并通过替换后端测试以及现有机器人、无人机、抓取、
@@ -174,7 +174,7 @@ python -m pytest -q \
   tests/test_simulation_clock.py \
   tests/test_simulation_session.py \
   tests/test_web_application.py
-python -m mypy src/simlab/simulation src/simlab/services/simulation_service.py
+python -m mypy src/beefoundrysim/simulation src/beefoundrysim/services/simulation_service.py
 ```
 
 `tests/test_runtime_backend.py` 使用一个不导入 MuJoCo 的 Newton 替身，验证 Web Preflight、Run、

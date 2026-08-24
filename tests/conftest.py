@@ -1,4 +1,4 @@
-"""Shared pytest configuration for SimLab backend tests.
+"""Shared pytest configuration for BeeFoundrySim backend tests.
 
 Ensures Qt applications can run in headless environments (CI, containers) by
 defaulting to the offscreen platform plugin before any PySide6 QApplication is

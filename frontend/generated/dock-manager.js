@@ -2,7 +2,7 @@
 // and owns all workspace interaction — tab stacks, splitters, drag & drop with
 // five-zone snapping, the panel library modal and layout persistence.
 import { FALLBACK_LEAF_ID, LAYOUT_PRESETS, addPanelToLeaf, collectPanels, createDefaultLayout, dropPanel, findLeafById, findLeafOf, firstLeafId, removePanel, resizeSplit, setActive, zoneFor, } from './dock-tree.js';
-const DOCK_STORAGE_KEY = 'simlab:dock:v3';
+const DOCK_STORAGE_KEY = 'beefoundrysim:dock:v3';
 const PANEL_ICONS = {
     project: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/>',
     assets: '<path d="M3 7l9-4 9 4v10l-9 4-9-4z"/><path d="M3 7l9 4 9-4M12 11v10"/>',
@@ -187,7 +187,7 @@ export class DockManager {
         this.libraryTargetLeaf = null;
     }
     onChange(callback) {
-        document.addEventListener('simlab:dock-change', () => callback());
+        document.addEventListener('beefoundrysim:dock-change', () => callback());
     }
     // ----------------------------------------------------------------- private
     restore() {
@@ -214,7 +214,7 @@ export class DockManager {
         catch {
             // Storage quota or private mode must never break the editor.
         }
-        document.dispatchEvent(new CustomEvent('simlab:dock-change'));
+        document.dispatchEvent(new CustomEvent('beefoundrysim:dock-change'));
     }
     iconSvg(panel) {
         const body = PANEL_ICONS[panel] ?? '<rect x="4" y="4" width="16" height="16" rx="2"/>';

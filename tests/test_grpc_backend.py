@@ -9,17 +9,17 @@ import pytest
 
 grpc = pytest.importorskip("grpc")
 
-from simlab.models.actor import Actor
-from simlab.models.robotics import RoboticsModel
-from simlab.models.scene import Scene
-from simlab.simulation.backend import SceneBundle, SimulationBackendError
-from simlab.simulation.grpc_backend import (
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.robotics import RoboticsModel
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.simulation.backend import SceneBundle, SimulationBackendError
+from beefoundrysim.simulation.grpc_backend import (
     GrpcSimulationBackend,
     create_grpc_server,
 )
-from simlab.simulation.gym_env import SimLabEnv
-from simlab.simulation.robot_adapter import DirectActuatorAdapter
-from simlab.simulation.task import JointTargetTask
+from beefoundrysim.simulation.gym_env import BeeFoundrySimEnv
+from beefoundrysim.simulation.robot_adapter import DirectActuatorAdapter
+from beefoundrysim.simulation.task import JointTargetTask
 
 
 def _robot_scene() -> Scene:
@@ -49,7 +49,7 @@ def test_same_gym_environment_runs_over_grpc_without_engine_imports_in_algorithm
     server, port, servicer = create_grpc_server("127.0.0.1:0", token="secret")
     server.start()
     backend = GrpcSimulationBackend(f"127.0.0.1:{port}", token="secret")
-    env = SimLabEnv(
+    env = BeeFoundrySimEnv(
         backend=backend,
         scene_bundle=SceneBundle.from_scene(
             _robot_scene(),

@@ -8,8 +8,8 @@ import httpx
 import pytest
 from mcp import Client
 
-from simlab.mcp.api_client import SimLabApiClient, SimLabApiError
-from simlab.mcp.server import create_mcp_server, main
+from beefoundrysim.mcp.api_client import BeeFoundrySimApiClient, BeeFoundrySimApiError
+from beefoundrysim.mcp.server import create_mcp_server, main
 
 
 def test_mcp_exposes_structured_rest_resources_and_simulation_controls() -> None:
@@ -88,8 +88,8 @@ def test_mcp_exposes_structured_rest_resources_and_simulation_controls() -> None
         return httpx.Response(404, json={"detail": f"Unhandled test route: {path}"})
 
     async def exercise() -> None:
-        api = SimLabApiClient(
-            "http://simlab.test/api/v1/",
+        api = BeeFoundrySimApiClient(
+            "http://beefoundrysim.test/api/v1/",
             access_token="test-token",
             transport=httpx.MockTransport(handler),
         )
@@ -98,74 +98,74 @@ def test_mcp_exposes_structured_rest_resources_and_simulation_controls() -> None
             tools = await client.list_tools()
             tool_names = {tool.name for tool in tools.tools}
             assert {
-                "simlab_health",
-                "simlab_update_scene",
-                "simlab_preflight_project",
-                "simlab_create_simulation",
-                "simlab_set_joint_targets",
-                "simlab_stop_simulation",
+                "beefoundrysim_health",
+                "beefoundrysim_update_scene",
+                "beefoundrysim_preflight_project",
+                "beefoundrysim_create_simulation",
+                "beefoundrysim_set_joint_targets",
+                "beefoundrysim_stop_simulation",
             } <= tool_names
-            health_tool = next(tool for tool in tools.tools if tool.name == "simlab_health")
+            health_tool = next(tool for tool in tools.tools if tool.name == "beefoundrysim_health")
             stop_tool = next(
-                tool for tool in tools.tools if tool.name == "simlab_stop_simulation"
+                tool for tool in tools.tools if tool.name == "beefoundrysim_stop_simulation"
             )
             assert health_tool.annotations is not None
             assert health_tool.annotations.read_only_hint is True
             assert stop_tool.annotations is not None
             assert stop_tool.annotations.destructive_hint is True
 
-            health = await client.call_tool("simlab_health", {})
+            health = await client.call_tool("beefoundrysim_health", {})
             assert health.structured_content == {"version": "v1", "status": "ok"}
             project = await client.call_tool(
-                "simlab_create_project", {"name": "MCP Project"}
+                "beefoundrysim_create_project", {"name": "MCP Project"}
             )
             assert project.structured_content is not None
             assert project.structured_content["id"] == "prj_1"
             scene = {"name": "Updated", "actors": []}
             updated = await client.call_tool(
-                "simlab_update_scene", {"project_id": "prj_1", "scene": scene}
+                "beefoundrysim_update_scene", {"project_id": "prj_1", "scene": scene}
             )
             assert updated.structured_content is not None
             assert updated.structured_content["scene"] == scene
             preflight = await client.call_tool(
-                "simlab_preflight_project", {"project_id": "prj_1"}
+                "beefoundrysim_preflight_project", {"project_id": "prj_1"}
             )
             assert preflight.structured_content is not None
             assert preflight.structured_content["ok"] is True
             simulation = await client.call_tool(
-                "simlab_create_simulation", {"project_id": "prj_1"}
+                "beefoundrysim_create_simulation", {"project_id": "prj_1"}
             )
             assert simulation.structured_content is not None
             assert simulation.structured_content["id"] == "sim_1"
             targets = await client.call_tool(
-                "simlab_set_joint_targets",
+                "beefoundrysim_set_joint_targets",
                 {"simulation_id": "sim_1", "targets": {"joint_arm": 0.5}},
             )
             assert targets.structured_content is not None
             assert targets.structured_content["targets"] == {"joint_arm": 0.5}
             running = await client.call_tool(
-                "simlab_run_simulation", {"simulation_id": "sim_1"}
+                "beefoundrysim_run_simulation", {"simulation_id": "sim_1"}
             )
             assert running.structured_content is not None
             assert running.structured_content["status"] == "running"
             stopped = await client.call_tool(
-                "simlab_stop_simulation", {"simulation_id": "sim_1"}
+                "beefoundrysim_stop_simulation", {"simulation_id": "sim_1"}
             )
             assert stopped.structured_content == {"version": "v1", "status": "deleted"}
 
             resources = await client.list_resources()
             assert {str(resource.uri) for resource in resources.resources} == {
-                "simlab://health"
+                "beefoundrysim://health"
             }
             templates = await client.list_resource_templates()
             assert len(templates.resource_templates) == 3
-            health_resource = await client.read_resource("simlab://health")
+            health_resource = await client.read_resource("beefoundrysim://health")
             assert json.loads(health_resource.contents[0].text) == {
                 "version": "v1",
                 "status": "ok",
             }
             prompts = await client.list_prompts()
-            assert [prompt.name for prompt in prompts.prompts] == ["simlab_review_project"]
+            assert [prompt.name for prompt in prompts.prompts] == ["beefoundrysim_review_project"]
 
     anyio.run(exercise)
 
@@ -187,12 +187,12 @@ def test_mcp_api_client_reports_backend_errors() -> None:
         return httpx.Response(503, json={"detail": "backend warming up"})
 
     async def exercise() -> None:
-        api = SimLabApiClient(
-            "http://simlab.test",
+        api = BeeFoundrySimApiClient(
+            "http://beefoundrysim.test",
             transport=httpx.MockTransport(handler),
         )
         try:
-            with pytest.raises(SimLabApiError, match=r"503.*backend warming up"):
+            with pytest.raises(BeeFoundrySimApiError, match=r"503.*backend warming up"):
                 await api.health()
         finally:
             await api.close()
@@ -209,14 +209,14 @@ def test_mcp_api_client_rejects_path_injection_before_http() -> None:
         return httpx.Response(200, json={})
 
     async def exercise() -> None:
-        api = SimLabApiClient(
-            "http://simlab.test",
+        api = BeeFoundrySimApiClient(
+            "http://beefoundrysim.test",
             transport=httpx.MockTransport(handler),
         )
         try:
-            with pytest.raises(SimLabApiError, match="Invalid SimLab prj resource ID"):
+            with pytest.raises(BeeFoundrySimApiError, match="Invalid BeeFoundrySim prj resource ID"):
                 await api.get_project("../../health")
-            with pytest.raises(SimLabApiError, match="Invalid SimLab simulation command"):
+            with pytest.raises(BeeFoundrySimApiError, match="Invalid BeeFoundrySim simulation command"):
                 await api.simulation_command("sim_1", "../projects")
         finally:
             await api.close()

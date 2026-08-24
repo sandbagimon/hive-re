@@ -1,6 +1,6 @@
 # Primitive Geometry Contract
 
-SimLab scene geometry uses meters, a right-handed Z-up world, and the following canonical rules.
+BeeFoundrySim scene geometry uses meters, a right-handed Z-up world, and the following canonical rules.
 
 ## Primitive Size
 

@@ -21,11 +21,11 @@ REST/WebSocket 控制面继续独立运行。
 - 增加 schema hash 与稳定 body/joint/actuator 顺序，模型 revision 不匹配时立即拒绝旧动作。
 - 增加 `DirectActuatorAdapter` 与 `JointTargetTask`，将稳定 actuator ID、动作范围、观测、
   reward、termination 和 truncation 与物理引擎分层。
-- `SimLabEnv` 保持标准 Gymnasium `reset/step/close` 接口，本地和远程后端不改变算法代码。
+- `BeeFoundrySimEnv` 保持标准 Gymnasium `reset/step/close` 接口，本地和远程后端不改变算法代码。
 - 将编辑器 authoring state 与 simulation runtime state 分离；前端关闭或继续编辑时，独立的
   Gym/gRPC Session 不依赖 Three.js、FastAPI UI 刷新率或墙钟 sleep。
 - 明确 REST + WebSocket 是编辑器资源控制面，gRPC 是高频固定步长算法数据面。
-- 增加 `simlab-algorithm-server` 入口、algorithm/remote 可选依赖和独立部署说明。
+- 增加 `beefoundrysim-algorithm-server` 入口、algorithm/remote 可选依赖和独立部署说明。
 
 ## 验证
 
@@ -37,7 +37,7 @@ REST/WebSocket 控制面继续独立运行。
 ## 已知限制
 
 - 当前 gRPC 是明文传输；跨不可信网络仍需 TLS、短期凭据和部署层限流。
-- 一个 `SimLabEnv` 对应一个独占 Session，尚未提供服务端批量向量环境 RPC。
+- 一个 `BeeFoundrySimEnv` 对应一个独占 Session，尚未提供服务端批量向量环境 RPC。
 - Task/Robot Adapter 只提供最小关节目标垂直切片，WASD、机械臂末端任务和训练框架适配尚未
   形成统一任务库。
 - REST/WebSocket 和 gRPC 共享场景语义，但尚未建立持久化 revision registry 与远程资产仓库。

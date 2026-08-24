@@ -12,6 +12,6 @@
 
 Attribution: “Forklift Truck” by louis-muir, licensed under CC BY 4.0.
 
-The GLB is stored exactly as downloaded from the Objaverse mirror. SimLab only applies
+The GLB is stored exactly as downloaded from the Objaverse mirror. BeeFoundrySim only applies
 runtime orientation and bounds fitting. The model is visual-only; the simplified box
 collider defined in the example scene remains authoritative for physics and navigation.

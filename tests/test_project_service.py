@@ -1,8 +1,8 @@
 import pytest
 
-from simlab.models.actor import Actor
-from simlab.models.scene import Scene
-from simlab.services.project_service import ProjectValidationError, load_scene, save_scene
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.services.project_service import ProjectValidationError, load_scene, save_scene
 
 
 def test_save_and_load_scene_json(tmp_path) -> None:

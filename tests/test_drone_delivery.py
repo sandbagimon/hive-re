@@ -5,9 +5,9 @@ from pathlib import Path
 import pytest
 
 from examples.drone_delivery import create_delivery_scene
-from simlab.services.controller_loader import ProjectControllerLoader
-from simlab.services.project_service import validate_scene
-from simlab.services.simulation_session import MuJoCoSimulationSession
+from beefoundrysim.services.controller_loader import ProjectControllerLoader
+from beefoundrysim.services.project_service import validate_scene
+from beefoundrysim.services.simulation_session import MuJoCoSimulationSession
 
 
 def test_delivery_scene_is_valid_and_controller_completes_physical_transport(tmp_path) -> None:

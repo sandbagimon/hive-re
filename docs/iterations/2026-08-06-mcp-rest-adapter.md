@@ -9,15 +9,15 @@ preflight，并控制一个完整的仿真生命周期。
 
 ## 主要改动
 
-- 新增独立 `simlab-mcp` 进程，只通过 `/api/v1` 调用现有 REST 资源，不直接导入
+- 新增独立 `beefoundrysim-mcp` 进程，只通过 `/api/v1` 调用现有 REST 资源，不直接导入
   `ResourceManager`、MuJoCo 或服务器资产目录。
 - 基于官方 MCP Python SDK v2 提供 stdio 与 Streamable HTTP 两种传输。
 - 提供 17 个 structured-output tools，覆盖项目、资产、preflight、MJCF 导出、仿真生命周期、
   关节目标和执行器控制。
 - 提供 1 个固定 resource、3 个 URI template resources 和 1 个只读项目审查 prompt。
-- 沿用 `SIMLAB_API_TOKEN` Bearer 认证；Streamable HTTP 默认只监听 loopback，非本地暴露要求
+- 沿用 `BEEFOUNDRYSIM_API_TOKEN` Bearer 认证；Streamable HTTP 默认只监听 loopback，非本地暴露要求
   显式 `--allow-remote` 并提示部署认证/TLS 代理。
-- 新增 `start_mcp.sh`、`mcp` optional dependency、`simlab-mcp` console entry point 和独立接入文档。
+- 新增 `start_mcp.sh`、`mcp` optional dependency、`beefoundrysim-mcp` console entry point 和独立接入文档。
 
 ## 验证
 

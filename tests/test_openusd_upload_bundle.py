@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from simlab.services.openusd.upload_bundle import (
+from beefoundrysim.services.openusd.upload_bundle import (
     safe_relative_path,
     stage_openusd_bytes,
 )
-from simlab.services.openusd_importer import import_openusd_asset
+from beefoundrysim.services.openusd_importer import import_openusd_asset
 
 
 def _zip_bytes(files: dict[str, bytes]) -> bytes:

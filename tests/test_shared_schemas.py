@@ -17,7 +17,7 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
         (root / "joint-recording.schema.json").read_text(encoding="utf-8")
     )
 
-    assert scene["title"] == "SimLabScene"
+    assert scene["title"] == "BeeFoundrySimScene"
     assert "physics" in scene["$defs"]["actor"]["properties"]["properties"]["properties"]
     assert {"rubber", "wood", "metal", "ice"}.issubset(
         physics["properties"]["material"]["enum"]
@@ -77,9 +77,9 @@ def test_shared_scene_physics_robotics_and_bridge_schemas_are_declared() -> None
     assert scene["$defs"]["trajectoryClip"]["properties"]["trajectory"]["$ref"] == (
         "joint-trajectory.schema.json"
     )
-    assert robotics["title"] == "SimLabRoboticsModel"
-    assert trajectory["title"] == "SimLabJointTrajectory"
-    assert recording["title"] == "SimLabJointStateRecording"
+    assert robotics["title"] == "BeeFoundrySimRoboticsModel"
+    assert trajectory["title"] == "BeeFoundrySimJointTrajectory"
+    assert recording["title"] == "BeeFoundrySimJointStateRecording"
     assert recording["properties"]["manifest"]["properties"]["engine"] == {
         "type": "string",
         "minLength": 1,

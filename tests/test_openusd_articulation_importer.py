@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from simlab.models.robotics import RoboticsModel
-from simlab.services.openusd import (
+from beefoundrysim.models.robotics import RoboticsModel
+from beefoundrysim.services.openusd import (
     OpenUsdArticulationError,
     import_openusd_articulations,
 )

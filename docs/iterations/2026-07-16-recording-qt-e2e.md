@@ -21,7 +21,7 @@
 - Session 轨迹与录制组合回归通过，最终 actuator target 与末关键帧一致。
 - 真实 QtWebEngine 双窗口 E2E：1 passed，记录 81 samples。
 - JSON 时间范围 0.00 到 0.80 秒，CSV 数据行数与 artifact sample count 一致。
-- 完成态截图：`/tmp/simlab-record-e2e-completed.png`。
+- 完成态截图：`/tmp/beefoundrysim-record-e2e-completed.png`。
 
 ## 已知限制
 

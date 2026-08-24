@@ -5,11 +5,11 @@
 
 ## 目标
 
-按照“不侵权复刻能力结构”的路线，将 SimLab 中间区域从 placeholder 替换成真正可交互的本地 3D viewport。物理继续使用 MuJoCo，3D 渲染和编辑控制使用 MIT 许可证的 three.js。
+按照“不侵权复刻能力结构”的路线，将 BeeFoundrySim 中间区域从 placeholder 替换成真正可交互的本地 3D viewport。物理继续使用 MuJoCo，3D 渲染和编辑控制使用 MIT 许可证的 three.js。
 
 ## 主要改动
 
-- 新增 `src/simlab/web_viewport/` 本地 web viewport 资源目录。
+- 新增 `src/beefoundrysim/web_viewport/` 本地 web viewport 资源目录。
 - vendored three.js r160 文件：
   - `three.module.js`
   - `OrbitControls.js`
@@ -44,7 +44,7 @@
 
 ## 已知限制
 
-- viewport 现在渲染的是 SimLab scene model，不是 MuJoCo 原生 renderer。
+- viewport 现在渲染的是 BeeFoundrySim scene model，不是 MuJoCo 原生 renderer。
 - transform gizmo 当前只实现 translate。
 - rotation 和 scale gizmo 尚未接入。
 - MuJoCo 仿真状态还没有实时同步回 three.js viewport。

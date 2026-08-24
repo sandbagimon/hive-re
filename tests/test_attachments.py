@@ -4,14 +4,14 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from simlab.models.actor import Actor
-from simlab.models.attachment import Attachment, DeliveryTask, VacuumGripper
-from simlab.models.scene import Scene
-from simlab.models.transform import Transform
-from simlab.services.controller_runtime import ControllerAction
-from simlab.services.mjcf_exporter import scene_to_mjcf_xml
-from simlab.services.project_service import ProjectValidationError, validate_scene
-from simlab.services.simulation_session import MuJoCoSimulationSession
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.attachment import Attachment, DeliveryTask, VacuumGripper
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.models.transform import Transform
+from beefoundrysim.services.controller_runtime import ControllerAction
+from beefoundrysim.services.mjcf_exporter import scene_to_mjcf_xml
+from beefoundrysim.services.project_service import ProjectValidationError, validate_scene
+from beefoundrysim.services.simulation_session import MuJoCoSimulationSession
 
 
 def _actor(

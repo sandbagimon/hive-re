@@ -6,13 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from simlab.models.actor import Actor
-from simlab.models.scene import Scene
-from simlab.models.transform import Transform
-from simlab.services.mjcf_exporter import scene_to_mjcf_xml
-from simlab.services.openusd_importer import import_openusd_asset, load_visual_geometry
-from simlab.services.physics_validation import run_physics_preflight
-from simlab.services.simulation_session import MuJoCoSimulationSession
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.models.transform import Transform
+from beefoundrysim.services.mjcf_exporter import scene_to_mjcf_xml
+from beefoundrysim.services.openusd_importer import import_openusd_asset, load_visual_geometry
+from beefoundrysim.services.physics_validation import run_physics_preflight
+from beefoundrysim.services.simulation_session import MuJoCoSimulationSession
 
 pytest.importorskip("pxr")
 FIXTURE = Path("tests/fixtures/openusd/tetrahedron.usda")
@@ -164,7 +164,7 @@ def Scope "Looks"
 def test_import_preserves_preview_surface_texture_and_vertex_uvs(tmp_path: Path) -> None:
     source = tmp_path / "textured.usda"
     texture = tmp_path / "albedo.png"
-    texture.write_bytes(b"simlab-test-texture")
+    texture.write_bytes(b"beefoundrysim-test-texture")
     source.write_text(
         '''#usda 1.0
 (

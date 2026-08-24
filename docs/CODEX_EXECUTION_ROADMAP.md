@@ -1,12 +1,12 @@
-# SimLab Codex 开发交接与执行路线
+# BeeFoundrySim Codex 开发交接与执行路线
 
 更新日期：2026-07-16
-适用仓库：`hive-re`（产品名：SimLab）  
+适用仓库：`hive-re`（产品名：BeeFoundrySim）  
 状态：当前执行路线，优先级高于历史 iteration 文档；长期范围仍以 `PRODUCT_PLAN.md` 为准。
 
 ## 1. 给新环境 Codex 的任务说明
 
-SimLab 当前已经完成一个可运行的基础闭环：TypeScript/three.js 编辑器可以导入 OpenUSD
+BeeFoundrySim 当前已经完成一个可运行的基础闭环：TypeScript/three.js 编辑器可以导入 OpenUSD
 可见网格、编辑 primitive/mesh actor、导出 MJCF，并在进程内运行 MuJoCo 后把刚体位姿同步回
 viewport。下一阶段不要继续堆普通 UI 或 primitive，而要完成 **OpenUSD Physics/Articulation 导入到
 可控 MuJoCo 运行时的垂直闭环**。
@@ -56,13 +56,13 @@ viewport。下一阶段不要继续堆普通 UI 或 primitive，而要完成 **O
 
 关键代码入口：
 
-- `src/simlab/services/openusd_importer.py`
-- `src/simlab/models/actor.py`
-- `src/simlab/services/mjcf_exporter.py`
-- `src/simlab/services/simulation_session.py`
-- `src/simlab/services/simulation_service.py`
-- `src/simlab/editor_bridge.py`
-- `src/simlab/web_viewport/ts/`
+- `src/beefoundrysim/services/openusd_importer.py`
+- `src/beefoundrysim/models/actor.py`
+- `src/beefoundrysim/services/mjcf_exporter.py`
+- `src/beefoundrysim/services/simulation_session.py`
+- `src/beefoundrysim/services/simulation_service.py`
+- `src/beefoundrysim/editor_bridge.py`
+- `src/beefoundrysim/web_viewport/ts/`
 
 ## 3. 不可破坏的架构约束
 
@@ -149,7 +149,7 @@ services/openusd/
 
 ### 1A.3 保留 Prim 层级和几何
 
-- 建立 USD Prim Path 到 SimLab stable ID 的映射。
+- 建立 USD Prim Path 到 BeeFoundrySim stable ID 的映射。
 - 保留 Xform/Link 父子关系和 local transform。
 - 每个 Link 保留各自 visual geometry，不再对 articulation 全局合并。
 - 正确转换 meters-per-unit 和 Y-up/Z-up。
@@ -179,7 +179,7 @@ limit、home position、mass、inertia 和 collider；相关资产依赖被解�
 
 扩展 exporter：
 
-| SimLab | MJCF |
+| BeeFoundrySim | MJCF |
 |---|---|
 | Articulation/Link | nested `<body>` |
 | Joint | `<joint>` / `<freejoint>` |
@@ -515,7 +515,7 @@ Frame Selected 会使用 child Link bounds，Store 拒绝不属于 actor 的 joi
 > QtWebEngine offscreen 测试验证 robot tree、Joint Inspector、Jog、canvas 和非空截图。
 
 MainWindow 支持注入临时 project root，视觉测试不会污染仓库资产。显式视觉门禁通过并生成
-`/tmp/simlab-robot-joint-ui.png`。实现证据见 `docs/iterations/2026-07-16-qt-robot-ui-e2e.md`。
+`/tmp/beefoundrysim-robot-joint-ui.png`。实现证据见 `docs/iterations/2026-07-16-qt-robot-ui-e2e.md`。
 
 ## 30. Qt Robot Run/Jog/Pause/Reset E2E（已完成 2026-07-16）
 

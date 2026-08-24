@@ -1,6 +1,6 @@
 平台差距
 
-| 能力 | SimLab 当前 | OrcaLab 公开能力 | Isaac Sim / Isaac Lab |
+| 能力 | BeeFoundrySim 当前 | OrcaLab 公开能力 | Isaac Sim / Isaac Lab |
 |---|---|---|---|
 | 场景表示 | scene.json + MJCF | 宣称支持 OpenUSD、SimReady 资产 | OpenUSD 原生 |
 | 机器人模型 | 无 articulation | 宣称支持多形态机器人 | URDF/MJCF/CAD、articulation |

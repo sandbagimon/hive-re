@@ -5,8 +5,8 @@ from dataclasses import dataclass
 import numpy as np
 import pytest
 
-from simlab.models.scene import Scene
-from simlab.simulation.backend import (
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.simulation.backend import (
     ActuatorDescription,
     BackendState,
     BodyDescription,
@@ -16,10 +16,10 @@ from simlab.simulation.backend import (
     ResetOptions,
     SceneBundle,
 )
-from simlab.simulation.backend_factory import BackendConfig, create_backend
-from simlab.simulation.gym_env import SimLabEnv
-from simlab.simulation.robot_adapter import DirectActuatorAdapter
-from simlab.simulation.task import JointTargetTask
+from beefoundrysim.simulation.backend_factory import BackendConfig, create_backend
+from beefoundrysim.simulation.gym_env import BeeFoundrySimEnv
+from beefoundrysim.simulation.robot_adapter import DirectActuatorAdapter
+from beefoundrysim.simulation.task import JointTargetTask
 
 gymnasium = pytest.importorskip("gymnasium")
 
@@ -116,8 +116,8 @@ class FakeBackend:
         return self.session
 
 
-def _make_env(backend: FakeBackend) -> SimLabEnv:
-    return SimLabEnv(
+def _make_env(backend: FakeBackend) -> BeeFoundrySimEnv:
+    return BeeFoundrySimEnv(
         backend=backend,
         scene_bundle=SceneBundle.from_scene(Scene()),
         task=JointTargetTask(
@@ -171,7 +171,7 @@ def test_same_task_switches_backend_without_algorithm_changes() -> None:
     assert observations[1][0] == pytest.approx(0.2)
 
 
-def test_gymnasium_checker_accepts_simlab_environment() -> None:
+def test_gymnasium_checker_accepts_beefoundrysim_environment() -> None:
     from gymnasium.utils.env_checker import check_env
 
     env = _make_env(FakeBackend())
@@ -180,7 +180,7 @@ def test_gymnasium_checker_accepts_simlab_environment() -> None:
 
 
 def test_task_randomization_replays_from_gym_seed() -> None:
-    env = SimLabEnv(
+    env = BeeFoundrySimEnv(
         backend=FakeBackend(),
         scene_bundle=SceneBundle.from_scene(Scene()),
         task=JointTargetTask(

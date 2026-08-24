@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from simlab.services.openusd import OpenUsdStageError, load_openusd_stage
+from beefoundrysim.services.openusd import OpenUsdStageError, load_openusd_stage
 
 pxr = pytest.importorskip("pxr")
 from pxr import UsdPhysics  # noqa: E402

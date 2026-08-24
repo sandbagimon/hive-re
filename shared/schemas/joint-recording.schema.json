@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://simlab.local/schemas/joint-recording.schema.json",
-  "title": "SimLabJointStateRecording",
+  "$id": "https://beefoundrysim.local/schemas/joint-recording.schema.json",
+  "title": "BeeFoundrySimJointStateRecording",
   "$defs": {
     "jointState": {
       "type": "object",

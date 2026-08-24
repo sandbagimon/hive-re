@@ -2,7 +2,7 @@
 
 These browser-ready glTF assets are distributed under the
 [CC0 1.0 Universal license](https://creativecommons.org/publicdomain/zero/1.0/).
-They are visual-only assets: SimLab keeps simplified primitive collision bodies for MuJoCo.
+They are visual-only assets: BeeFoundrySim keeps simplified primitive collision bodies for MuJoCo.
 
 ## Concrete Road Barrier 02
 

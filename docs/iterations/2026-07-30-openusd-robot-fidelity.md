@@ -6,7 +6,7 @@
 ## 目标
 
 解决复杂 OpenUSD 机器人导入后姿态异常、部件不完整和 MuJoCo mesh 编译失败的问题，使
-OpenUSD、SimLab Robotics Model、Three.js 和 MJCF/MuJoCo 对关节坐标系与初始状态采用同一
+OpenUSD、BeeFoundrySim Robotics Model、Three.js 和 MJCF/MuJoCo 对关节坐标系与初始状态采用同一
 语义，并用 Franka Panda 完成真实资产验证和控制入口。
 
 ## 主要改动

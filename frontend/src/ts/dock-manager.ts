@@ -21,7 +21,7 @@ import {
   zoneFor,
 } from './dock-tree.js';
 
-const DOCK_STORAGE_KEY = 'simlab:dock:v3';
+const DOCK_STORAGE_KEY = 'beefoundrysim:dock:v3';
 
 const PANEL_ICONS: Record<string, string> = {
   project: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/>',
@@ -223,7 +223,7 @@ export class DockManager {
   }
 
   onChange(callback: () => void): void {
-    document.addEventListener('simlab:dock-change', () => callback());
+    document.addEventListener('beefoundrysim:dock-change', () => callback());
   }
 
   // ----------------------------------------------------------------- private
@@ -250,7 +250,7 @@ export class DockManager {
     } catch {
       // Storage quota or private mode must never break the editor.
     }
-    document.dispatchEvent(new CustomEvent('simlab:dock-change'));
+    document.dispatchEvent(new CustomEvent('beefoundrysim:dock-change'));
   }
 
   private iconSvg(panel: PanelId): string {

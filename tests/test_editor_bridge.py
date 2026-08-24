@@ -4,12 +4,12 @@ from pathlib import Path
 import pytest
 from PySide6.QtWidgets import QApplication, QFileDialog, QWidget
 
-from simlab.editor_bridge import EditorBridge
-from simlab.models.actor import Actor
-from simlab.models.robotics import Sensor
-from simlab.models.scene import Scene
-from simlab.services.openusd_importer import import_openusd_asset
-from simlab.services.project_service import load_scene
+from beefoundrysim.editor_bridge import EditorBridge
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.robotics import Sensor
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.services.openusd_importer import import_openusd_asset
+from beefoundrysim.services.project_service import load_scene
 
 
 def _bridge(project_root: Path | None = None) -> EditorBridge:
@@ -321,7 +321,7 @@ def test_editor_bridge_loads_and_detaches_project_controller(tmp_path: Path) -> 
     source = tmp_path / "controllers" / "bridge_controller.py"
     source.parent.mkdir(parents=True)
     source.write_text(
-        "from simlab.services.controller_runtime import ControllerAction\n"
+        "from beefoundrysim.services.controller_runtime import ControllerAction\n"
         "class BridgeController:\n"
         "    name = 'Bridge Controller'\n"
         "    def reset(self, observation): pass\n"

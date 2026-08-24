@@ -4,10 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from simlab.models.robotics import JointLimits, RoboticsModel
-from simlab.models.scene import Scene
-from simlab.services.project_service import validate_scene
-from simlab.services.robotics_validation import (
+from beefoundrysim.models.robotics import JointLimits, RoboticsModel
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.services.project_service import validate_scene
+from beefoundrysim.services.robotics_validation import (
     RoboticsValidationError,
     validate_robotics_model,
 )

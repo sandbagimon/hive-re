@@ -10,7 +10,7 @@
 ## 主要改动
 
 - MainWindow 支持注入 project root，测试将 OpenUSD cache 和 metadata 隔离到临时目录。
-- Window 暴露受控 `simlabEditor` automation API：path import、state JSON、有效 joint selection。
+- Window 暴露受控 `beefoundrysimEditor` automation API：path import、state JSON、有效 joint selection。
 - Automation API 复用正式 `importOpenUsdPath` 和 EditorStore，不增加旁路 scene mutation。
 - 页面发布明确 ready flag，自动化会等待 QWebChannel、assets 和初始 Store 同步完成。
 - 新增 opt-in QtWebEngine E2E，默认普通测试环境跳过，显式环境变量启用。
@@ -21,9 +21,9 @@
 ## 验证
 
 - 默认门禁：82 passed，2 skipped。
-- `SIMLAB_QT_WEBENGINE_E2E=1 ... pytest tests/test_qt_robot_ui.py`：1 passed。
+- `BEEFOUNDRYSIM_QT_WEBENGINE_E2E=1 ... pytest tests/test_qt_robot_ui.py`：1 passed。
 - QtWebEngine 在无 Vulkan 环境自动 fallback 到 software rendering，WebGL viewport 非空。
-- 验收截图：`/tmp/simlab-robot-joint-ui.png`。
+- 验收截图：`/tmp/beefoundrysim-robot-joint-ui.png`。
 
 ## 下一步
 

@@ -6,12 +6,12 @@ from pathlib import Path
 
 import uvicorn
 
-from simlab.web_server import create_app
+from beefoundrysim.web_server import create_app
 
 
 def main() -> None:
     repository = Path(__file__).resolve().parents[1]
-    data_root = Path(tempfile.mkdtemp(prefix="simlab-web-e2e-"))
+    data_root = Path(tempfile.mkdtemp(prefix="beefoundrysim-web-e2e-"))
     try:
         uvicorn.run(
             create_app(

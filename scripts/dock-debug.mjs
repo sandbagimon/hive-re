@@ -13,7 +13,7 @@ page.on('console', (message) => {
   if (message.type() === 'error') console.error('CONSOLE ERROR:', message.text());
 });
 try {
-  await page.route('**/simlab-config.json', (route) => route.fulfill({
+  await page.route('**/beefoundrysim-config.json', (route) => route.fulfill({
     contentType: 'application/json',
     body: JSON.stringify({
       apiBaseUrl: 'http://127.0.0.1:8876', webSocketBaseUrl: 'ws://127.0.0.1:8876',
@@ -32,7 +32,7 @@ try {
   await page.getByRole('button', { name: 'Run', exact: true }).click();
   await page.waitForTimeout(3000);
   console.log('badge after run:', await page.locator('#simulation-badge').textContent());
-  const state1 = JSON.parse(await page.evaluate(() => window.simlabEditor.getStateJson()));
+  const state1 = JSON.parse(await page.evaluate(() => window.beefoundrysimEditor.getStateJson()));
   console.log('store status:', state1.simulationStatus, 'sim state status:', state1.simulationState?.status ?? null);
   await page.locator('[data-command="stop"]').click();
   await page.waitForTimeout(2000);

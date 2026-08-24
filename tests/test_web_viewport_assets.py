@@ -21,7 +21,7 @@ def test_typescript_editor_assets_are_an_independent_frontend() -> None:
     assert (generated / "procedural-materials.js").exists()
     assert (generated / "pbr-model-loader.js").exists()
     assert (generated / "photographic-environment.js").exists()
-    assert Path("frontend/public/simlab-config.json").exists()
+    assert Path("frontend/public/beefoundrysim-config.json").exists()
     assert Path("frontend/public/docs/viewport-controls.html").exists()
     assert Path("frontend/public/textures/delivery-bag-oxford-albedo.png").exists()
     assert Path(
@@ -81,7 +81,7 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
     assert "webkitdirectory" in bridge
     assert "/api/v1/projects" in bridge
     assert "/api/v1/simulations" in bridge
-    assert "simlab-config.json" in bridge
+    assert "beefoundrysim-config.json" in bridge
     assert "after_sequence" in bridge
     assert "QWebChannel" not in bridge
     assert "/api/rpc" not in bridge
@@ -140,8 +140,8 @@ def test_editor_ui_and_bridge_commands_are_declared() -> None:
         assert sensor_state in types
     assert "selectViewportLink" in app
     assert "selectedLinkId" in viewport
-    assert "window.simlabEditor" in app
-    assert "simlabEditorReady" in app
+    assert "window.beefoundrysimEditor" in app
+    assert "beefoundrysimEditorReady" in app
     assert "simulationStatus === 'running' ? 'running' : 'paused'" in app
     assert "loadTrajectory" in bridge
     assert "TrajectorySimulationState" in types
@@ -253,10 +253,10 @@ def test_viewport_controls_document_covers_implemented_shortcuts() -> None:
 
 
 def test_optional_qt_shell_is_only_an_http_client() -> None:
-    source = Path("src/simlab/main_window.py").read_text(encoding="utf-8")
+    source = Path("src/beefoundrysim/main_window.py").read_text(encoding="utf-8")
 
     assert "QWebEngineView" in source
-    assert "SIMLAB_FRONTEND_URL" in source
+    assert "BEEFOUNDRYSIM_FRONTEND_URL" in source
     assert 'parsed.scheme() not in {"http", "https"}' in source
     assert "EditorBridge" not in source
     assert "QWebChannel" not in source

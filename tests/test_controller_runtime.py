@@ -4,7 +4,7 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
-from simlab.services.controller_runtime import (
+from beefoundrysim.services.controller_runtime import (
     ActuatorObservation,
     BodyObservation,
     ControllerAction,

@@ -5,7 +5,7 @@
 
 ## 目标
 
-使用实际启动脚本和浏览器/API 链路运行一次完整 SimLab 工作流，主动查找现有自动化没有覆盖的
+使用实际启动脚本和浏览器/API 链路运行一次完整 BeeFoundrySim 工作流，主动查找现有自动化没有覆盖的
 集成故障；修复后重复原路径，并执行全量回归。
 
 ## 完整工作流
@@ -24,12 +24,12 @@
 
 ## 发现的 Bug
 
-当后端通过 `SIMLAB_API_TOKEN` 开启 Bearer 鉴权时，Vite development runtime config 仍把
+当后端通过 `BEEFOUNDRYSIM_API_TOKEN` 开启 Bearer 鉴权时，Vite development runtime config 仍把
 `accessToken` 固定为 `null`。浏览器可以访问未鉴权的 `/health`，但随后创建 Project 返回
-401，因此用户看到的是“页面能打开但资产为空/SimLab API unavailable”。
+401，因此用户看到的是“页面能打开但资产为空/BeeFoundrySim API unavailable”。
 
 该问题没有被原 Web E2E 捕获，因为测试用 `page.route()` 注入了自定义 token config，绕过了
-Vite 自己生成 `/simlab-config.json` 的路径。
+Vite 自己生成 `/beefoundrysim-config.json` 的路径。
 
 ## 根因
 
@@ -39,9 +39,9 @@ Vite 自己生成 `/simlab-config.json` 的路径。
 
 ## 修复
 
-- Vite development config 优先读取 `SIMLAB_FRONTEND_ACCESS_TOKEN`，其次读取
-  `SIMLAB_API_TOKEN`，没有值时保持 `null`。
-- `start_frontend.sh` 在未显式设置前端 token 时，从 `SIMLAB_API_TOKEN` 安全继承到 Vite
+- Vite development config 优先读取 `BEEFOUNDRYSIM_FRONTEND_ACCESS_TOKEN`，其次读取
+  `BEEFOUNDRYSIM_API_TOKEN`，没有值时保持 `null`。
+- `start_frontend.sh` 在未显式设置前端 token 时，从 `BEEFOUNDRYSIM_API_TOKEN` 安全继承到 Vite
   进程；脚本不打印 token。
 - 增加 Node 回归测试，直接调用 Vite middleware 并验证 no-store runtime config 中的 token。
 - README 补充两个终端的鉴权启动方式，并明确这种共享 token 只适用于可信开发环境；生产环境
@@ -49,7 +49,7 @@ Vite 自己生成 `/simlab-config.json` 的路径。
 
 ## 验证
 
-- 修复前复现：设置 `SIMLAB_API_TOKEN=workflow-secret` 后，runtime config 仍返回
+- 修复前复现：设置 `BEEFOUNDRYSIM_API_TOKEN=workflow-secret` 后，runtime config 仍返回
   `accessToken: null`。
 - 修复后真实启动：runtime token 注入成功；无 Token 创建 Project 返回 401；带 Token 创建
   Project 返回 201；随后读取 12 个共享资产并确认 Franka 可用。
@@ -63,7 +63,7 @@ Vite 自己生成 `/simlab-config.json` 的路径。
 ## 已知限制
 
 - 开发 token 会返回给能够访问 Vite development server 的浏览器，只能用于可信开发网络。
-- production preview 使用部署提供的静态 `simlab-config.json`，本次修复不会自动向静态构建
+- production preview 使用部署提供的静态 `beefoundrysim-config.json`，本次修复不会自动向静态构建
   注入 secret。
 - 当前 E2E 仍通过 route override 测试跨域 token；后续应增加一个直接启动 Vite dev middleware
   的独立浏览器鉴权用例。

@@ -31,7 +31,7 @@
 - `ActorProperties.visual_model` 声明 URL、来源、许可、作者、分辨率和多个拟合实例。场景 JSON
   不包含渲染器对象，也不要求后端解析 glTF。
 - `pbr-model-loader.ts` 缓存 glTF 模板，按 actor 克隆几何、材质和纹理资源，将 Y-up 模型旋转到
-  SimLab Z-up 坐标，并按 collision proxy 的目标包围盒拟合。
+  BeeFoundrySim Z-up 坐标，并按 collision proxy 的目标包围盒拟合。
 - primitive proxy 保持可 raycast、可变换和可显示 collider debug，但正常渲染时关闭 color/depth
   write；glTF 失败时恢复 proxy 和程序化 PBR detail。
 - 摄影 HDRI 异步替换程序化 PMREM；失败时继续使用无需网络的程序化日光环境。

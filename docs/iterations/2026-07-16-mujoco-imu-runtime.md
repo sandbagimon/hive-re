@@ -11,7 +11,7 @@
 
 - Exporter 与 Session 共享 stable sensor ID 到三个 MJCF channel names 的确定映射。
 - Session 编译后解析 channel sensor ID、address 和 dimension，严格要求 framequat/gyro/accelerometer 为 4/3/3。
-- sensordata framequat 从 MuJoCo wxyz 转为 SimLab xyzw；gyro 和 accelerometer 保留 sensor-frame 原值。
+- sensordata framequat 从 MuJoCo wxyz 转为 BeeFoundrySim xyzw；gyro 和 accelerometer 保留 sensor-frame 原值。
 - ImuSensorScheduler 与 joint-state scheduler 在同一 physics step index 上 capture/reset。
 - SimulationState sensors 支持带 `sensor_type` 判别字段的 joint_state/imu union。
 - Bridge protocol schema 和 TypeScript contract 定义 typed IMU payload。
@@ -31,7 +31,7 @@
 
 - Qt IMU Inspector 尚无真实端到端截图测试。
 - Recording artifact 尚未定义 IMU vector columns。
-- MuJoCo 对 world-welded fixed body accelerometer 输出为零；SimLab 不人为注入重力值。
+- MuJoCo 对 world-welded fixed body accelerometer 输出为零；BeeFoundrySim 不人为注入重力值。
 - 尚无 noise、bias、drift 或 calibration。
 
 ## 下一步

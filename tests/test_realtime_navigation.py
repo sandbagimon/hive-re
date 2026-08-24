@@ -10,13 +10,13 @@ from examples.controllers.iris_obstacle_delivery import (
     RAY_IDS,
     IrisObstacleDeliveryController,
 )
-from simlab.controllers.realtime_navigation import (
+from beefoundrysim.controllers.realtime_navigation import (
     GridSpec,
     IncrementalAStarPlanner,
     LiveOccupancyGrid,
     route_is_clear,
 )
-from simlab.services.controller_runtime import (
+from beefoundrysim.services.controller_runtime import (
     ActuatorObservation,
     AttachmentObservation,
     BodyObservation,

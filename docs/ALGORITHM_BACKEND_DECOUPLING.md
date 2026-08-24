@@ -11,7 +11,7 @@ RL / IL algorithm
        |
        | Gymnasium API
        v
-SimLabEnv
+BeeFoundrySimEnv
        |
        +--> EnvironmentTask: observation / reward / termination / truncation
        |
@@ -28,12 +28,12 @@ SimulationBackendSession
 网页实时仿真继续由 `SimulationService` 管理，但它现在只依赖
 `SimulationRuntimeSession`，通过 `RuntimeBackendRegistry` 选择 MuJoCo、Newton 或未来的
 组合求解器；训练环境不复用它的 Run/Pause、UI catch-up 或 WebSocket 状态。每个
-`SimLabEnv` 创建并独占一个后端 Session，因此多个
+`BeeFoundrySimEnv` 创建并独占一个后端 Session，因此多个
 环境之间没有 `MjData`、episode 计数器或随机数状态泄漏。
 
 ## 2. 稳定契约
 
-`src/simlab/simulation/backend.py` 是引擎无关契约，核心对象如下：
+`src/beefoundrysim/simulation/backend.py` 是引擎无关契约，核心对象如下：
 
 - `SceneBundle`：规范化 Scene JSON、内容哈希，以及仅供本地适配器使用的部署路径；
 - `ModelDescription`：timestep、scene/schema hash，以及按固定顺序排列的 body、joint、actuator；
@@ -76,13 +76,13 @@ python -m pip install -e '.[algorithm]'
 ```python
 import numpy as np
 
-from simlab.services.project_service import load_scene
-from simlab.simulation import (
+from beefoundrysim.services.project_service import load_scene
+from beefoundrysim.simulation import (
     DirectActuatorAdapter,
     JointTargetTask,
     MujocoBackend,
     SceneBundle,
-    SimLabEnv,
+    BeeFoundrySimEnv,
 )
 
 project_root = "/path/to/project"
@@ -94,7 +94,7 @@ task = JointTargetTask(
     target_positions=(0.6, -1.0),
     max_episode_steps=500,
 )
-env = SimLabEnv(
+env = BeeFoundrySimEnv(
     backend=MujocoBackend(),
     scene_bundle=SceneBundle.from_scene(scene, asset_root=project_root),
     task=task,
@@ -117,22 +117,22 @@ env.close()
 
 ```bash
 python -m pip install -e '.[algorithm,remote]'
-export SIMLAB_ALGORITHM_TOKEN='replace-with-a-random-token'
-simlab-algorithm-server \
+export BEEFOUNDRYSIM_ALGORITHM_TOKEN='replace-with-a-random-token'
+beefoundrysim-algorithm-server \
   --bind 127.0.0.1:50051 \
-  --asset-root /srv/simlab/project
+  --asset-root /srv/beefoundrysim/project
 ```
 
 客户端只需替换 backend，Task 和算法代码保持不变：
 
 ```python
-from simlab.simulation.grpc_backend import GrpcSimulationBackend
+from beefoundrysim.simulation.grpc_backend import GrpcSimulationBackend
 
 backend = GrpcSimulationBackend(
     "127.0.0.1:50051",
     token="replace-with-a-random-token",
 )
-env = SimLabEnv(
+env = BeeFoundrySimEnv(
     backend=backend,
     scene_bundle=SceneBundle.from_scene(scene),
     task=task,
@@ -143,12 +143,12 @@ env = SimLabEnv(
 也可以让部署配置完成选择，Task 不读取该配置：
 
 ```python
-from simlab.simulation import create_backend
+from beefoundrysim.simulation import create_backend
 
 backend = create_backend({"kind": "grpc", "target": "127.0.0.1:50051"})
 ```
 
-gRPC 协议位于 `src/simlab/simulation/proto/algorithm_backend.proto`，包含
+gRPC 协议位于 `src/beefoundrysim/simulation/proto/algorithm_backend.proto`，包含
 CreateSession、Reset、Step、Close。远程请求不接受客户端文件路径：MJCF 输出使用
 服务端临时目录，场景引用的相对资产由服务端 `--asset-root` 解析。这样算法进程不需要
 挂载仿真服务器的文件系统。
@@ -156,7 +156,7 @@ CreateSession、Reset、Step、Close。远程请求不接受客户端文件路�
 默认只绑定 `127.0.0.1`。远程开发时建议通过 SSH/VS Code 转发 50051；当前实现是
 明文 gRPC，跨不可信网络部署前必须在反向代理或服务端增加 TLS，不能只依赖 token。
 
-当前握手版本为 `simlab.algorithm.v2`。v2 在 body 状态中增加线速度和角速度，使四旋翼等
+当前握手版本为 `beefoundrysim.algorithm.v2`。v2 在 body 状态中增加线速度和角速度，使四旋翼等
 浮动基座机器人能够闭环控制；客户端和服务端版本不一致时会在创建 Session 阶段明确拒绝，
 而不是静默错读状态数组。
 
@@ -184,7 +184,7 @@ python -m pytest -q \
   tests/test_simulation_backend.py \
   tests/test_gym_env.py \
   tests/test_grpc_backend.py
-python -m mypy src/simlab/simulation
+python -m mypy src/beefoundrysim/simulation
 ```
 
 测试覆盖 Scene hash、稳定 schema、控制范围、原子多步、Session close、Gymnasium

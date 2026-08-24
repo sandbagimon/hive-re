@@ -14,10 +14,17 @@ node_modules/
 test-results/
 playwright-report/
 assets/uploads/
-.simlab-data/
+.beefoundrysim-data/
 frontend/dist/
 *.egg-info/
 exports/*.xml
 !exports/.gitkeep
 .DS_Store
 Thumbs.db
+
+# Runtime / tool artifacts
+MUJOCO_LOG.TXT
+pytest-of-simon/
+.qoder/
+reference/
+external/

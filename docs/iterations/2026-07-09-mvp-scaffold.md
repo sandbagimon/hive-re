@@ -5,12 +5,12 @@
 
 ## 目标
 
-创建 SimLab 的初始可运行项目骨架。该版本聚焦 simulation-first MVP，不引入云服务、登录、在线资产市场，也不使用 OrcaLab 的品牌、资产、业务逻辑或专有运行时。
+创建 BeeFoundrySim 的初始可运行项目骨架。该版本聚焦 simulation-first MVP，不引入云服务、登录、在线资产市场，也不使用 OrcaLab 的品牌、资产、业务逻辑或专有运行时。
 
 ## 主要改动
 
 - 建立 Python `src/` 项目结构和现代 `pyproject.toml`。
-- 添加 PySide6 桌面应用入口：`python -m simlab.app`。
+- 添加 PySide6 桌面应用入口：`python -m beefoundrysim.app`。
 - 添加主窗口布局：
   - 顶部工具栏：New Scene、Open、Save、Save As、Export MJCF、Run Simulation、Stop Simulation。
   - 左侧 Asset Browser。
@@ -43,7 +43,7 @@
   - 加载 MJCF。
   - 创建 `MjModel` 和 `MjData`。
   - 运行短仿真循环并输出 step 日志。
-- 添加 `SimLabEnv` gym 风格 stub。
+- 添加 `BeeFoundrySimEnv` gym 风格 stub。
 - 添加 demo scene 和 pytest 测试。
 - 添加 README、LICENSE、`.gitignore`。
 

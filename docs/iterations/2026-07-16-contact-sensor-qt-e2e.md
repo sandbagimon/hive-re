@@ -21,7 +21,7 @@
 - 真实 QWebEngine + MuJoCo + OpenUSD E2E：1 passed。
 - 接触时 simulation time 约 0.38s，contact count 为 2，normal force/impulse 与 UI 格式化值一致。
 - Tangent force、首个 world point 和首个 world normal 与 SimulationState 逐项一致。
-- `/tmp/simlab-contact-sensor-ui.png` 视觉检查通过：viewport 非空、机械臂/平台可见、link 高亮清晰、Inspector 无重叠。
+- `/tmp/beefoundrysim-contact-sensor-ui.png` 视觉检查通过：viewport 非空、机械臂/平台可见、link 高亮清晰、Inspector 无重叠。
 
 ## 已知限制
 

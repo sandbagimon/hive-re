@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from simlab.controllers import JointPdConfig, JointPositionPdController
-from simlab.services.controller_runtime import ControllerAction, ControllerObservation
+from beefoundrysim.controllers import JointPdConfig, JointPositionPdController
+from beefoundrysim.services.controller_runtime import ControllerAction, ControllerObservation
 
 
 class TwoJointPdExample:

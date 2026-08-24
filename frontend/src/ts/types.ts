@@ -322,6 +322,7 @@ export interface AssetMetadata {
 export interface LocalSceneStatus {
   scene_id: string;
   name: string;
+  content_profile: 'optimized' | 'full';
   status: 'disabled' | 'unavailable' | 'preparing' | 'ready' | 'failed';
   error?: string;
   statistics?: Record<string, number>;
@@ -370,10 +371,11 @@ export interface LocalSceneTexture {
 }
 
 export interface LocalSceneManifest {
-  format: 'simlab-local-scene';
+  format: 'beefoundrysim-local-scene';
   version: 3;
   scene_id: string;
   name: string;
+  content_profile: 'optimized' | 'full';
   bounds: { min: Vector3; max: Vector3 };
   chunks: LocalSceneChunk[];
   materials: Record<string, LocalSceneMaterial>;
@@ -619,7 +621,7 @@ export interface VisualGeometryPayload {
   metalness?: number | null;
 }
 
-export interface SimLabEditorAutomation {
+export interface BeeFoundrySimEditorAutomation {
   getRecording(): Promise<RpcResult<{ recording: unknown }>>;
   setSimulationSpeed(factor: number): Promise<RpcResult<{
     target_rtf: number;
@@ -632,7 +634,7 @@ export interface SimLabEditorAutomation {
 
 declare global {
   interface Window {
-    simlabEditor?: SimLabEditorAutomation;
-    simlabEditorReady?: boolean;
+    beefoundrysimEditor?: BeeFoundrySimEditorAutomation;
+    beefoundrysimEditorReady?: boolean;
   }
 }

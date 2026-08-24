@@ -1623,6 +1623,7 @@ function addStreamedSceneActor(actor, sceneId, loadRevision) {
     root.userData.loadedChunks = 0;
     canvas.dataset.localSceneStatus = 'loading-manifest';
     canvas.dataset.localSceneLoadedChunks = '0';
+    canvas.dataset.localSceneFailedChunks = '0';
     void localSceneManifestResolver(sceneId).then(async (manifest) => {
         if (!manifest || !actorLoadIsCurrent(actor.id, root, loadRevision)) {
             canvas.dataset.localSceneStatus = manifest ? 'cancelled' : 'failed';
@@ -1660,6 +1661,7 @@ function addStreamedSceneActor(actor, sceneId, loadRevision) {
                 normalScale: new THREE.Vector2(definition.normal_scale, definition.normal_scale),
                 emissive: new THREE.Color(...definition.emissive_color),
                 emissiveIntensity: definition.emissive_intensity,
+                side: THREE.DoubleSide,
                 dithering: true,
                 envMapIntensity: 0.62,
             });
@@ -1725,25 +1727,65 @@ function addStreamedSceneActor(actor, sceneId, loadRevision) {
                         material.roughness = 1;
                     if (slot === 'metalnessMap')
                         material.metalness = 1;
-                    if (slot === 'alphaMap')
+                    if (slot === 'alphaMap') {
+                        material.alphaTest = 0.35;
                         material.transparent = true;
+                    }
                     material.needsUpdate = true;
                 });
             }
         };
         let cursor = 0;
         let loaded = 0;
+        let failed = 0;
+        const resolveChunk = async (chunkId) => {
+            for (let attempt = 0; attempt < 3; attempt += 1) {
+                const buffer = await localSceneChunkResolver(sceneId, chunkId);
+                if (buffer)
+                    return buffer;
+                if (!actorLoadIsCurrent(actor.id, root, loadRevision))
+                    return null;
+                if (attempt < 2) {
+                    await new Promise((resolve) => window.setTimeout(resolve, 250 * (attempt + 1)));
+                }
+            }
+            return null;
+        };
         const loadNext = async () => {
             while (cursor < chunks.length) {
                 const chunk = chunks[cursor];
                 cursor += 1;
-                const buffer = await localSceneChunkResolver(sceneId, chunk.id);
-                if (!buffer || !actorLoadIsCurrent(actor.id, root, loadRevision))
+                const buffer = await resolveChunk(chunk.id);
+                if (!actorLoadIsCurrent(actor.id, root, loadRevision))
                     return;
+                if (!buffer) {
+                    failed += 1;
+                    canvas.dataset.localSceneFailedChunks = String(failed);
+                    continue;
+                }
                 const bundle = decodeGeometryBundle(buffer);
-                for (const [materialId, geometry] of bundle.entries()) {
+                for (const [geometryId, geometry] of bundle.entries()) {
+                    const materialId = geometry.materialId ?? geometryId;
                     initializeMaterialTextures(materialId);
-                    const mesh = new THREE.Mesh(geometryFromBundle(geometry), materials.get(materialId) ?? fallbackMaterial);
+                    const bufferGeometry = geometryFromBundle(geometry);
+                    const material = materials.get(materialId) ?? fallbackMaterial;
+                    let mesh;
+                    if (geometry.instanceMatrices) {
+                        const count = geometry.instanceMatrices.length / 16;
+                        const instanced = new THREE.InstancedMesh(bufferGeometry, material, count);
+                        const matrix = new THREE.Matrix4();
+                        for (let index = 0; index < count; index += 1) {
+                            matrix.fromArray(geometry.instanceMatrices, index * 16);
+                            instanced.setMatrixAt(index, matrix);
+                        }
+                        instanced.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+                        instanced.computeBoundingBox();
+                        instanced.computeBoundingSphere();
+                        mesh = instanced;
+                    }
+                    else {
+                        mesh = new THREE.Mesh(bufferGeometry, material);
+                    }
                     mesh.name = chunk.id;
                     mesh.userData.actorId = actor.id;
                     mesh.userData.localSceneChunk = chunk.id;
@@ -1768,7 +1810,7 @@ function addStreamedSceneActor(actor, sceneId, loadRevision) {
         if (!actorLoadIsCurrent(actor.id, root, loadRevision)) {
             return;
         }
-        canvas.dataset.localSceneStatus = loaded === chunks.length ? 'ready' : 'partial';
+        canvas.dataset.localSceneStatus = failed ? 'partial' : 'ready';
         updateSelectionOutline();
     }).catch(() => {
         if (actorLoadIsCurrent(actor.id, root, loadRevision)) {

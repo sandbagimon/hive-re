@@ -1,6 +1,6 @@
-# SimLab Iteration Log
+# BeeFoundrySim Iteration Log
 
-这个目录用于记录 SimLab 每次迭代的详细内容。每个迭代文件应说明本轮目标、主要改动、验证结果、已知限制和下一步建议。
+这个目录用于记录 BeeFoundrySim 每次迭代的详细内容。每个迭代文件应说明本轮目标、主要改动、验证结果、已知限制和下一步建议。
 
 ## 记录规范
 

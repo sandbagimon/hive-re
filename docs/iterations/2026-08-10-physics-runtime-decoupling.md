@@ -9,7 +9,7 @@
 
 - 新增完整 `SimulationRuntimeSession` 和 `SimulationRuntimeBackend` 契约；
 - 新增引擎能力模型、Scene 能力推导和 fail-fast 校验；
-- 新增 `RuntimeBackendRegistry` 与 `simlab.runtime_backends` 插件发现；
+- 新增 `RuntimeBackendRegistry` 与 `beefoundrysim.runtime_backends` 插件发现；
 - Scene 支持 `solvers.primary`、有序 `extensions` 和 `required_capabilities`；
 - MuJoCo 被封装为默认 `MujocoRuntimeBackend`；
 - `SimulationService` 不再导入 MuJoCo、不再读取 `model.opt.timestep` 或 `xml_path`；

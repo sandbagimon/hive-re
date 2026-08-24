@@ -22,7 +22,7 @@ export function decodeGeometryBundle(buffer) {
     if (headerEnd > buffer.byteLength)
         throw new Error('Geometry bundle header is truncated');
     const header = JSON.parse(new TextDecoder().decode(new Uint8Array(buffer, 12, headerLength)));
-    if (header.format !== 'simlab-geometry-bundle' || header.version !== 1) {
+    if (header.format !== 'beefoundrysim-geometry-bundle' || header.version !== 1) {
         throw new Error('Unsupported geometry bundle format');
     }
     const payloadStart = align4(headerEnd);
@@ -37,6 +37,12 @@ export function decodeGeometryBundle(buffer) {
         const uvOffset = entry.uvs
             ? validateSlice(entry.uvs, 4, payloadStart, buffer.byteLength)
             : null;
+        const instanceOffset = entry.instances
+            ? validateSlice(entry.instances, 4, payloadStart, buffer.byteLength)
+            : null;
+        if (entry.instances && (!entry.instances[1] || entry.instances[1] % 16 !== 0)) {
+            throw new Error('Geometry bundle contains invalid instance matrices');
+        }
         output.set(geometryId, {
             positions: new Float32Array(buffer, positionOffset, entry.positions[1]),
             indices: new Uint32Array(buffer, indexOffset, entry.indices[1]),
@@ -47,6 +53,10 @@ export function decodeGeometryBundle(buffer) {
             uvs: uvOffset === null
                 ? null
                 : new Float32Array(buffer, uvOffset, entry.uvs[1]),
+            materialId: entry.material ?? null,
+            instanceMatrices: instanceOffset === null
+                ? null
+                : new Float32Array(buffer, instanceOffset, entry.instances[1]),
             bounds: entry.bounds,
         });
     }

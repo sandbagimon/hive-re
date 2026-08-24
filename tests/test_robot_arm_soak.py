@@ -4,10 +4,10 @@ import math
 
 import pytest
 
-from simlab.models.actor import Actor
-from simlab.models.scene import Scene
-from simlab.services.openusd_importer import import_openusd_asset
-from simlab.services.simulation_session import MuJoCoSimulationSession, SimulationState
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.services.openusd_importer import import_openusd_asset
+from beefoundrysim.services.simulation_session import MuJoCoSimulationSession, SimulationState
 
 
 def _assert_finite_state(state: SimulationState, cycle: int) -> None:

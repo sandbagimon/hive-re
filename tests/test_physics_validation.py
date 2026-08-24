@@ -1,10 +1,10 @@
 import json
 from pathlib import Path
 
-from simlab.models.actor import Actor
-from simlab.models.robotics import RoboticsModel
-from simlab.models.scene import Scene
-from simlab.services.physics_validation import run_physics_preflight
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.robotics import RoboticsModel
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.services.physics_validation import run_physics_preflight
 
 
 def _actor(

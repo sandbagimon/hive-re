@@ -1,6 +1,6 @@
 # Quadrotor Propulsion and Control
 
-SimLab models a quadrotor as four named velocity actuators plus an engine-neutral propulsion profile on
+BeeFoundrySim models a quadrotor as four named velocity actuators plus an engine-neutral propulsion profile on
 the Scene actor. Algorithms and controllers command rotor angular-velocity magnitudes in `rad/s`; only
 the MuJoCo adapter converts those values to engine forces and moments.
 
@@ -14,7 +14,7 @@ yaw_moment_i = direction_i * k_m * omega_i^2
 ```
 
 The thrust and yaw moment follow the rotor's configured local axis, transformed into world coordinates
-at every physics step. SimLab converts every rotor force into an equivalent force and `r × F` moment
+at every physics step. BeeFoundrySim converts every rotor force into an equivalent force and `r × F` moment
 about the airframe center of mass, adds the yaw reaction moment, and applies the summed wrench to the
 main body. Visual rotor links therefore cannot destabilize physics through their small inertia.
 
@@ -77,7 +77,7 @@ returns a 13-value body observation (`xyz`, MuJoCo `wxyz` quaternion, world-fram
 world-frame angular velocity):
 
 ```python
-from simlab.simulation import QuadrotorAdapter
+from beefoundrysim.simulation import QuadrotorAdapter
 
 robot = QuadrotorAdapter(
     [

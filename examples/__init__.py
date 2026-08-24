@@ -1,1 +1,1 @@
-"""Executable SimLab examples."""
+"""Executable BeeFoundrySim examples."""

@@ -1,6 +1,6 @@
 # 无人机避障运货示例
 
-SimLab 提供了一个可直接运行的 Iris 四旋翼实时避障外卖配送闭环。蓝调时刻的无人机从临街餐厅
+BeeFoundrySim 提供了一个可直接运行的 Iris 四旋翼实时避障外卖配送闭环。蓝调时刻的无人机从临街餐厅
 取餐，通过先验地图、12 路 MuJoCo 距离传感器构建的在线占用栅格和增量 A* 飞往住宅投递点，
 抵达后释放外卖袋并悬停。
 three.js 只显示仿真状态与射线，不参与物理或控制计算。
@@ -28,7 +28,7 @@ three.js 只显示仿真状态与射线，不参与物理或控制计算。
 
 场景为逐帧控制保留 `50 ms` 截止时间，并为包含 A* 规划的 Controller `reset()` 单独提供
 `200 ms` 初始化预算；初始化时的路径规划不会再因瞬时服务器负载误触发逐帧超时。
-通用的 Iris 抓取、轨迹和飞控逻辑位于 `simlab.controllers.iris_payload_delivery`，上传的避障
+通用的 Iris 抓取、轨迹和飞控逻辑位于 `beefoundrysim.controllers.iris_payload_delivery`，上传的避障
 Controller 不依赖仓库内的 `examples` Python 包，因此在远程服务器和隔离项目目录中也能加载。
 
 预期过程是预转、起飞、在 **NIGHT KITCHEN** 取餐点抓取外卖袋并负载爬升。约 `12.8 s`，一辆

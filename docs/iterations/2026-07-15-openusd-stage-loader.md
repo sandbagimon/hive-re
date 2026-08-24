@@ -20,7 +20,7 @@
   中提供结构化 report。
 - 新增独立外部 USDA 双关节机械臂 fixture，包含 articulation root、三个 rigid body、fixed base、
   两个 revolute joint、position drive、collision、mass 和 diagonal inertia。
-- fixture 为 SimLab 测试原创资产，附带明确许可证记录；importer 不包含文件名、Prim 名称或拓扑特判。
+- fixture 为 BeeFoundrySim 测试原创资产，附带明确许可证记录；importer 不包含文件名、Prim 名称或拓扑特判。
 
 ## 验证
 

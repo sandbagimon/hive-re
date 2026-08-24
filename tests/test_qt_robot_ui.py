@@ -58,7 +58,7 @@ def _write_qt_controller(
         )
     )
     path.write_text(
-        "from simlab.services.controller_runtime import ControllerAction\n"
+        "from beefoundrysim.services.controller_runtime import ControllerAction\n"
         "class QtController:\n"
         "    name = 'Qt Project Controller'\n"
         "    def reset(self, observation): pass\n"
@@ -75,7 +75,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     from PySide6.QtGui import QColor
     from PySide6.QtWidgets import QApplication
 
-    from simlab.main_window import MainWindow
+    from beefoundrysim.main_window import MainWindow
 
     assets = tmp_path / "assets"
     assets.mkdir()
@@ -89,7 +89,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     assert loaded[-1] is True
     _wait_until(
         app,
-        lambda: bool(_javascript(app, window.web_view.page(), "window.simlabEditorReady === true")),
+        lambda: bool(_javascript(app, window.web_view.page(), "window.beefoundrysimEditorReady === true")),
     )
 
     source = Path(
@@ -99,7 +99,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     _javascript(
         app,
         window.web_view.page(),
-        f"window.simlabEditor.importOpenUsdPath({source_json}).then("
+        f"window.beefoundrysimEditor.importOpenUsdPath({source_json}).then("
         "result => document.documentElement.dataset.robotImport = JSON.stringify(result)); true",
     )
     _wait_until(
@@ -121,7 +121,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     )
     assert import_result["ok"] is True
     state = json.loads(
-        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
     )
     actor_id = state["scene"]["actors"][0]["id"]
     articulation = state["scene"]["robotics"]["articulations"][0]
@@ -129,7 +129,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     assert _javascript(
         app,
         window.web_view.page(),
-        f"window.simlabEditor.selectJoint({json.dumps(actor_id)}, {json.dumps(joint_id)})",
+        f"window.beefoundrysimEditor.selectJoint({json.dumps(actor_id)}, {json.dumps(joint_id)})",
     ) is True
     app.processEvents()
 
@@ -156,7 +156,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     window.repaint()
     _pump_events(app, 1.0)
     screenshot = window.web_view.grab()
-    output = Path(os.environ.get("SIMLAB_QT_SCREENSHOT", tmp_path / "robot-joint-ui.png"))
+    output = Path(os.environ.get("BEEFOUNDRYSIM_QT_SCREENSHOT", tmp_path / "robot-joint-ui.png"))
     assert screenshot.save(str(output))
     image = screenshot.toImage()
     colors = {
@@ -174,11 +174,11 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     _wait_until(
         app,
         lambda: json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )["simulationStatus"] == "running",
     )
     home_runtime = json.loads(
-        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
     )["simulationState"]
     _javascript(
         app,
@@ -191,7 +191,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
 
     def robot_has_moved() -> bool:
         current = json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )
         runtime = current["simulationState"]
         return bool(
@@ -204,7 +204,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
 
     _wait_until(app, robot_has_moved)
     running_state = json.loads(
-        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
     )
     running_runtime = running_state["simulationState"]
     assert running_state["simulationStatus"] == "running"
@@ -225,7 +225,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     running_screenshot = window.web_view.grab()
     running_output = Path(
         os.environ.get(
-            "SIMLAB_QT_RUNNING_SCREENSHOT",
+            "BEEFOUNDRYSIM_QT_RUNNING_SCREENSHOT",
             tmp_path / "robot-joint-running.png",
         )
     )
@@ -239,15 +239,15 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     _wait_until(
         app,
         lambda: json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )["simulationStatus"] == "paused",
     )
     paused_time = json.loads(
-        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
     )["simulationState"]["time"]
     _pump_events(app, 0.2)
     assert json.loads(
-        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
     )["simulationState"]["time"] == pytest.approx(paused_time)
 
     _javascript(
@@ -258,7 +258,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
 
     def robot_is_home() -> bool:
         current = json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )
         runtime = current["simulationState"]
         return bool(
@@ -282,7 +282,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     _wait_until(
         app,
         lambda: json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )["simulationState"]["actuators"][0]["ctrl"]
         == pytest.approx(0.5),
     )
@@ -300,7 +300,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
 
     def trajectory_is_loaded() -> bool:
         current = json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )
         runtime = current["simulationState"]
         trajectory = runtime["trajectory"]
@@ -322,7 +322,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
 
     def trajectory_is_in_progress() -> bool:
         current = json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )
         trajectory = current["simulationState"]["trajectory"]
         return bool(
@@ -340,7 +340,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
 
     def trajectory_is_paused() -> bool:
         current = json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )
         return bool(
             current["simulationStatus"] == "paused"
@@ -349,11 +349,11 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
 
     _wait_until(app, trajectory_is_paused)
     paused_trajectory_state = json.loads(
-        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
     )["simulationState"]
     _pump_events(app, 0.2)
     frozen_trajectory_state = json.loads(
-        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
     )["simulationState"]
     assert frozen_trajectory_state["time"] == pytest.approx(paused_trajectory_state["time"])
     assert frozen_trajectory_state["trajectory"]["time"] == pytest.approx(
@@ -374,7 +374,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
 
     def trajectory_is_completed() -> bool:
         current = json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )
         runtime = current["simulationState"]
         trajectory = runtime["trajectory"]
@@ -388,7 +388,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
 
     _wait_until(app, trajectory_is_completed)
     completed_state = json.loads(
-        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
     )["simulationState"]
     completed_link = next(
         item for item in completed_state["links"] if item["id"] == child_link_id
@@ -414,14 +414,14 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     trajectory_screenshot = window.web_view.grab()
     trajectory_output = Path(
         os.environ.get(
-            "SIMLAB_QT_TRAJECTORY_SCREENSHOT",
+            "BEEFOUNDRYSIM_QT_TRAJECTORY_SCREENSHOT",
             tmp_path / "robot-trajectory-completed.png",
         )
     )
     assert trajectory_screenshot.save(str(trajectory_output))
 
     editor_history_before_keyframes = json.loads(
-        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
     )
     _javascript(
         app,
@@ -484,7 +484,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         {"id": "keyframe-1", "time": 0.8},
     ]
     editor_history_after_edit = json.loads(
-        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
     )
     assert editor_history_after_edit["dirty"] == editor_history_before_keyframes["dirty"]
     assert editor_history_after_edit["canUndo"] == editor_history_before_keyframes["canUndo"]
@@ -504,7 +504,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
 
     def trajectory_crossed_middle_keyframe() -> bool:
         current = json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )
         runtime = current["simulationState"]
         cursor = runtime["trajectory"]["time"]
@@ -526,7 +526,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     keyframe_screenshot = window.web_view.grab()
     keyframe_output = Path(
         os.environ.get(
-            "SIMLAB_QT_KEYFRAME_SCREENSHOT",
+            "BEEFOUNDRYSIM_QT_KEYFRAME_SCREENSHOT",
             tmp_path / "robot-keyframes.png",
         )
     )
@@ -550,7 +550,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         == 2,
     )
     editor_history_after_delete = json.loads(
-        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
     )
     assert editor_history_after_delete["dirty"] == editor_history_before_keyframes["dirty"]
     assert editor_history_after_delete["canUndo"] == editor_history_before_keyframes["canUndo"]
@@ -598,7 +598,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
 
     def trajectory_clip_is_saved() -> bool:
         current = json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )
         clips = current["scene"].get("trajectories", [])
         return bool(
@@ -620,7 +620,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         app,
         lambda: "trajectories"
         not in json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )["scene"],
     )
     _javascript(
@@ -644,7 +644,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     _javascript(
         app,
         window.web_view.page(),
-        f"window.simlabEditor.saveProjectPath({saved_scene_json}).then("
+        f"window.beefoundrysimEditor.saveProjectPath({saved_scene_json}).then("
         "result=>document.documentElement.dataset.projectSave=JSON.stringify(result));true",
     )
     _wait_until(
@@ -668,7 +668,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     saved_data = json.loads(saved_scene_path.read_text(encoding="utf-8"))
     assert saved_data["trajectories"][0]["trajectory"]["name"] == "Qt Arm Motion"
     saved_editor_state = json.loads(
-        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
     )
     assert saved_editor_state["dirty"] is False
     assert saved_editor_state["currentPath"] == str(saved_scene_path)
@@ -688,14 +688,14 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditorReady === true",
+                "window.beefoundrysimEditorReady === true",
             )
         ),
     )
     _javascript(
         app,
         reopened_window.web_view.page(),
-        f"window.simlabEditor.openProjectPath({saved_scene_json}).then("
+        f"window.beefoundrysimEditor.openProjectPath({saved_scene_json}).then("
         "result=>document.documentElement.dataset.projectOpen=JSON.stringify(result));true",
     )
     _wait_until(
@@ -720,7 +720,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         _javascript(
             app,
             reopened_window.web_view.page(),
-            "window.simlabEditor.getStateJson()",
+            "window.beefoundrysimEditor.getStateJson()",
         )
     )
     reopened_actor_id = reopened_state["scene"]["actors"][0]["id"]
@@ -729,7 +729,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     assert _javascript(
         app,
         reopened_window.web_view.page(),
-        "window.simlabEditor.selectJoint("
+        "window.beefoundrysimEditor.selectJoint("
         f"{json.dumps(reopened_actor_id)},{json.dumps(reopened_joint_id)})",
     ) is True
     _wait_until(
@@ -765,7 +765,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )
         runtime = current["simulationState"]
@@ -786,7 +786,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     _javascript(
         app,
         reopened_window.web_view.page(),
-        f"window.simlabEditor.loadControllerPath({controller_path_json}).then("
+        f"window.beefoundrysimEditor.loadControllerPath({controller_path_json}).then("
         "result=>document.documentElement.dataset.controllerLoad=JSON.stringify(result));true",
     )
     _wait_until(
@@ -817,7 +817,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )
         runtime = current["simulationState"]
@@ -858,7 +858,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )["simulationStatus"]
         == "running",
@@ -871,7 +871,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         _javascript(
             app,
             reopened_window.web_view.page(),
-            "window.simlabEditor.getStateJson()",
+            "window.beefoundrysimEditor.getStateJson()",
         )
     )["simulationState"]
     assert controller_running["time"] == pytest.approx(0.08)
@@ -906,7 +906,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )["simulationStatus"]
         == "paused",
@@ -922,7 +922,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )["simulationStatus"]
         == "running",
@@ -935,7 +935,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         _javascript(
             app,
             reopened_window.web_view.page(),
-            "window.simlabEditor.getStateJson()",
+            "window.beefoundrysimEditor.getStateJson()",
         )
     )["simulationState"]
     assert controller_reloaded["time"] == pytest.approx(0.16)
@@ -966,7 +966,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )["simulationStatus"]
         == "running",
@@ -979,7 +979,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         _javascript(
             app,
             reopened_window.web_view.page(),
-            "window.simlabEditor.getStateJson()",
+            "window.beefoundrysimEditor.getStateJson()",
         )
     )
     assert controller_fault["simulationStatus"] == "running"
@@ -1003,7 +1003,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )["simulationState"]["controller"]["mode"]
         == "manual",
@@ -1013,7 +1013,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             app,
             reopened_window.web_view.page(),
             "JSON.stringify({"
-            "status:window.simlabEditor.getStateJson(),"
+            "status:window.beefoundrysimEditor.getStateJson(),"
             "jogEnabled:[...document.querySelectorAll('[data-joint-jog]')].every(x=>!x.disabled),"
             "playEnabled:!document.querySelector('[data-trajectory-command=\"play\"]').disabled"
             "})",
@@ -1033,7 +1033,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )["simulationState"]["time"]
         == 0,
@@ -1049,7 +1049,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )
         runtime = current["simulationState"]
@@ -1077,7 +1077,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )["simulationState"]["recording"]["sample_count"]
         == 1,
@@ -1093,7 +1093,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )["simulationStatus"]
         == "running",
@@ -1106,7 +1106,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         _javascript(
             app,
             reopened_window.web_view.page(),
-            "window.simlabEditor.getStateJson()",
+            "window.beefoundrysimEditor.getStateJson()",
         )
     )["simulationState"]
     assert half_speed_state["time"] == pytest.approx(0.02)
@@ -1129,7 +1129,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         _javascript(
             app,
             reopened_window.web_view.page(),
-            "window.simlabEditor.getStateJson()",
+            "window.beefoundrysimEditor.getStateJson()",
         )
     )["simulationState"]
     assert double_speed_state["time"] == pytest.approx(0.10)
@@ -1155,7 +1155,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )["simulationState"]["recording"]["active"]
         is False,
@@ -1171,7 +1171,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )["simulationStatus"]
         == "paused",
@@ -1198,7 +1198,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )["simulationState"]["time"]
         == 0,
@@ -1231,7 +1231,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )
         runtime = current["simulationState"]
@@ -1255,7 +1255,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )
         runtime = current["simulationState"]
@@ -1273,7 +1273,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )
         raise AssertionError(
@@ -1290,7 +1290,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         _javascript(
             app,
             reopened_window.web_view.page(),
-            "window.simlabEditor.getStateJson()",
+            "window.beefoundrysimEditor.getStateJson()",
         )
     )["simulationState"]["recording"]
     assert completed_recording_state["active"] is True
@@ -1306,7 +1306,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
             _javascript(
                 app,
                 reopened_window.web_view.page(),
-                "window.simlabEditor.getStateJson()",
+                "window.beefoundrysimEditor.getStateJson()",
             )
         )
         recording = current["simulationState"]["recording"]
@@ -1320,7 +1320,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     _javascript(
         app,
         reopened_window.web_view.page(),
-        "window.simlabEditor.getRecording().then("
+        "window.beefoundrysimEditor.getRecording().then("
         "result=>document.documentElement.dataset.recording=JSON.stringify(result));true",
     )
     _wait_until(
@@ -1366,8 +1366,8 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
         app,
         reopened_window.web_view.page(),
         "Promise.all(["
-        f"window.simlabEditor.exportRecordingPath({recording_json_path_json},'json'),"
-        f"window.simlabEditor.exportRecordingPath({recording_csv_path_json},'csv')"
+        f"window.beefoundrysimEditor.exportRecordingPath({recording_json_path_json},'json'),"
+        f"window.beefoundrysimEditor.exportRecordingPath({recording_csv_path_json},'csv')"
         "]).then(result=>document.documentElement.dataset.recordingExport="
         "JSON.stringify(result));true",
     )
@@ -1409,7 +1409,7 @@ def test_qt_webengine_renders_imported_robot_joint_ui(tmp_path: Path) -> None:
     reopened_screenshot = reopened_window.web_view.grab()
     reopened_output = Path(
         os.environ.get(
-            "SIMLAB_QT_REOPENED_SCREENSHOT",
+            "BEEFOUNDRYSIM_QT_REOPENED_SCREENSHOT",
             tmp_path / "robot-trajectory-reopened.png",
         )
     )

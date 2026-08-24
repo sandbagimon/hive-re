@@ -1,22 +1,22 @@
 import pytest
 
-from simlab.models.actor import Actor
-from simlab.models.robotics import (
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.robotics import (
     RigidTransform,
     Sensor,
     SensorNoise,
     SensorNoiseChannel,
 )
-from simlab.models.scene import Scene
-from simlab.models.trajectory import JointTrajectory
-from simlab.models.transform import Transform
-from simlab.services.controller_runtime import (
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.models.trajectory import JointTrajectory
+from beefoundrysim.models.transform import Transform
+from beefoundrysim.services.controller_runtime import (
     ControllerAction,
     ControllerObservation,
     NavigationUpdate,
 )
-from simlab.services.openusd_importer import import_openusd_asset
-from simlab.services.simulation_session import (
+from beefoundrysim.services.openusd_importer import import_openusd_asset
+from beefoundrysim.services.simulation_session import (
     MuJoCoSimulationSession,
     SimulationRuntimeError,
 )

@@ -12,33 +12,33 @@ if [[ ! -x "${VENV_PYTHON}" ]]; then
   exit 1
 fi
 
-BACKEND_HOST="${SIMLAB_BACKEND_HOST:-127.0.0.1}"
-BACKEND_PORT="${SIMLAB_BACKEND_PORT:-8765}"
-DATA_ROOT="${SIMLAB_DATA_ROOT:-${SCRIPT_DIR}/.simlab-data}"
-LOCAL_SCENE_ROOT="${SIMLAB_LOCAL_SCENE_ROOT:-${SCRIPT_DIR}/external/architectural-brownstone/unpacked}"
-ALGORITHM_HOST="${SIMLAB_ALGORITHM_HOST:-127.0.0.1}"
-ALGORITHM_PORT="${SIMLAB_ALGORITHM_PORT:-50051}"
-if [[ -n "${SIMLAB_ALGORITHM_BIND:-}" ]]; then
-  ALGORITHM_BIND="${SIMLAB_ALGORITHM_BIND}"
+BACKEND_HOST="${BEEFOUNDRYSIM_BACKEND_HOST:-127.0.0.1}"
+BACKEND_PORT="${BEEFOUNDRYSIM_BACKEND_PORT:-8765}"
+DATA_ROOT="${BEEFOUNDRYSIM_DATA_ROOT:-${SCRIPT_DIR}/.beefoundrysim-data}"
+LOCAL_SCENE_ROOT="${BEEFOUNDRYSIM_LOCAL_SCENE_ROOT:-${SCRIPT_DIR}/external/architectural-brownstone/unpacked}"
+ALGORITHM_HOST="${BEEFOUNDRYSIM_ALGORITHM_HOST:-127.0.0.1}"
+ALGORITHM_PORT="${BEEFOUNDRYSIM_ALGORITHM_PORT:-50051}"
+if [[ -n "${BEEFOUNDRYSIM_ALGORITHM_BIND:-}" ]]; then
+  ALGORITHM_BIND="${BEEFOUNDRYSIM_ALGORITHM_BIND}"
   ALGORITHM_PORT="${ALGORITHM_BIND##*:}"
 else
   ALGORITHM_BIND="${ALGORITHM_HOST}:${ALGORITHM_PORT}"
 fi
-ALGORITHM_ASSET_ROOT="${SIMLAB_ALGORITHM_ASSET_ROOT:-${SCRIPT_DIR}}"
-ALGORITHM_WORKERS="${SIMLAB_ALGORITHM_WORKERS:-8}"
+ALGORITHM_ASSET_ROOT="${BEEFOUNDRYSIM_ALGORITHM_ASSET_ROOT:-${SCRIPT_DIR}}"
+ALGORITHM_WORKERS="${BEEFOUNDRYSIM_ALGORITHM_WORKERS:-8}"
 
 export PYTHONPATH="${SCRIPT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}"
 
 if ! [[ "${BACKEND_PORT}" =~ ^[0-9]+$ ]]; then
-  echo "Error: SIMLAB_BACKEND_PORT must be a number: ${BACKEND_PORT}" >&2
+  echo "Error: BEEFOUNDRYSIM_BACKEND_PORT must be a number: ${BACKEND_PORT}" >&2
   exit 1
 fi
 if ! [[ "${ALGORITHM_PORT}" =~ ^[0-9]+$ ]]; then
-  echo "Error: SIMLAB_ALGORITHM_PORT must be a number: ${ALGORITHM_PORT}" >&2
+  echo "Error: BEEFOUNDRYSIM_ALGORITHM_PORT must be a number: ${ALGORITHM_PORT}" >&2
   exit 1
 fi
 if ! [[ "${ALGORITHM_WORKERS}" =~ ^[1-9][0-9]*$ ]]; then
-  echo "Error: SIMLAB_ALGORITHM_WORKERS must be a positive integer." >&2
+  echo "Error: BEEFOUNDRYSIM_ALGORITHM_WORKERS must be a positive integer." >&2
   exit 1
 fi
 
@@ -87,7 +87,7 @@ handle_signal() {
 trap cleanup EXIT
 trap handle_signal INT TERM
 
-echo "Starting SimLab API backend at http://${BACKEND_HOST}:${BACKEND_PORT}"
+echo "Starting BeeFoundrySim API backend at http://${BACKEND_HOST}:${BACKEND_PORT}"
 echo "Starting MuJoCo algorithm gRPC backend at ${ALGORITHM_BIND}"
 echo "API data directory: ${DATA_ROOT}"
 if [[ -f "${LOCAL_SCENE_ROOT}/Demos/AEC/BrownstoneDemo/World_BrownstoneDemopack_Park(8Gb).usd" ]]; then
@@ -99,7 +99,7 @@ else
 fi
 echo "Algorithm asset root: ${ALGORITHM_ASSET_ROOT}"
 
-"${VENV_PYTHON}" -u -m simlab.web_server \
+"${VENV_PYTHON}" -u -m beefoundrysim.web_server \
   --host "${BACKEND_HOST}" \
   --port "${BACKEND_PORT}" \
   --data-root "${DATA_ROOT}" \
@@ -112,7 +112,7 @@ echo "Algorithm asset root: ${ALGORITHM_ASSET_ROOT}"
   "$@" &
 api_pid=$!
 
-"${VENV_PYTHON}" -u -m simlab.simulation.grpc_backend \
+"${VENV_PYTHON}" -u -m beefoundrysim.simulation.grpc_backend \
   --bind "${ALGORITHM_BIND}" \
   --asset-root "${ALGORITHM_ASSET_ROOT}" \
   --workers "${ALGORITHM_WORKERS}" &
@@ -158,7 +158,7 @@ if [[ "${algorithm_ready}" != "true" ]]; then
   exit 1
 fi
 
-echo "SimLab backend is ready. Press Ctrl+C to stop both services."
+echo "BeeFoundrySim backend is ready. Press Ctrl+C to stop both services."
 
 set +e
 wait -n "${api_pid}" "${algorithm_pid}"

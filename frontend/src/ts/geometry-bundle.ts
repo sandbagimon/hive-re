@@ -8,6 +8,8 @@ interface GeometryBundleHeaderEntry {
   normals: Slice;
   colors?: Slice;
   uvs?: Slice;
+  material?: string;
+  instances?: Slice;
   bounds: {
     min: [number, number, number];
     max: [number, number, number];
@@ -16,7 +18,7 @@ interface GeometryBundleHeaderEntry {
 }
 
 interface GeometryBundleHeader {
-  format: 'simlab-geometry-bundle';
+  format: 'beefoundrysim-geometry-bundle';
   version: 1;
   geometries: Record<string, GeometryBundleHeaderEntry>;
 }
@@ -27,6 +29,8 @@ export interface BundledGeometry {
   normals: Float32Array;
   colors: Uint8Array | null;
   uvs: Float32Array | null;
+  materialId: string | null;
+  instanceMatrices: Float32Array | null;
   bounds: GeometryBundleHeaderEntry['bounds'];
 }
 
@@ -59,7 +63,7 @@ export function decodeGeometryBundle(buffer: ArrayBuffer): Map<string, BundledGe
   const header = JSON.parse(
     new TextDecoder().decode(new Uint8Array(buffer, 12, headerLength)),
   ) as GeometryBundleHeader;
-  if (header.format !== 'simlab-geometry-bundle' || header.version !== 1) {
+  if (header.format !== 'beefoundrysim-geometry-bundle' || header.version !== 1) {
     throw new Error('Unsupported geometry bundle format');
   }
   const payloadStart = align4(headerEnd);
@@ -74,6 +78,12 @@ export function decodeGeometryBundle(buffer: ArrayBuffer): Map<string, BundledGe
     const uvOffset = entry.uvs
       ? validateSlice(entry.uvs, 4, payloadStart, buffer.byteLength)
       : null;
+    const instanceOffset = entry.instances
+      ? validateSlice(entry.instances, 4, payloadStart, buffer.byteLength)
+      : null;
+    if (entry.instances && (!entry.instances[1] || entry.instances[1] % 16 !== 0)) {
+      throw new Error('Geometry bundle contains invalid instance matrices');
+    }
     output.set(geometryId, {
       positions: new Float32Array(buffer, positionOffset, entry.positions[1]),
       indices: new Uint32Array(buffer, indexOffset, entry.indices[1]),
@@ -84,6 +94,10 @@ export function decodeGeometryBundle(buffer: ArrayBuffer): Map<string, BundledGe
       uvs: uvOffset === null
         ? null
         : new Float32Array(buffer, uvOffset, entry.uvs![1]),
+      materialId: entry.material ?? null,
+      instanceMatrices: instanceOffset === null
+        ? null
+        : new Float32Array(buffer, instanceOffset, entry.instances![1]),
       bounds: entry.bounds,
     });
   }

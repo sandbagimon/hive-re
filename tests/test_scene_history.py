@@ -1,7 +1,7 @@
-from simlab.models.scene import Scene
-from simlab.models.transform import Transform
-from simlab.services.scene_history import SceneHistory
-from simlab.services.scene_service import SceneService
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.models.transform import Transform
+from beefoundrysim.services.scene_history import SceneHistory
+from beefoundrysim.services.scene_service import SceneService
 
 
 def test_scene_history_tracks_dirty_saved_and_undo_redo() -> None:

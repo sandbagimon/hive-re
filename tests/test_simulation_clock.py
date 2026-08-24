@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from simlab.models.actor import Actor
-from simlab.models.robotics import Sensor
-from simlab.models.scene import Scene
-from simlab.models.transform import Transform
-from simlab.services.openusd_importer import import_openusd_asset
-from simlab.services.simulation_service import SimulationService
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.robotics import Sensor
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.models.transform import Transform
+from beefoundrysim.services.openusd_importer import import_openusd_asset
+from beefoundrysim.services.simulation_service import SimulationService
 
 
 class FakeClock:

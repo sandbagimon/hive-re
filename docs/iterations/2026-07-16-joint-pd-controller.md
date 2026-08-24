@@ -9,7 +9,7 @@
 
 ## 主要改动
 
-- 新增 `simlab.controllers` package 和 `JointPositionPdController`。
+- 新增 `beefoundrysim.controllers` package 和 `JointPositionPdController`。
 - `JointPdConfig` 定义 target、kp、kd、max_delta 和 tolerance，拒绝非有限或非法范围。
 - 每步根据 qpos error 和 qvel 计算外环 correction，并限制 position target delta。
 - `set_target` 与 `set_targets` 支持 runtime goal 更新，未知 joint 不产生部分更新。

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from simlab.models.robotics import RigidTransform, Sensor, SensorNoise, SensorNoiseChannel
-from simlab.services.rangefinder_sensors import (
+from beefoundrysim.models.robotics import RigidTransform, Sensor, SensorNoise, SensorNoiseChannel
+from beefoundrysim.services.rangefinder_sensors import (
     RangefinderMeasurement,
     RangefinderSensorScheduler,
 )

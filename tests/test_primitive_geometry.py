@@ -2,9 +2,9 @@ import math
 
 import pytest
 
-from simlab.models.actor import Actor
-from simlab.models.transform import Transform
-from simlab.services.primitive_geometry import (
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.transform import Transform
+from beefoundrysim.services.primitive_geometry import (
     GeometryContractError,
     collider_geometry,
     euler_xyz_to_mujoco_quaternion,

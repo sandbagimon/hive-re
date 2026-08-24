@@ -12,9 +12,9 @@ from examples.controllers.iris_obstacle_delivery import (
     plan_route,
 )
 from examples.drone_delivery_obstacles import create_obstacle_delivery_scene
-from simlab.services.controller_loader import ProjectControllerLoader
-from simlab.services.project_service import validate_scene
-from simlab.services.simulation_session import MuJoCoSimulationSession
+from beefoundrysim.services.controller_loader import ProjectControllerLoader
+from beefoundrysim.services.project_service import validate_scene
+from beefoundrysim.services.simulation_session import MuJoCoSimulationSession
 
 
 def test_a_star_route_avoids_inflated_delivery_obstacles() -> None:

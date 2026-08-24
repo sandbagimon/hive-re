@@ -27,13 +27,13 @@ async function loadRuntimeConfig(label) {
     },
   });
 
-  assert.equal(routePath, '/simlab-config.json');
+  assert.equal(routePath, '/beefoundrysim-config.json');
   assert.equal(headers.get('cache-control'), 'no-store');
   return JSON.parse(responseBody);
 }
 
-process.env.SIMLAB_API_TOKEN = 'backend-development-token';
-delete process.env.SIMLAB_FRONTEND_ACCESS_TOKEN;
+process.env.BEEFOUNDRYSIM_API_TOKEN = 'backend-development-token';
+delete process.env.BEEFOUNDRYSIM_FRONTEND_ACCESS_TOKEN;
 assert.deepEqual(await loadRuntimeConfig('fallback'), {
   apiBaseUrl: 'same-origin',
   webSocketBaseUrl: 'same-origin',
@@ -42,7 +42,7 @@ assert.deepEqual(await loadRuntimeConfig('fallback'), {
   accessToken: 'backend-development-token',
 });
 
-process.env.SIMLAB_FRONTEND_ACCESS_TOKEN = 'frontend-development-token';
+process.env.BEEFOUNDRYSIM_FRONTEND_ACCESS_TOKEN = 'frontend-development-token';
 assert.deepEqual(await loadRuntimeConfig('override'), {
   apiBaseUrl: 'same-origin',
   webSocketBaseUrl: 'same-origin',

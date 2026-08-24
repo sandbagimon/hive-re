@@ -27,7 +27,7 @@
 - 多刚体 Stage 会给出 warning，并暂时合并。
 - 碰撞体暂时使用合并后的视觉网格。
 - 支持 `displayColor`，尚未完整支持 `UsdPreviewSurface`、纹理和动画。
-- 默认仿真链路是 OpenUSD -> SimLab Schema/cache -> MJCF -> MuJoCo，不依赖实验性的 MuJoCo native USD decoder。
+- 默认仿真链路是 OpenUSD -> BeeFoundrySim Schema/cache -> MJCF -> MuJoCo，不依赖实验性的 MuJoCo native USD decoder。
 - `usd-core` 依赖和 TOST license 已记录在 `docs/THIRD_PARTY_NOTICES.md`。
 
 ## 后续

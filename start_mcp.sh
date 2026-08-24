@@ -11,16 +11,16 @@ if [[ ! -x "${VENV_PYTHON}" ]]; then
   exit 1
 fi
 
-if ! "${VENV_PYTHON}" -c "import httpx, mcp, simlab.mcp.server" >/dev/null 2>&1; then
+if ! "${VENV_PYTHON}" -c "import httpx, mcp, beefoundrysim.mcp.server" >/dev/null 2>&1; then
   echo "Error: MCP dependencies are incomplete." >&2
   echo "Install them with: .venv/bin/python -m pip install -e '.[mcp]'" >&2
   exit 1
 fi
 
-export SIMLAB_API_URL="${SIMLAB_API_URL:-http://127.0.0.1:8765}"
+export BEEFOUNDRYSIM_API_URL="${BEEFOUNDRYSIM_API_URL:-http://127.0.0.1:8765}"
 export PYTHONPATH="${SCRIPT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}"
 
-echo "Starting SimLab MCP adapter (${SIMLAB_MCP_TRANSPORT:-stdio})" >&2
-echo "Connecting to SimLab API at ${SIMLAB_API_URL}" >&2
+echo "Starting BeeFoundrySim MCP adapter (${BEEFOUNDRYSIM_MCP_TRANSPORT:-stdio})" >&2
+echo "Connecting to BeeFoundrySim API at ${BEEFOUNDRYSIM_API_URL}" >&2
 
-exec "${VENV_PYTHON}" -m simlab.mcp.server "$@"
+exec "${VENV_PYTHON}" -m beefoundrysim.mcp.server "$@"

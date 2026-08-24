@@ -7,10 +7,10 @@ from typing import Any
 
 import pytest
 
-from simlab.models.scene import Scene
-from simlab.services.simulation_service import SimulationService
-from simlab.services.simulation_session import SimulationState
-from simlab.simulation.runtime import (
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.services.simulation_service import SimulationService
+from beefoundrysim.services.simulation_session import SimulationState
+from beefoundrysim.simulation.runtime import (
     EngineCapability,
     EngineDescriptor,
     MissingEngineCapabilityError,
@@ -21,11 +21,11 @@ from simlab.simulation.runtime import (
     UnsupportedSolverCombinationError,
     validate_runtime_request,
 )
-from simlab.simulation.runtime_registry import (
+from beefoundrysim.simulation.runtime_registry import (
     RuntimeBackendRegistry,
     default_runtime_backend_registry,
 )
-from simlab.web_application import WebApplication
+from beefoundrysim.web_application import WebApplication
 
 
 @dataclass(slots=True)

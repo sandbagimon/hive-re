@@ -6,9 +6,16 @@ const positions = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]);
 const indices = new Uint32Array([0, 1, 2]);
 const normals = new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]);
 const colors = new Uint8Array([255, 0, 0, 0, 255, 0, 0, 0, 255]);
-const payloadLength = positions.byteLength + indices.byteLength + normals.byteLength + colors.byteLength;
+const instances = new Float32Array([
+  1, 0, 0, 0,
+  0, 1, 0, 0,
+  0, 0, 1, 0,
+  4, 5, 6, 1,
+]);
+const payloadLength = positions.byteLength + indices.byteLength + normals.byteLength
+  + colors.byteLength + 3 + instances.byteLength;
 const header = new TextEncoder().encode(JSON.stringify({
-  format: 'simlab-geometry-bundle',
+  format: 'beefoundrysim-geometry-bundle',
   version: 1,
   geometries: {
     triangle: {
@@ -16,6 +23,11 @@ const header = new TextEncoder().encode(JSON.stringify({
       indices: [positions.byteLength, indices.length],
       normals: [positions.byteLength + indices.byteLength, normals.length],
       colors: [positions.byteLength + indices.byteLength + normals.byteLength, colors.length],
+      material: 'mat_green',
+      instances: [
+        positions.byteLength + indices.byteLength + normals.byteLength + colors.byteLength + 3,
+        instances.length,
+      ],
       bounds: { min: [0, 0, 0], max: [1, 1, 0], sphere: [0.5, 0.5, 0, 0.707] },
     },
   },
@@ -26,11 +38,12 @@ new Uint8Array(buffer, 0, 8).set(new TextEncoder().encode('SIMGEOM1'));
 new DataView(buffer).setUint32(8, header.byteLength, true);
 new Uint8Array(buffer, 12, header.byteLength).set(header);
 let offset = payloadStart;
-for (const view of [positions, indices, normals, colors]) {
+for (const view of [positions, indices, normals, colors, instances]) {
   new Uint8Array(buffer, offset, view.byteLength).set(
     new Uint8Array(view.buffer, view.byteOffset, view.byteLength),
   );
   offset += view.byteLength;
+  offset = (offset + 3) & ~3;
 }
 
 const bundle = decodeGeometryBundle(buffer);
@@ -40,6 +53,8 @@ assert.deepEqual([...triangle.positions], [...positions]);
 assert.deepEqual([...triangle.indices], [...indices]);
 assert.deepEqual([...triangle.normals], [...normals]);
 assert.deepEqual([...triangle.colors], [...colors]);
+assert.equal(triangle.materialId, 'mat_green');
+assert.deepEqual([...triangle.instanceMatrices], [...instances]);
 
 assert.throws(
   () => decodeGeometryBundle(new TextEncoder().encode('not-a-bundle').buffer),

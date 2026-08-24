@@ -6,13 +6,13 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
-from simlab.models.recording import JointStateRecording
-from simlab.services.contact_sensors import ContactMeasurement, ContactSensorSample
-from simlab.services.imu_sensors import ImuSensorSample
-from simlab.services.joint_state_recorder import JointStateRecorder
-from simlab.services.joint_state_sensors import JointStateSensorSample
-from simlab.services.rangefinder_sensors import RangefinderSensorSample
-from simlab.services.simulation_session import (
+from beefoundrysim.models.recording import JointStateRecording
+from beefoundrysim.services.contact_sensors import ContactMeasurement, ContactSensorSample
+from beefoundrysim.services.imu_sensors import ImuSensorSample
+from beefoundrysim.services.joint_state_recorder import JointStateRecorder
+from beefoundrysim.services.joint_state_sensors import JointStateSensorSample
+from beefoundrysim.services.rangefinder_sensors import RangefinderSensorSample
+from beefoundrysim.services.simulation_session import (
     ActuatorSimulationState,
     JointSimulationState,
     SimulationState,

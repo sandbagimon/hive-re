@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from simlab.models.robotics import Sensor, SensorNoise, SensorNoiseChannel
-from simlab.services.joint_state_sensors import (
+from beefoundrysim.models.robotics import Sensor, SensorNoise, SensorNoiseChannel
+from beefoundrysim.services.joint_state_sensors import (
     JointKinematics,
     JointStateSensorScheduler,
 )

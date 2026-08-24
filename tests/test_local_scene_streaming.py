@@ -2,14 +2,21 @@ from __future__ import annotations
 
 import asyncio
 import json
+import struct
 from pathlib import Path
 
 import httpx
 import pytest
 
-from simlab.services.local_scene_streaming import PARK_ENTRY, build_park_cache
-from simlab.services.openusd.geometry_bundle import read_geometry_bundle_header
-from simlab.web_server import create_app
+from beefoundrysim.services.local_scene_streaming import (
+    FULL_PARK_SCENE_ID,
+    PARK_ENTRY,
+    _instance_lod_mesh,
+    build_park_cache,
+)
+from beefoundrysim.services.openusd.geometry_bundle import read_geometry_bundle_header
+from beefoundrysim.services.openusd.mesh_extractor import MeshData
+from beefoundrysim.web_server import create_app
 
 pytest.importorskip("pxr")
 
@@ -34,6 +41,18 @@ def Xform "World"
         uniform token[] xformOpOrder = ["xformOp:translate"]
         float3[] primvars:displayColor = [(0.1, 0.5, 0.1)]
         rel material:binding = </World/Looks/OpaqueMdl>
+    }
+    def Cube "GrassBlade"
+    {
+        double size = 0.25
+        float3[] primvars:displayColor = [(0.1, 0.7, 0.1)]
+        rel material:binding = </World/Looks/OpaqueMdl>
+    }
+    def PointInstancer "GrassInstances"
+    {
+        rel prototypes = [</World/GrassBlade>]
+        int[] protoIndices = [0, 0]
+        point3f[] positions = [(0, 6, 0), (1, 6, 0)]
     }
     def Scope "Looks"
     {
@@ -72,6 +91,50 @@ def Xform "World"
 '''
 
 TEXTURE_BYTES = b"fixture-original-park-texture"
+
+NESTED_INSTANCER_FIXTURE = '''#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+def Xform "World"
+{
+    def Cube "Road"
+    {
+        double size = 4
+        float3[] primvars:displayColor = [(0.2, 0.2, 0.2)]
+    }
+    def Xform "ScatterAsset"
+    {
+        def Cube "Trunk"
+        {
+            double size = 0.4
+            double3 xformOp:translate = (0, 0, 1)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+        def PointInstancer "BranchInstancer"
+        {
+            double3 xformOp:translate = (0.5, 0.25, 1.5)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+            rel prototypes = [</World/ScatterAsset/BranchInstancer/Branch>]
+            int[] protoIndices = [0, 0]
+            point3f[] positions = [(0.1, 0, 0), (-0.1, 0, 0)]
+            def Cube "Branch"
+            {
+                double size = 0.1
+            }
+        }
+    }
+    def PointInstancer "TreeScatter"
+    {
+        rel prototypes = [</World/ScatterAsset>]
+        int[] protoIndices = [0, 0]
+        point3f[] positions = [(4, 2, 0), (6, -1, 0)]
+    }
+}
+'''
+
 MDL_TEXTURE_BYTES = {
     "BaseColor.png": b"fixture-mdl-base-color",
     "Normal.png": b"fixture-mdl-normal",
@@ -125,7 +188,7 @@ def test_park_cache_builds_stream_chunks_and_box_collision_proxy(tmp_path: Path)
 
     persisted = json.loads((cache / "manifest.json").read_text(encoding="utf-8"))
     assert persisted == manifest
-    assert manifest["format"] == "simlab-local-scene"
+    assert manifest["format"] == "beefoundrysim-local-scene"
     assert manifest["version"] == 3
     assert manifest["statistics"]["chunk_count"] == 1
     assert manifest["statistics"]["collision_box_count"] == 1
@@ -188,6 +251,142 @@ def test_material_texture_recovers_pack_relative_path(tmp_path: Path) -> None:
     assert manifest["statistics"]["missing_texture_count"] == 0
 
 
+def test_dense_instance_prototype_lod_retains_triangle_attributes() -> None:
+    vertex_count = 300
+    mesh = MeshData(
+        positions=[float(index) for index in range(vertex_count * 3)],
+        indices=list(range(vertex_count)),
+        colors=[0.1, 0.2, 0.3, 1.0] * vertex_count,
+        uvs=[0.25, 0.75] * vertex_count,
+    )
+
+    simplified = _instance_lod_mesh(mesh, 100_000)
+
+    assert simplified.vertex_count == 24
+    assert simplified.triangle_count == 8
+    assert len(simplified.colors) == 24 * 4
+    assert len(simplified.uvs) == 24 * 2
+
+
+def test_full_park_cache_preserves_filtered_content_as_gpu_instances(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "park.usda"
+    _write_park_fixture(source)
+    cache = tmp_path / "full-cache"
+
+    manifest = build_park_cache(
+        source,
+        cache,
+        "full-fixture",
+        scene_id=FULL_PARK_SCENE_ID,
+        name="Architectural Brownstone Park (Full)",
+        content_profile="full",
+    )
+
+    assert manifest["scene_id"] == FULL_PARK_SCENE_ID
+    assert manifest["content_profile"] == "full"
+    assert manifest["statistics"]["point_instance_count"] == 2
+    assert manifest["statistics"]["instance_group_count"] == 1
+    headers = [
+        read_geometry_bundle_header((cache / f"{chunk['id']}.simbin").read_bytes())
+        for chunk in manifest["chunks"]
+    ]
+    instanced = [
+        entry
+        for header in headers
+        for entry in header["geometries"].values()
+        if "instances" in entry
+    ]
+    assert len(instanced) == 1
+    assert instanced[0]["instances"][1] == 32
+    assert instanced[0]["material"].startswith("mat_")
+
+
+def _decode_instanced_entries(
+    cache: Path, manifest: dict
+) -> list[tuple[dict, list[tuple[float, float, float]]]]:
+    """Decode every instanced geometry entry with its instance translations."""
+    entries: list[tuple[dict, list[tuple[float, float, float]]]] = []
+    for chunk in manifest["chunks"]:
+        content = (cache / f"{chunk['id']}.simbin").read_bytes()
+        header = read_geometry_bundle_header(content)
+        header_length = int.from_bytes(content[8:12], "little")
+        payload_start = (12 + header_length + 3) & ~3
+        for entry in header["geometries"].values():
+            if "instances" not in entry:
+                continue
+            offset, count = entry["instances"]
+            values = struct.unpack_from(f"<{count}f", content, payload_start + offset)
+            entries.append(
+                (
+                    entry,
+                    [
+                        (
+                            values[index * 16 + 12],
+                            values[index * 16 + 13],
+                            values[index * 16 + 14],
+                        )
+                        for index in range(count // 16)
+                    ],
+                )
+            )
+    return entries
+
+
+def test_full_park_cache_composes_nested_point_instancers(tmp_path: Path) -> None:
+    source = tmp_path / "nested-park.usda"
+    source.write_text(NESTED_INSTANCER_FIXTURE, encoding="utf-8")
+    cache = tmp_path / "nested-full-cache"
+
+    manifest = build_park_cache(
+        source,
+        cache,
+        "nested-fixture",
+        scene_id=FULL_PARK_SCENE_ID,
+        name="Nested Instancer Park",
+        content_profile="full",
+    )
+
+    assert manifest["statistics"]["point_instance_count"] == 4  # 2 trees + 2 branches
+    assert manifest["statistics"]["instance_group_count"] == 2  # trunk + branch
+    entries = _decode_instanced_entries(cache, manifest)
+    assert len(entries) == 2
+
+    # Trunk copies land on both painted trees.
+    trunk = next(
+        translations
+        for entry, translations in entries
+        if len(translations) == 2
+    )
+    assert sorted(round(x, 3) for x, _y, _z in trunk) == [4.0, 6.0]
+
+    # Branch copies compose outer scatter, nested instancer offset, and the
+    # inner instance positions: 2 outer x 2 inner copies on the painted trees.
+    branch = next(
+        translations
+        for entry, translations in entries
+        if len(translations) == 4
+    )
+    assert sorted(round(x, 3) for x, _y, _z in branch) == [4.4, 4.6, 6.4, 6.6]
+    assert sorted(round(y, 3) for _x, y, _z in branch) == [-0.75, -0.75, 2.25, 2.25]
+    assert all(round(z, 3) == 1.5 for _x, _y, z in branch)
+    # No copy may remain at the authored prototype location near the origin.
+    assert all(abs(x) > 1.0 or abs(y) > 1.0 for x, y, _z in branch)
+
+
+def test_optimized_park_cache_composes_nested_point_instancers(tmp_path: Path) -> None:
+    source = tmp_path / "nested-park.usda"
+    source.write_text(NESTED_INSTANCER_FIXTURE, encoding="utf-8")
+
+    manifest = build_park_cache(source, tmp_path / "nested-cache", "nested-fixture")
+
+    assert manifest["statistics"]["point_instance_count"] == 4
+    # Baked copies: 2 trunks + 4 branches exist only at the painted positions.
+    assert manifest["bounds"]["max"][0] < 6.7
+    assert manifest["bounds"]["min"][0] > -2.1
+
+
 def test_local_scene_api_publishes_ready_asset_manifest_and_chunk(tmp_path: Path) -> None:
     pack_root = tmp_path / "pack"
     source = pack_root / PARK_ENTRY
@@ -210,10 +409,15 @@ def test_local_scene_api_publishes_ready_asset_manifest_and_chunk(tmp_path: Path
                     response = await client.get(f"/api/v1/projects/{project_id}/assets")
                     payload = response.json()
                     local_scenes = payload["local_scenes"]
-                    if local_scenes[0]["status"] == "ready":  # type: ignore[index]
+                    if all(  # type: ignore[union-attr]
+                        scene["status"] == "ready" for scene in local_scenes
+                    ):
                         break
                     await asyncio.sleep(0.02)
-                assert local_scenes[0]["status"] == "ready"  # type: ignore[index]
+                assert len(local_scenes) == 2  # type: ignore[arg-type]
+                assert all(  # type: ignore[union-attr]
+                    scene["status"] == "ready" for scene in local_scenes
+                )
                 local_asset = next(
                     item for item in payload["assets"]  # type: ignore[union-attr]
                     if item["id"] == "openusd_brownstone_park_8gb"
@@ -221,6 +425,14 @@ def test_local_scene_api_publishes_ready_asset_manifest_and_chunk(tmp_path: Path
                 geometry = local_asset["default_properties"]["geometry"]
                 assert geometry["stream_scene_id"] == "brownstone-park"
                 assert geometry["collision_mesh"].startswith("art_")
+                full_asset = next(
+                    item for item in payload["assets"]  # type: ignore[union-attr]
+                    if item["id"] == "openusd_brownstone_park_full"
+                )
+                assert (
+                    full_asset["default_properties"]["geometry"]["stream_scene_id"]
+                    == FULL_PARK_SCENE_ID
+                )
 
                 manifest_response = await client.get(
                     f"/api/v1/projects/{project_id}"

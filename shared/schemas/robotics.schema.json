@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://simlab.local/schemas/robotics.schema.json",
-  "title": "SimLabRoboticsModel",
+  "$id": "https://beefoundrysim.local/schemas/robotics.schema.json",
+  "title": "BeeFoundrySimRoboticsModel",
   "type": "object",
   "$defs": {
     "id": {

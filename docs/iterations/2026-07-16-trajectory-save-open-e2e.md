@@ -21,7 +21,7 @@
 ## 验证
 
 - 双窗口显式 QtWebEngine E2E：1 passed in 14.30s。
-- 重开截图：`/tmp/simlab-trajectory-reopened.png`。
+- 重开截图：`/tmp/beefoundrysim-trajectory-reopened.png`。
 - 截图确认 selector、keyframes、Completed 状态、关节反馈和 viewport pose 一致。
 
 ## 已知限制

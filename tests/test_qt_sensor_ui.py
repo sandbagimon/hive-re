@@ -38,12 +38,12 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
     from PySide6.QtGui import QColor
     from PySide6.QtWidgets import QApplication
 
-    from simlab.main_window import MainWindow
-    from simlab.models.actor import Actor
-    from simlab.models.robotics import RigidTransform, Sensor
-    from simlab.models.scene import Scene
-    from simlab.services.openusd_importer import import_openusd_asset
-    from simlab.services.project_service import save_scene
+    from beefoundrysim.main_window import MainWindow
+    from beefoundrysim.models.actor import Actor
+    from beefoundrysim.models.robotics import RigidTransform, Sensor
+    from beefoundrysim.models.scene import Scene
+    from beefoundrysim.services.openusd_importer import import_openusd_asset
+    from beefoundrysim.services.project_service import save_scene
 
     imported = import_openusd_asset(
         "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
@@ -94,13 +94,13 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
     _wait_until(
         app,
         lambda: bool(
-            _javascript(app, window.web_view.page(), "window.simlabEditorReady === true")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditorReady === true")
         ),
     )
     _javascript(
         app,
         window.web_view.page(),
-        f"window.simlabEditor.openProjectPath({json.dumps(str(scene_path))}).then("
+        f"window.beefoundrysimEditor.openProjectPath({json.dumps(str(scene_path))}).then("
         "result=>document.documentElement.dataset.sensorOpen=JSON.stringify(result));true",
     )
     _wait_until(
@@ -116,7 +116,7 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
     assert _javascript(
         app,
         window.web_view.page(),
-        "window.simlabEditor.selectSensor('actor_arm','sensor_qt_shoulder')",
+        "window.beefoundrysimEditor.selectSensor('actor_arm','sensor_qt_shoulder')",
     ) is True
     initial_ui = json.loads(
         _javascript(
@@ -157,7 +157,7 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
 
     def recording_is_active() -> bool:
         current = json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )["simulationState"]
         return bool(
             current
@@ -176,7 +176,7 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
 
     def sensor_has_samples() -> bool:
         current = json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )
         return bool(
             current["simulationStatus"] == "running"
@@ -193,7 +193,7 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
     _wait_until(
         app,
         lambda: json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )["simulationStatus"]
         == "paused",
     )
@@ -205,12 +205,12 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
     _wait_until(
         app,
         lambda: json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )["simulationState"]["recording"]["active"]
         is False,
     )
     state = json.loads(
-        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
     )["simulationState"]
     sample = state["sensors"][0]
     live_ui = json.loads(
@@ -231,7 +231,7 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
     _javascript(
         app,
         window.web_view.page(),
-        "window.simlabEditor.getRecording().then("
+        "window.beefoundrysimEditor.getRecording().then("
         "result=>document.documentElement.dataset.sensorRecording=JSON.stringify(result));true",
     )
     _wait_until(
@@ -285,8 +285,8 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
         app,
         window.web_view.page(),
         "Promise.all(["
-        f"window.simlabEditor.exportRecordingPath({json.dumps(str(json_path))},'json'),"
-        f"window.simlabEditor.exportRecordingPath({json.dumps(str(csv_path))},'csv')"
+        f"window.beefoundrysimEditor.exportRecordingPath({json.dumps(str(json_path))},'json'),"
+        f"window.beefoundrysimEditor.exportRecordingPath({json.dumps(str(csv_path))},'csv')"
         "]).then(result=>document.documentElement.dataset.sensorExport="
         "JSON.stringify(result));true",
     )
@@ -333,7 +333,7 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
     assert _javascript(
         app,
         window.web_view.page(),
-        "window.simlabEditor.selectSensor('actor_arm','sensor_qt_forearm_imu')",
+        "window.beefoundrysimEditor.selectSensor('actor_arm','sensor_qt_forearm_imu')",
     ) is True
     imu_sample = next(item for item in state["sensors"] if item["sensor_type"] == "imu")
     imu_ui = json.loads(
@@ -370,7 +370,7 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
         time.sleep(0.02)
     screenshot = window.web_view.grab()
     output = Path(
-        os.environ.get("SIMLAB_QT_SENSOR_SCREENSHOT", tmp_path / "joint-sensor-ui.png")
+        os.environ.get("BEEFOUNDRYSIM_QT_SENSOR_SCREENSHOT", tmp_path / "joint-sensor-ui.png")
     )
     assert screenshot.save(str(output))
     image = screenshot.toImage()
@@ -389,7 +389,7 @@ def test_qt_webengine_displays_live_joint_state_sensor(tmp_path: Path) -> None:
 
     def imu_is_reset() -> bool:
         current = json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )
         reset_imu = next(
             item
@@ -416,13 +416,13 @@ def test_qt_webengine_records_joint_imu_and_contact_sensors(tmp_path: Path) -> N
     from PySide6.QtGui import QColor
     from PySide6.QtWidgets import QApplication
 
-    from simlab.main_window import MainWindow
-    from simlab.models.actor import Actor
-    from simlab.models.robotics import RigidTransform, Sensor
-    from simlab.models.scene import Scene
-    from simlab.models.transform import Transform
-    from simlab.services.openusd_importer import import_openusd_asset
-    from simlab.services.project_service import save_scene
+    from beefoundrysim.main_window import MainWindow
+    from beefoundrysim.models.actor import Actor
+    from beefoundrysim.models.robotics import RigidTransform, Sensor
+    from beefoundrysim.models.scene import Scene
+    from beefoundrysim.models.transform import Transform
+    from beefoundrysim.services.openusd_importer import import_openusd_asset
+    from beefoundrysim.services.project_service import save_scene
 
     imported = import_openusd_asset(
         "tests/fixtures/openusd/robot_arm/external_two_joint_arm.usda", tmp_path
@@ -497,13 +497,13 @@ def test_qt_webengine_records_joint_imu_and_contact_sensors(tmp_path: Path) -> N
     _wait_until(
         app,
         lambda: bool(
-            _javascript(app, window.web_view.page(), "window.simlabEditorReady === true")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditorReady === true")
         ),
     )
     _javascript(
         app,
         window.web_view.page(),
-        f"window.simlabEditor.openProjectPath({json.dumps(str(scene_path))}).then("
+        f"window.beefoundrysimEditor.openProjectPath({json.dumps(str(scene_path))}).then("
         "result=>document.documentElement.dataset.contactOpen=JSON.stringify(result));true",
     )
     _wait_until(
@@ -519,7 +519,7 @@ def test_qt_webengine_records_joint_imu_and_contact_sensors(tmp_path: Path) -> N
     assert _javascript(
         app,
         window.web_view.page(),
-        f"window.simlabEditor.selectSensor('actor_arm',{json.dumps(sensor.id)})",
+        f"window.beefoundrysimEditor.selectSensor('actor_arm',{json.dumps(sensor.id)})",
     ) is True
     initial_ui = json.loads(
         _javascript(
@@ -547,7 +547,7 @@ def test_qt_webengine_records_joint_imu_and_contact_sensors(tmp_path: Path) -> N
 
     def recording_is_active() -> bool:
         current = json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )["simulationState"]
         return bool(
             current
@@ -566,14 +566,14 @@ def test_qt_webengine_records_joint_imu_and_contact_sensors(tmp_path: Path) -> N
     _wait_until(
         app,
         lambda: json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )["simulationStatus"]
         == "running",
     )
     assert _javascript(
         app,
         window.web_view.page(),
-        f"window.simlabEditor.selectJoint('actor_arm',{json.dumps(shoulder.id)})",
+        f"window.beefoundrysimEditor.selectJoint('actor_arm',{json.dumps(shoulder.id)})",
     ) is True
     _javascript(
         app,
@@ -584,7 +584,7 @@ def test_qt_webengine_records_joint_imu_and_contact_sensors(tmp_path: Path) -> N
 
     def contact_is_active() -> bool:
         current = json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )
         samples = current["simulationState"]["sensors"] if current["simulationState"] else []
         contact = next((item for item in samples if item["id"] == sensor.id), None)
@@ -605,7 +605,7 @@ def test_qt_webengine_records_joint_imu_and_contact_sensors(tmp_path: Path) -> N
     _wait_until(
         app,
         lambda: json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )["simulationStatus"]
         == "paused",
     )
@@ -617,17 +617,17 @@ def test_qt_webengine_records_joint_imu_and_contact_sensors(tmp_path: Path) -> N
     _wait_until(
         app,
         lambda: json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )["simulationState"]["recording"]["active"]
         is False,
     )
     assert _javascript(
         app,
         window.web_view.page(),
-        f"window.simlabEditor.selectSensor('actor_arm',{json.dumps(sensor.id)})",
+        f"window.beefoundrysimEditor.selectSensor('actor_arm',{json.dumps(sensor.id)})",
     ) is True
     state = json.loads(
-        _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+        _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
     )["simulationState"]
     sample = next(item for item in state["sensors"] if item["id"] == sensor.id)
     live_ui = json.loads(
@@ -665,7 +665,7 @@ def test_qt_webengine_records_joint_imu_and_contact_sensors(tmp_path: Path) -> N
     _javascript(
         app,
         window.web_view.page(),
-        "window.simlabEditor.getRecording().then("
+        "window.beefoundrysimEditor.getRecording().then("
         "result=>document.documentElement.dataset.contactRecording=JSON.stringify(result));true",
     )
     _wait_until(
@@ -726,8 +726,8 @@ def test_qt_webengine_records_joint_imu_and_contact_sensors(tmp_path: Path) -> N
         app,
         window.web_view.page(),
         "Promise.all(["
-        f"window.simlabEditor.exportRecordingPath({json.dumps(str(json_path))},'json'),"
-        f"window.simlabEditor.exportRecordingPath({json.dumps(str(csv_path))},'csv')"
+        f"window.beefoundrysimEditor.exportRecordingPath({json.dumps(str(json_path))},'json'),"
+        f"window.beefoundrysimEditor.exportRecordingPath({json.dumps(str(csv_path))},'csv')"
         "]).then(result=>document.documentElement.dataset.contactExport="
         "JSON.stringify(result));true",
     )
@@ -781,7 +781,7 @@ def test_qt_webengine_records_joint_imu_and_contact_sensors(tmp_path: Path) -> N
         time.sleep(0.02)
     screenshot = window.web_view.grab()
     output = Path(
-        os.environ.get("SIMLAB_QT_CONTACT_SCREENSHOT", tmp_path / "contact-sensor-ui.png")
+        os.environ.get("BEEFOUNDRYSIM_QT_CONTACT_SCREENSHOT", tmp_path / "contact-sensor-ui.png")
     )
     assert screenshot.save(str(output))
     image = screenshot.toImage()
@@ -800,7 +800,7 @@ def test_qt_webengine_records_joint_imu_and_contact_sensors(tmp_path: Path) -> N
 
     def contact_is_reset() -> bool:
         current = json.loads(
-            _javascript(app, window.web_view.page(), "window.simlabEditor.getStateJson()")
+            _javascript(app, window.web_view.page(), "window.beefoundrysimEditor.getStateJson()")
         )
         samples = current["simulationState"]["sensors"] if current["simulationState"] else []
         contact = next((item for item in samples if item["id"] == sensor.id), None)

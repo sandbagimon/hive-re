@@ -30,7 +30,7 @@ export class EditorBridgeClient {
     }
     static async connect() {
         try {
-            const response = await fetch(new URL('simlab-config.json', document.baseURI), {
+            const response = await fetch(new URL('beefoundrysim-config.json', document.baseURI), {
                 cache: 'no-store',
             });
             if (!response.ok)

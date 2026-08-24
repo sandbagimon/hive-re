@@ -57,7 +57,7 @@ Franka Panda 实测：
 
 ## 已知限制
 
-- Bundle v1 是 SimLab 内部格式，尚未提供公开稳定规范或独立转换 CLI。
+- Bundle v1 是 BeeFoundrySim 内部格式，尚未提供公开稳定规范或独立转换 CLI。
 - 前后端目前都以完整文件处理 ArrayBuffer；尚未使用 Range、流式解析或 Web Worker。
 - bundle cache 当前按 Artifact ID 保留到页面生命周期结束，大量不同项目连续打开时需要 LRU。
 - 单刚体 OpenUSD 仍使用 `visual.json` 兼容链路，尚未统一迁移到 bundle。

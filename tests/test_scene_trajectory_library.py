@@ -3,15 +3,15 @@ from pathlib import Path
 
 import pytest
 
-from simlab.models.actor import Actor
-from simlab.models.robotics import RoboticsModel
-from simlab.models.scene import Scene
-from simlab.models.trajectory import (
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.robotics import RoboticsModel
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.models.trajectory import (
     JointTrajectory,
     JointTrajectoryKeyframe,
     SceneTrajectory,
 )
-from simlab.services.project_service import (
+from beefoundrysim.services.project_service import (
     ProjectValidationError,
     load_scene,
     save_scene,

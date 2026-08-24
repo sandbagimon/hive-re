@@ -5,10 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from simlab.models.actor import Actor
-from simlab.models.robotics import RoboticsModel
-from simlab.models.scene import Scene
-from simlab.simulation.backend import (
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.robotics import RoboticsModel
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.simulation.backend import (
     BackendSessionClosedError,
     ControlCommand,
     InvalidControlError,
@@ -16,8 +16,8 @@ from simlab.simulation.backend import (
     ResetOptions,
     SceneBundle,
 )
-from simlab.simulation.mujoco_backend import MujocoBackend
-from simlab.simulation.robot_adapter import DirectActuatorAdapter
+from beefoundrysim.simulation.mujoco_backend import MujocoBackend
+from beefoundrysim.simulation.robot_adapter import DirectActuatorAdapter
 
 
 def _robot_scene() -> Scene:

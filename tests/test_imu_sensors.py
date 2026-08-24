@@ -4,13 +4,13 @@ import math
 
 import pytest
 
-from simlab.models.robotics import (
+from beefoundrysim.models.robotics import (
     RigidTransform,
     Sensor,
     SensorNoise,
     SensorNoiseChannel,
 )
-from simlab.services.imu_sensors import ImuKinematics, ImuSensorScheduler
+from beefoundrysim.services.imu_sensors import ImuKinematics, ImuSensorScheduler
 
 
 def _sensor(identifier: str, rate: float | None) -> Sensor:

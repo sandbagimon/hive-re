@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from simlab.resources import ResourceManager
-from simlab.services.openusd.asset_cache import atomic_write_bytes
+from beefoundrysim.resources import ResourceManager
+from beefoundrysim.services.openusd.asset_cache import atomic_write_bytes
 
 
 def test_project_seed_copy_skips_development_sources_and_is_independent(

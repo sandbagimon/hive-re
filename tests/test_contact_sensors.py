@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from simlab.models.robotics import Sensor, SensorNoise, SensorNoiseChannel
-from simlab.services.contact_sensors import (
+from beefoundrysim.models.robotics import Sensor, SensorNoise, SensorNoiseChannel
+from beefoundrysim.services.contact_sensors import (
     ContactMeasurement,
     ContactSensorScheduler,
 )

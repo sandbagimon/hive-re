@@ -1,13 +1,13 @@
-# SimLab Platform Module Gap Matrix
+# BeeFoundrySim Platform Module Gap Matrix
 
 评审日期：2026-08-07
-对标范围：SimLab 当前仓库、OrcaLab 公开资料、NVIDIA Isaac Sim 6.0 / Isaac Lab 公开资料
+对标范围：BeeFoundrySim 当前仓库、OrcaLab 公开资料、NVIDIA Isaac Sim 6.0 / Isaac Lab 公开资料
 
 ## 目的与口径
 
 本文是平台能力差距的长期台账，回答三个问题：
 
-1. SimLab 每个模块现在做到什么程度。
+1. BeeFoundrySim 每个模块现在做到什么程度。
 2. 对比 OrcaLab 和 Isaac Sim / Isaac Lab 还缺什么。
 3. 下一次交付应如何验收，而不是只写“支持某功能”。
 
@@ -27,21 +27,21 @@
 - **P3**：高保真、分布式和产业集成能力。
 - **N/A**：当前明确不作为目标。
 
-证据边界：SimLab 状态以本仓库代码和测试为准；OrcaLab 一栏仅记录官网和 PyPI 的公开表述，细粒度架构、格式兼容性和性能上限没有公开证据时标记为“未知”；Isaac Sim 与 Isaac Lab 分开看待，前者是仿真、传感器和合成数据平台，后者是建立在仿真平台上的机器人学习框架。
+证据边界：BeeFoundrySim 状态以本仓库代码和测试为准；OrcaLab 一栏仅记录官网和 PyPI 的公开表述，细粒度架构、格式兼容性和性能上限没有公开证据时标记为“未知”；Isaac Sim 与 Isaac Lab 分开看待，前者是仿真、传感器和合成数据平台，后者是建立在仿真平台上的机器人学习框架。
 
 ## 当前架构基线
 
-SimLab 当前不是单体 Qt 面板应用，主要边界已经形成：
+BeeFoundrySim 当前不是单体 Qt 面板应用，主要边界已经形成：
 
 - **TypeScript Editor**：[`frontend/src/ts/`](../frontend/src/ts/) 负责界面、scene store、selection、dirty、undo/redo 和 three.js viewport。
-- **Bridge Protocol**：[`shared/schemas/`](../shared/schemas/) 定义 scene、physics 和 RPC 数据契约；[`editor_bridge.py`](../src/simlab/editor_bridge.py) 承担 QtWebChannel RPC。
-- **Scene Core**：[`src/simlab/models/`](../src/simlab/models/) 和 scene/project services 负责 Python 数据模型、保存、加载和基础校验。
-- **Simulation Core**：[`src/simlab/services/`](../src/simlab/services/) 负责 primitive geometry contract、physics materials、preflight、MJCF export 和 MuJoCo session。
-- **Experiment Stub**：[`gym_env.py`](../src/simlab/simulation/gym_env.py) 目前只有占位语义，尚不是可训练环境。
+- **Bridge Protocol**：[`shared/schemas/`](../shared/schemas/) 定义 scene、physics 和 RPC 数据契约；[`editor_bridge.py`](../src/beefoundrysim/editor_bridge.py) 承担 QtWebChannel RPC。
+- **Scene Core**：[`src/beefoundrysim/models/`](../src/beefoundrysim/models/) 和 scene/project services 负责 Python 数据模型、保存、加载和基础校验。
+- **Simulation Core**：[`src/beefoundrysim/services/`](../src/beefoundrysim/services/) 负责 primitive geometry contract、physics materials、preflight、MJCF export 和 MuJoCo session。
+- **Experiment Stub**：[`gym_env.py`](../src/beefoundrysim/simulation/gym_env.py) 目前只有占位语义，尚不是可训练环境。
 
 ## A. 编辑器与场景核心
 
-| 模块 | SimLab 当前状态 | OrcaLab 公开能力 | Isaac Sim / Lab 能力 | 主要差距与下一交付 | 优先级 |
+| 模块 | BeeFoundrySim 当前状态 | OrcaLab 公开能力 | Isaac Sim / Lab 能力 | 主要差距与下一交付 | 优先级 |
 |---|---|---|---|---|---|
 | A1 桌面壳与工作区 | **已有**。PySide6 + QtWebEngine 薄壳，主要编辑器已迁移到 TypeScript。 | 公开展示完整本地仿真工作台；具体桌面壳架构未知。 | Omniverse Kit 应用、扩展和可配置工作区。 | 增加布局持久化、命令系统、崩溃恢复；保持 Python host 足够薄。 | P1 |
 | A2 前端状态与 Bridge | **已有**。TS Store 管理 scene、selection、dirty、undo/redo，JSON RPC 调用 Python。 | 宣称提供 CLI、MCP 和 30+ 标准化 API；协议细节未知。 | Python API、Extensions、OmniGraph、命令和事件体系成熟。 | 给 bridge 增加协议版本、request id、错误码、异步任务、取消和超时；生成 TS/Python 类型。 | P1 |
@@ -55,7 +55,7 @@ SimLab 当前不是单体 Qt 面板应用，主要边界已经形成：
 
 ## B. 物理与机器人运行时
 
-| 模块 | SimLab 当前状态 | OrcaLab 公开能力 | Isaac Sim / Lab 能力 | 主要差距与下一交付 | 优先级 |
+| 模块 | BeeFoundrySim 当前状态 | OrcaLab 公开能力 | Isaac Sim / Lab 能力 | 主要差距与下一交付 | 优先级 |
 |---|---|---|---|---|---|
 | B1 物理引擎与仿真时钟 | **部分**。MuJoCo in-process Run/Pause/Step/Reset 和 pose sync 已有。 | 宣称高精度物理和大规模并发训练；引擎细节未完全公开。 | PhysX 与 Newton 路线、CPU/GPU 仿真、明确的 simulation/render clocks。 | 将 stepping 与 UI timer 解耦，增加 real-time factor、固定步长、catch-up policy、线程/进程隔离和长跑测试。 | P0 |
 | B2 物理参数编辑 | **部分**。dynamic/static、mass/density、friction、contact presets 已有。 | 公开颗粒度不足。 | 刚体、关节、材质、solver、gravity、collision、terrain 等 authoring 完整。 | 增加 gravity、timestep、integrator、solver、inertia、contact 参数、constraints、tendons、heightfield UI。 | P1 |
@@ -68,25 +68,25 @@ SimLab 当前不是单体 Qt 面板应用，主要边界已经形成：
 
 ## C. 传感器、数据与机器人学习
 
-| 模块 | SimLab 当前状态 | OrcaLab 公开能力 | Isaac Sim / Lab 能力 | 主要差距与下一交付 | 优先级 |
+| 模块 | BeeFoundrySim 当前状态 | OrcaLab 公开能力 | Isaac Sim / Lab 能力 | 主要差距与下一交付 | 优先级 |
 |---|---|---|---|---|---|
 | C1 物理传感器 | **部分**。joint-state、IMU、contact 和 link-mounted rangefinder 已有统一 timestamp/frequency/noise、MuJoCo runtime、Inspector 与 typed recording；尚无扫描式 LiDAR/相机。 | 官网列出 IMU、LiDAR，并提到多类机器人传感器。 | Camera、RTX LiDAR/Radar、IMU、contact、effort 等传感器体系。 | 增加传感器 authoring、扫描式 2D/3D LiDAR、buffer contract 与 Gym/gRPC observation adapter。 | P0 |
 | C2 视觉传感器 | **缺失**。viewport 相机不是可采样的仿真 sensor。 | 官网列出 RGB、Depth。 | RTX camera、多种 annotator 和传感器模型成熟。 | three.js 离屏 camera MVP：RGB/depth/segmentation；随后评估高保真后端，不把编辑相机冒充 sensor。 | P2 |
 | C3 中间件与 ROS 2 | **缺失**。无 ROS topic/service/clock/tf bridge。 | 宣称标准化 API 和生态兼容；ROS 版本与覆盖范围未明确。 | 官方 ROS 2 bridge、simulation control、sensor 和 TF 教程齐全。 | 建立 transport-neutral adapter，再实现 ROS 2 clock、TF、joint states、commands 和 selected sensors。 | P2 |
 | C4 数据记录与标注 | **缺失**。无图像、标注或同步传感器数据集导出。 | 宣称 OpenUSD 数据集与数据采集工作流。 | Replicator、RGB/bbox/semantic/instance 等 annotators，支持常见数据格式工作流。 | 定义 episode manifest、同步时钟、state/sensor writers、2D/3D 标注 schema、COCO/KITTI adapter。 | P2 |
 | C5 Domain Randomization / Sim2Real | **缺失**。没有参数分布、随机化阶段或审计记录。 | 官网强调仿真到部署的完整流程；具体随机化 API 未公开。 | Replicator randomization、Isaac Lab events/randomization 和 sim-to-real 工作流。 | 增加可复现 randomization graph：pose、physics、material、light、sensor noise，并记录每 episode 参数。 | P2 |
-| C6 Task / Environment API | **基础闭环**。`SimLabEnv` 已有 Gymnasium spaces、seed/reset、reward、termination/truncation、Robot/Task 分层，以及本地 MuJoCo/原子 gRPC 后端切换；尚无 vectorized/MJX runtime。 | 宣称兼容主流强化学习平台。 | Isaac Lab 提供 manager-based/direct workflows、环境、任务和 wrappers。 | 增加 task registry、domain randomization、vector env、训练 runner 与 benchmark。 | P1 |
+| C6 Task / Environment API | **基础闭环**。`BeeFoundrySimEnv` 已有 Gymnasium spaces、seed/reset、reward、termination/truncation、Robot/Task 分层，以及本地 MuJoCo/原子 gRPC 后端切换；尚无 vectorized/MJX runtime。 | 宣称兼容主流强化学习平台。 | Isaac Lab 提供 manager-based/direct workflows、环境、任务和 wrappers。 | 增加 task registry、domain randomization、vector env、训练 runner 与 benchmark。 | P1 |
 | C7 强化学习与模仿学习 | **缺失**。无训练 runner、算法 adapter、demo buffer。 | 官网宣称强化学习训练及多机并发。 | Isaac Lab 集成 RL、imitation、motion planning 工作流和示例任务。 | 仿真平台只提供稳定 env API 与 adapters；先接一个外部 RL 库，避免自研算法框架。 | P2 |
 | C8 运动规划与导航 | **部分**。Iris 运货示例已有先验+实时占用栅格、带控制帧预算的增量 A*、路径失效/停滞重规划、安全悬停重试、rangefinder 局部避障和实时路线 telemetry；尚未形成通用导航服务或 SLAM。 | 公开概述覆盖具身智能研发，具体 planner 未确认。 | Isaac 生态含运动规划、操控和导航相关工具链。 | 将 map/collision-query 提升为 engine-neutral 服务，再增加 3D/动态障碍预测、SLAM 与外部 planner adapter。 | P3 |
 
 ## D. 规模化、扩展与交付
 
-| 模块 | SimLab 当前状态 | OrcaLab 公开能力 | Isaac Sim / Lab 能力 | 主要差距与下一交付 | 优先级 |
+| 模块 | BeeFoundrySim 当前状态 | OrcaLab 公开能力 | Isaac Sim / Lab 能力 | 主要差距与下一交付 | 优先级 |
 |---|---|---|---|---|---|
 | D1 Headless 与批处理 | **部分**。有 headless MuJoCo smoke runner，没有 task batch runner。 | 宣称多环境、多机器人并行训练。 | Isaac Sim 可 headless，Isaac Lab 支持大规模并行环境。 | 建立无 Qt 的 scene->env runner、batch spec、metrics、seed matrix 和失败隔离。 | P2 |
 | D2 GPU 并行与分布式 | **缺失**。MuJoCo 单进程路径，没有 vectorized runtime。 | 宣称“万机并发训练”和多节点分布式。 | Isaac Lab 支持 GPU 并行、多 GPU 和多节点训练。 | 先测量 CPU batch 上限；再评估 MuJoCo MJX/vectorization；分布式排在 API 稳定之后。 | P3 |
 | D3 合成数据规模化 | **缺失**。无 annotator、writer 或生成任务编排。 | 宣称数据采集和 OpenUSD 数据集能力。 | Replicator 提供随机化、annotator、writer 和大规模 SDG。 | 依赖 C2/C4/C5 后建立 headless generation job、数据校验、断点续跑和 dataset manifest。 | P3 |
-| D4 扩展、插件与脚本 | **部分**。已有独立 `simlab-mcp` REST 适配器，提供 stdio/Streamable HTTP、17 个结构化 tools、resources 和 prompt；尚无 public Python SDK、插件 manifest 与 artifact/blob task 协议。 | 宣称 MCP、CLI、30+ API。 | Kit Extensions、Python API、OmniGraph 和插件生态。 | 保持 MCP 不进入核心；下一步定义 versioned public Python SDK、CLI/plugin manifest、带确认的 blob/artifact 交换和长任务进度/取消。 | P2 |
+| D4 扩展、插件与脚本 | **部分**。已有独立 `beefoundrysim-mcp` REST 适配器，提供 stdio/Streamable HTTP、17 个结构化 tools、resources 和 prompt；尚无 public Python SDK、插件 manifest 与 artifact/blob task 协议。 | 宣称 MCP、CLI、30+ API。 | Kit Extensions、Python API、OmniGraph 和插件生态。 | 保持 MCP 不进入核心；下一步定义 versioned public Python SDK、CLI/plugin manifest、带确认的 blob/artifact 交换和长任务进度/取消。 | P2 |
 | D5 SIL / HIL / 数字孪生 | **缺失**。无实时 I/O、硬件协议或时钟同步。 | 官网覆盖验证和部署阶段，具体 HIL 能力公开不足。 | Isaac Sim 官方定位包含 SIL/HIL 工作流与数字孪生场景。 | 先完成 deterministic clock、ROS 2 和 controller boundary，再设计 external clock、realtime deadline、hardware adapter。 | P3 |
 | D6 性能、可靠性与可观测性 | **部分**。有 pytest/ruff/preflight，没有 profiler、telemetry 和 soak suite。 | 宣称大规模并发，公开 benchmark 方法有限。 | 提供 profiler、日志、性能优化指引和大场景实践。 | 建立 frame/step budgets、actor/geom scaling benchmark、内存监控、24h soak、crash bundle。 | P1 |
 | D7 打包与硬件兼容 | **缺失**。当前依赖 conda/Python/Qt 系统库，曾出现 Linux xcb 依赖问题。 | PyPI 公布 Ubuntu 与 NVIDIA GPU 的最低建议配置，并宣称适配国产芯片。 | 有明确 workstation/container/cloud 部署和 GPU 兼容矩阵。 | 锁定依赖、Linux/Windows CI、Qt runtime 检查、安装包、容器化 headless runner、硬件矩阵。 | P1 |
@@ -95,13 +95,13 @@ SimLab 当前不是单体 Qt 面板应用，主要边界已经形成：
 
 ## 差距结论
 
-SimLab 已经越过“只有 UI 原型”的阶段：primitive scene authoring、TS 编辑器状态、可见碰撞契约、MJCF preflight、MuJoCo 运行和 viewport pose sync 已形成一个小型闭环。当前最主要的问题不是再补一个面板，而是 scene model 仍以独立 primitive actor 为中心，尚不能表达真实机器人、控制、传感器和任务。
+BeeFoundrySim 已经越过“只有 UI 原型”的阶段：primitive scene authoring、TS 编辑器状态、可见碰撞契约、MJCF preflight、MuJoCo 运行和 viewport pose sync 已形成一个小型闭环。当前最主要的问题不是再补一个面板，而是 scene model 仍以独立 primitive actor 为中心，尚不能表达真实机器人、控制、传感器和任务。
 
 与两个对标平台相比：
 
-- **对 OrcaLab**：SimLab 的本地、透明、可测试架构是差异化基础，但缺少其公开宣称的机器人资产、传感器、训练工作流、并发规模和标准化 API。
-- **对 Isaac Sim**：SimLab 在体量和目标上不应直接追平 RTX/OpenUSD/Omniverse 全栈；应先把 MuJoCo 的轻量、可复现、易调试优势做实。差距最大的是 articulation/import、sensor、ROS 2、SDG 和规模化运行。
-- **对 Isaac Lab**：SimLab 已完成单环境 Gymnasium 和远程 backend 边界；主要差距转为 task library、domain randomization、vectorized/MJX training 与分布式吞吐。
+- **对 OrcaLab**：BeeFoundrySim 的本地、透明、可测试架构是差异化基础，但缺少其公开宣称的机器人资产、传感器、训练工作流、并发规模和标准化 API。
+- **对 Isaac Sim**：BeeFoundrySim 在体量和目标上不应直接追平 RTX/OpenUSD/Omniverse 全栈；应先把 MuJoCo 的轻量、可复现、易调试优势做实。差距最大的是 articulation/import、sensor、ROS 2、SDG 和规模化运行。
+- **对 Isaac Lab**：BeeFoundrySim 已完成单环境 Gymnasium 和远程 backend 边界；主要差距转为 task library、domain randomization、vectorized/MJX training 与分布式吞吐。
 
 ## 建议执行顺序
 

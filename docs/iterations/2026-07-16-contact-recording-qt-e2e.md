@@ -23,7 +23,7 @@
 - 至少一个非发射 physics step 的 sensors map 为空；contact events 从 empty 变为非零 count/force。
 - JSON 文件与内存 recording 完全一致。
 - CSV 同时包含 joint-state 5 列、IMU 13 列、contact 56 列；sequence 空 cells 与非零 normal force 均验证。
-- `/tmp/simlab-contact-recording-ui.png` 视觉检查通过，无空白、遮挡或 Inspector 字段溢出。
+- `/tmp/beefoundrysim-contact-recording-ui.png` 视觉检查通过，无空白、遮挡或 Inspector 字段溢出。
 
 ## 已知限制
 

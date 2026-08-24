@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from simlab.resources import ResourceManager
+from beefoundrysim.resources import ResourceManager
 
 
 def test_houhai_asset_uses_semantic_daylight_palette() -> None:

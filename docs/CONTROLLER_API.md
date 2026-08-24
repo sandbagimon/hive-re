@@ -1,11 +1,11 @@
 # Python Controller API
 
-SimLab controllers receive an immutable snapshot before every MuJoCo physics step and may return
+BeeFoundrySim controllers receive an immutable snapshot before every MuJoCo physics step and may return
 joint position targets, named actuator controls, and attachment requests. They never receive mutable `MjModel` or
 `MjData` objects.
 
 ```python
-from simlab.services.controller_runtime import (
+from beefoundrysim.services.controller_runtime import (
     ControllerAction,
     ControllerObservation,
 )
@@ -61,7 +61,7 @@ also demonstrates contact-gated attachment commands; see
 [`DRONE_DELIVERY.md`](DRONE_DELIVERY.md).
 
 For a reusable bounded outer loop, import `JointPdConfig` and `JointPositionPdController` from
-`simlab.controllers`. It computes a qpos/qvel correction, limits each per-step position-target delta, and
+`beefoundrysim.controllers`. It computes a qpos/qvel correction, limits each per-step position-target delta, and
 leaves force generation to the MuJoCo position actuator. Runtime goals can be changed with `set_target()`
 or atomic `set_targets()`. See [`examples/controllers/two_joint_pd.py`](../examples/controllers/two_joint_pd.py)
 for a project-loadable example that configures the first two observed joints relative to Home without
@@ -95,5 +95,5 @@ contract validation as distinct phases. Scene Open never executes controller cod
 provides `loadController`, `loadControllerPath`, and `detachController`. The robot Inspector Controller
 section exposes explicit Load, Reload, and Detach controls; Load and Reload require trusted-code confirmation.
 
-Controller modules are trusted in-process Python code with the same filesystem permissions as SimLab. The
+Controller modules are trusted in-process Python code with the same filesystem permissions as BeeFoundrySim. The
 project-root check prevents accidental selection outside the project, but it is not a security sandbox.

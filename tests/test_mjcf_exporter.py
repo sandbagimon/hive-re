@@ -3,13 +3,13 @@ from pathlib import Path
 
 import pytest
 
-from simlab.models.actor import Actor
-from simlab.models.robotics import RigidTransform, Sensor
-from simlab.models.scene import Scene
-from simlab.models.transform import Transform
-from simlab.services.mjcf_exporter import export_scene_to_mjcf, scene_to_mjcf_xml
-from simlab.services.openusd.articulation_importer import import_openusd_articulations
-from simlab.services.openusd_importer import import_openusd_asset
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.robotics import RigidTransform, Sensor
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.models.transform import Transform
+from beefoundrysim.services.mjcf_exporter import export_scene_to_mjcf, scene_to_mjcf_xml
+from beefoundrysim.services.openusd.articulation_importer import import_openusd_articulations
+from beefoundrysim.services.openusd_importer import import_openusd_asset
 
 
 def _scene_with_primitives() -> Scene:

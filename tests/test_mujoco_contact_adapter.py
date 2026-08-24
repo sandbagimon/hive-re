@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from simlab.models.robotics import Articulation, Collider, Link, RoboticsModel, Sensor
-from simlab.services.mujoco_contact_adapter import MujocoContactAggregator
+from beefoundrysim.models.robotics import Articulation, Collider, Link, RoboticsModel, Sensor
+from beefoundrysim.services.mujoco_contact_adapter import MujocoContactAggregator
 
 
 def _robotics(scope: str = "collider") -> RoboticsModel:

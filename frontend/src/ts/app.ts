@@ -2107,11 +2107,11 @@ async function initialize(): Promise<void> {
     store.current.currentPath,
   );
   store.appendLog('TypeScript editor ready.');
-  window.simlabEditorReady = true;
+  window.beefoundrysimEditorReady = true;
 }
 
 let lastAssetConnectionError = '';
-let lastLocalSceneStatus = '';
+const lastLocalSceneStatuses = new Map<string, string>();
 
 async function loadAssetsWithRetry(): Promise<void> {
   const assets = await bridge.call<AssetsPayload>('getAssets');
@@ -2120,26 +2120,24 @@ async function loadAssetsWithRetry(): Promise<void> {
     store.setAssets(assets.data.assets);
     if (lastAssetConnectionError) store.appendLog('Shared assets connected.');
     lastAssetConnectionError = '';
-    const localScene = assets.data.local_scenes[0];
-    const localStatus = localScene
-      ? `${localScene.scene_id}:${localScene.status}:${localScene.error ?? ''}`
-      : '';
-    if (localStatus && localStatus !== lastLocalSceneStatus) {
+    for (const localScene of assets.data.local_scenes) {
+      const localStatus = `${localScene.status}:${localScene.error ?? ''}`;
+      if (localStatus === lastLocalSceneStatuses.get(localScene.scene_id)) continue;
       if (localScene.status === 'preparing') {
-        store.appendLog(`${localScene.name}: optimizing geometry in the backend…`);
+        store.appendLog(`${localScene.name}: preparing streamed geometry in the backend…`);
       } else if (localScene.status === 'ready') {
         store.appendLog(`${localScene.name}: streaming asset ready.`);
       } else if (localScene.status === 'failed' || localScene.status === 'unavailable') {
         store.appendLog(`${localScene.name}: ${localScene.error ?? localScene.status}`);
       }
+      lastLocalSceneStatuses.set(localScene.scene_id, localStatus);
     }
-    lastLocalSceneStatus = localStatus;
     bridge.syncEditorState(
       JSON.stringify(store.current.scene),
       store.current.dirty,
       store.current.currentPath,
     );
-    if (localScene?.status === 'preparing') {
+    if (assets.data.local_scenes.some((scene) => scene.status === 'preparing')) {
       window.setTimeout(() => { void loadAssetsWithRetry(); }, 1500);
     }
     return;
@@ -2151,8 +2149,8 @@ async function loadAssetsWithRetry(): Promise<void> {
   window.setTimeout(() => { void loadAssetsWithRetry(); }, 1000);
 }
 
-window.simlabEditorReady = false;
-window.simlabEditor = {
+window.beefoundrysimEditorReady = false;
+window.beefoundrysimEditor = {
   getRecording: () => bridge.call('getRecording'),
   setSimulationSpeed,
   // Keep the legacy flattened automation payload while the application uses separate stores.

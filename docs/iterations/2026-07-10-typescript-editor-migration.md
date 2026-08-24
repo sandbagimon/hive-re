@@ -4,7 +4,7 @@
 
 ## 目标
 
-将 SimLab 的编辑器交互迁移到 TypeScript，Python 只保留桌面容器、本地文件、MJCF、validation 和 MuJoCo 服务。
+将 BeeFoundrySim 的编辑器交互迁移到 TypeScript，Python 只保留桌面容器、本地文件、MJCF、validation 和 MuJoCo 服务。
 
 ## 已完成
 

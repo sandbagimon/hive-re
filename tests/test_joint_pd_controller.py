@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import pytest
 
-from simlab.controllers import JointPdConfig, JointPositionPdController
-from simlab.models.actor import Actor
-from simlab.models.scene import Scene
-from simlab.services.controller_loader import ProjectControllerLoader
-from simlab.services.controller_runtime import (
+from beefoundrysim.controllers import JointPdConfig, JointPositionPdController
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.services.controller_loader import ProjectControllerLoader
+from beefoundrysim.services.controller_runtime import (
     ControllerObservation,
     JointObservation,
 )
-from simlab.services.openusd_importer import import_openusd_asset
-from simlab.services.simulation_session import MuJoCoSimulationSession
+from beefoundrysim.services.openusd_importer import import_openusd_asset
+from beefoundrysim.services.simulation_session import MuJoCoSimulationSession
 
 
 def _observation(qpos: float, qvel: float = 0.0) -> ControllerObservation:

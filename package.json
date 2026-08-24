@@ -1,6 +1,6 @@
 {
-  "name": "beetemp-editor",
-  "description": "BeeTemp — internal codename placeholder (product name TBD; formerly simlab-editor)",
+  "name": "beefoundrysim-editor",
+  "description": "BeeFoundrySim — simulation-first desktop robotics scene editor",
   "private": true,
   "type": "module",
   "version": "0.1.0",

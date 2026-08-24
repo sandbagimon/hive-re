@@ -5,13 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from simlab.models.scene import Scene
-from simlab.services.mjcf_exporter import scene_to_mjcf_xml
-from simlab.services.primitive_geometry import (
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.services.mjcf_exporter import scene_to_mjcf_xml
+from beefoundrysim.services.primitive_geometry import (
     collider_geometry,
     euler_xyz_to_mujoco_quaternion,
 )
-from simlab.services.project_service import load_scene
+from beefoundrysim.services.project_service import load_scene
 
 mujoco = pytest.importorskip("mujoco")
 

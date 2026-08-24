@@ -1,21 +1,21 @@
-# SimLab
+# BeeFoundrySim
 
-SimLab is a simulation-first robotics scene editor MVP. Its independently built TypeScript/three.js frontend runs in a standard browser and communicates with a separately deployed Python API over versioned HTTP resources and WebSocket events. An optional PySide6/QWebEngine program is only a web client for the same hosted frontend. Python provides OpenUSD import, MJCF export, validation, controllers, recording, sensors, and isolated engine-neutral simulation resources with MuJoCo as the default runtime adapter. It has no cloud service, login flow, online marketplace, or third-party product branding.
+BeeFoundrySim is a simulation-first robotics scene editor MVP. Its independently built TypeScript/three.js frontend runs in a standard browser and communicates with a separately deployed Python API over versioned HTTP resources and WebSocket events. An optional PySide6/QWebEngine program is only a web client for the same hosted frontend. Python provides OpenUSD import, MJCF export, validation, controllers, recording, sensors, and isolated engine-neutral simulation resources with MuJoCo as the default runtime adapter. It has no cloud service, login flow, online marketplace, or third-party product branding.
 
 ## Architecture
 
 ```text
-SimLab frontend (static deployment)
+BeeFoundrySim frontend (static deployment)
 +-- Browser or optional PySide6/QWebEngine Client
 +-- TypeScript Editor (`frontend/src`)
 |   +-- Editor Store + History
 |   +-- Asset Browser / Scene Tree / Inspector / Console
 |   +-- three.js Viewport
-+-- runtime `simlab-config.json`
++-- runtime `beefoundrysim-config.json`
     |
     +-- `/api/v1` HTTP resources + per-simulation WebSocket
         |
-SimLab backend (independent Python deployment)
+BeeFoundrySim backend (independent Python deployment)
 +-- Project / Simulation / Artifact Resource Manager
 +-- Transport-neutral Python Application Service
     +-- Project IO / OpenUSD Import / Validation / MJCF Export
@@ -70,13 +70,13 @@ For Remote SSH, use `./start_mcp.sh --transport streamable-http --host 127.0.0.1
 and forward port `8766`. See [`docs/MCP_INTEGRATION.md`](docs/MCP_INTEGRATION.md) for client
 configuration, all tools/resources, authentication, and the deployment boundary.
 
-Then open `http://127.0.0.1:5173`. For a production-like build use `npm run build` followed by `npm run preview:frontend`, which serves `frontend/dist` at `http://127.0.0.1:4173`. Deployment-specific API and WebSocket addresses are read from `simlab-config.json`, so the static bundle does not need to share a host or release cycle with Python.
+Then open `http://127.0.0.1:5173`. For a production-like build use `npm run build` followed by `npm run preview:frontend`, which serves `frontend/dist` at `http://127.0.0.1:4173`. Deployment-specific API and WebSocket addresses are read from `beefoundrysim-config.json`, so the static bundle does not need to share a host or release cycle with Python.
 
 The backend launcher checks both ports, verifies the HTTP health endpoint, and shuts down both
-services together on `Ctrl+C`. Override its defaults with `SIMLAB_BACKEND_HOST`,
-`SIMLAB_BACKEND_PORT`, `SIMLAB_DATA_ROOT`, `SIMLAB_ALGORITHM_HOST`,
-`SIMLAB_ALGORITHM_PORT`, `SIMLAB_ALGORITHM_ASSET_ROOT`, `SIMLAB_ALGORITHM_WORKERS`, or
-`SIMLAB_LOCAL_SCENE_ROOT`.
+services together on `Ctrl+C`. Override its defaults with `BEEFOUNDRYSIM_BACKEND_HOST`,
+`BEEFOUNDRYSIM_BACKEND_PORT`, `BEEFOUNDRYSIM_DATA_ROOT`, `BEEFOUNDRYSIM_ALGORITHM_HOST`,
+`BEEFOUNDRYSIM_ALGORITHM_PORT`, `BEEFOUNDRYSIM_ALGORITHM_ASSET_ROOT`, `BEEFOUNDRYSIM_ALGORITHM_WORKERS`, or
+`BEEFOUNDRYSIM_LOCAL_SCENE_ROOT`.
 Additional command-line arguments are passed to the FastAPI process, for example
 `./start_backend.sh --allow-controller-execution` on a trusted development machine.
 
@@ -91,19 +91,19 @@ starting the services. `start_frontend.sh` forwards it only into Vite's no-store
 it is visible to that browser session and is therefore intended for trusted development only:
 
 ```bash
-export SIMLAB_API_TOKEN='replace-with-a-development-token'
+export BEEFOUNDRYSIM_API_TOKEN='replace-with-a-development-token'
 ./start_backend.sh
-# In the frontend terminal, export the same value (or SIMLAB_FRONTEND_ACCESS_TOKEN), then:
+# In the frontend terminal, export the same value (or BEEFOUNDRYSIM_FRONTEND_ACCESS_TOKEN), then:
 ./start_frontend.sh
 ```
 
 Production deployments must issue user-scoped credentials outside the static bundle rather than
-embedding a shared secret in `frontend/public/simlab-config.json`.
+embedding a shared secret in `frontend/public/beefoundrysim-config.json`.
 
 The optional desktop adapter remains available after installing the `desktop` extra:
 
 ```bash
-SIMLAB_FRONTEND_URL=http://127.0.0.1:4173 simlab
+BEEFOUNDRYSIM_FRONTEND_URL=http://127.0.0.1:4173 beefoundrysim
 ```
 
 The Qt program only loads that HTTP(S) URL. It does not embed the frontend, expose QWebChannel, or start/own the backend.
@@ -120,7 +120,7 @@ The TypeScript Editor Store owns scene authoring state, selection, dirty trackin
 
 See [`docs/MODULAR_DEVELOPMENT.md`](docs/MODULAR_DEVELOPMENT.md) for module boundaries, dependency rules, the target package layout, and the incremental modularization roadmap. See [`docs/PHYSICS_RUNTIME_DECOUPLING.md`](docs/PHYSICS_RUNTIME_DECOUPLING.md) for live-runtime contracts, capability negotiation, solver-stack configuration, and the Newton/water-engine adapter path.
 
-Use **Import USD** for a self-contained `.usd`, `.usda`, `.usdc`, `.usdz`, or safe ZIP package. Use **Import USD Folder** for a composed asset with sublayers, payloads, references, or textures; relative directory paths are preserved through multipart upload. The importer resolves stage transforms, converts stage units and Y-up coordinates to SimLab's meter/Z-up convention, triangulates meshes and native geometric primitives, expands PointInstancer instances at the default time, and registers a relocatable project cache. See [`docs/OPENUSD_IMPORT.md`](docs/OPENUSD_IMPORT.md) for the supported subset and package rules.
+Use **Import USD** for a self-contained `.usd`, `.usda`, `.usdc`, `.usdz`, or safe ZIP package. Use **Import USD Folder** for a composed asset with sublayers, payloads, references, or textures; relative directory paths are preserved through multipart upload. The importer resolves stage transforms, converts stage units and Y-up coordinates to BeeFoundrySim's meter/Z-up convention, triangulates meshes and native geometric primitives, expands PointInstancer instances at the default time, and registers a relocatable project cache. See [`docs/OPENUSD_IMPORT.md`](docs/OPENUSD_IMPORT.md) for the supported subset and package rules.
 
 OpenUSD physics values are imported when authored, including rigid-body state, mass/density, and basic friction. Dedicated `PhysicsCollisionAPI` geometry is preferred; otherwise import emits a warning and falls back to the visual mesh. Display colors, bound `UsdPreviewSurface` base color/opacity, UVs, and base-color, normal, roughness, and metallic textures are carried into the Three.js viewport. USDZ package-member textures are materialized into the relocatable project cache and served as authenticated artifacts. Robot visuals are cached as one content-addressed typed-array geometry bundle with precomputed normals and browser cache headers, while legacy per-mesh JSON remains readable. The generated project cache also contains OBJ collision meshes. Export and simulation convert that asset to MuJoCo mesh geoms, so the default runtime does not require MuJoCo's experimental native USD decoder.
 
@@ -147,11 +147,11 @@ uses CC0 2K Poly Haven glTF obstacles, photographic HDR image-based lighting, AC
 shadows while MuJoCo retains deterministic low-cost collision proxies. See
 [`docs/DRONE_OBSTACLE_DELIVERY.md`](docs/DRONE_OBSTACLE_DELIVERY.md).
 
-Training algorithms use a separate Gymnasium data plane. `SimLabEnv` composes an engine-neutral backend contract, a robot adapter, and a task, and can switch between an in-process `MujocoBackend` and an atomic gRPC backend without changing task or algorithm code. Install `.[algorithm]` for local training or `.[algorithm,remote]` for gRPC. See [`docs/ALGORITHM_BACKEND_DECOUPLING.md`](docs/ALGORITHM_BACKEND_DECOUPLING.md).
+Training algorithms use a separate Gymnasium data plane. `BeeFoundrySimEnv` composes an engine-neutral backend contract, a robot adapter, and a task, and can switch between an in-process `MujocoBackend` and an atomic gRPC backend without changing task or algorithm code. Install `.[algorithm]` for local training or `.[algorithm,remote]` for gRPC. See [`docs/ALGORITHM_BACKEND_DECOUPLING.md`](docs/ALGORITHM_BACKEND_DECOUPLING.md).
 
 The robot Inspector Controller section explicitly loads trusted project-local Python files, supports reload and detach, and displays callback status, step count, and execution duration. Controller code is never executed by opening a scene.
 
-`simlab.controllers.JointPositionPdController` provides a bounded qpos/qvel outer loop for MuJoCo position drives. A project-loadable two-joint example is available at [`examples/controllers/two_joint_pd.py`](examples/controllers/two_joint_pd.py).
+`beefoundrysim.controllers.JointPositionPdController` provides a bounded qpos/qvel outer loop for MuJoCo position drives. A project-loadable two-joint example is available at [`examples/controllers/two_joint_pd.py`](examples/controllers/two_joint_pd.py).
 
 The robotics schema includes fixed-clock `joint_state` sensors, link-mounted IMUs/rangefinders, and collider/link-scoped contact sensors. Contact aggregation maps stable collider IDs to MuJoCo geoms, sums native contact wrenches, and publishes bounded world-frame points/normals, normal force/impulse, and tangent force with a normal directed from the scoped geometry toward the other geometry. Rangefinders publish bounded distance/hit samples from native MuJoCo rays. Samples run inside the fixed-step simulation session, can be inspected live with their resolved link/collider scope, and can be selected for typed JSON/CSV recording. IMU orientation is `world_from_sensor` xyzw, while angular velocity and MuJoCo accelerometer output are expressed in the sensor frame. Optional per-channel bias and Gaussian white noise uses deterministic stable sensor/channel streams; Reset replays the same sequence, while sensors without noise preserve exact values. Sensor update rates are exact integer divisors of the physics rate and remain independent of UI refresh, pause gaps, and target real-time factor.
 

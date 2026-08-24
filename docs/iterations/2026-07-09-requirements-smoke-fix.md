@@ -18,7 +18,7 @@
   - `pytest`
   - `ruff`
   - `mypy`
-- 保留 `-e .`，用于从当前 checkout 安装 SimLab 包本身。
+- 保留 `-e .`，用于从当前 checkout 安装 BeeFoundrySim 包本身。
 - README 安装步骤增加：
   - 必须在 repository root 执行。
   - 先升级 `pip setuptools wheel`。
@@ -30,7 +30,7 @@
 - 验证以下 import 成功：
   - `PySide6.QtWebEngineWidgets.QWebEngineView`
   - `mujoco`
-  - `simlab`
+  - `beefoundrysim`
 
 ## 已知限制
 

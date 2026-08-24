@@ -6,18 +6,18 @@ from pathlib import Path
 
 import pytest
 
-from simlab.models.actor import Actor
-from simlab.models.robotics import RoboticsModel
-from simlab.models.scene import Scene
-from simlab.models.transform import Transform
-from simlab.services.controller_loader import ProjectControllerLoader
-from simlab.services.controller_runtime import ControllerAction
-from simlab.services.project_service import ProjectValidationError, validate_scene
-from simlab.services.quadrotor_dynamics import quadrotor_models_from_scene
-from simlab.services.simulation_session import MuJoCoSimulationSession
-from simlab.simulation.backend import SceneBundle
-from simlab.simulation.mujoco_backend import MujocoBackend
-from simlab.simulation.robot_adapter import QuadrotorAdapter
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.robotics import RoboticsModel
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.models.transform import Transform
+from beefoundrysim.services.controller_loader import ProjectControllerLoader
+from beefoundrysim.services.controller_runtime import ControllerAction
+from beefoundrysim.services.project_service import ProjectValidationError, validate_scene
+from beefoundrysim.services.quadrotor_dynamics import quadrotor_models_from_scene
+from beefoundrysim.services.simulation_session import MuJoCoSimulationSession
+from beefoundrysim.simulation.backend import SceneBundle
+from beefoundrysim.simulation.mujoco_backend import MujocoBackend
+from beefoundrysim.simulation.robot_adapter import QuadrotorAdapter
 
 IRIS_ASSET_ID = "openusd_iris_09f8390b45"
 IRIS_ACTUATORS = tuple(f"actuator_iris_rotor_{index}" for index in range(4))

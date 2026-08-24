@@ -1,14 +1,14 @@
-# SimLab 模块化开发指南
+# BeeFoundrySim 模块化开发指南
 
 ## 1. 文档目的
 
-本文定义 SimLab 的模块边界、依赖方向、代码组织方式和渐进式重构路线，用于指导后续功能开发、代码评审和测试建设。
+本文定义 BeeFoundrySim 的模块边界、依赖方向、代码组织方式和渐进式重构路线，用于指导后续功能开发、代码评审和测试建设。
 
 本文描述的是目标架构。现有代码已经具备前后端独立部署、领域模型、仿真服务和传感器子模块等基础，但部分物理文件仍承载多个职责。模块化工作应当以小步迁移完成，不应为了调整目录一次性重写已经验证过的业务逻辑。
 
 ## 2. 当前运行架构
 
-SimLab 当前由独立 Web 前端、Python API 后端、仿真核心和共享数据契约组成：
+BeeFoundrySim 当前由独立 Web 前端、Python API 后端、仿真核心和共享数据契约组成：
 
 ```text
 Browser / optional Qt web shell
@@ -33,7 +33,7 @@ Algorithm process
        |
        | Gymnasium
        v
-SimLabEnv --> Task --> RobotAdapter --> SimulationBackendSession
+BeeFoundrySimEnv --> Task --> RobotAdapter --> SimulationBackendSession
                                       |                 |
                                       v                 v
                               local MuJoCo       atomic gRPC backend
@@ -159,14 +159,14 @@ Viewport 不负责保存项目、创建仿真实例或显示业务 Toast。
 
 职责：
 
-- 读取 `simlab-config.json`；
+- 读取 `beefoundrysim-config.json`；
 - REST 请求和统一错误处理；
 - Bearer Token；
 - Project/Simulation ID 生命周期；
 - WebSocket 连接、重连和事件补发；
 - API 版本兼容检查。
 
-建议将当前 `EditorBridgeClient` 更名为 `SimLabApiClient`。名称迁移不应改变公共行为。
+建议将当前 `EditorBridgeClient` 更名为 `BeeFoundrySimApiClient`。名称迁移不应改变公共行为。
 
 #### Feature Panels
 
@@ -238,7 +238,7 @@ AttachController
 - Project revision 与 Simulation 场景快照的显式绑定和替换；
 - 资源关闭和后台线程清理。
 
-当前实现来源：`src/simlab/resources.py`。
+当前实现来源：`src/beefoundrysim/resources.py`。
 
 #### Persistence
 
@@ -289,7 +289,7 @@ AttachController
 - Visual/Collision/Robotics Cache；
 - Import Report 和不支持能力报告。
 
-导入模块输出 SimLab 领域模型和项目相对缓存引用，不输出供前端直接使用的 USD Python 对象。
+导入模块输出 BeeFoundrySim 领域模型和项目相对缓存引用，不输出供前端直接使用的 USD Python 对象。
 
 #### Validation and Export
 
@@ -320,7 +320,7 @@ AttachController
 Orchestrator 只依赖 `SimulationRuntimeSession`，不得读取 `MjModel/MjData`、Newton
 内部对象或水体求解器缓冲区。`RuntimeBackendRegistry` 根据 Scene 的
 `simulation_config.solvers` 选择主引擎，并允许外部包通过
-`simlab.runtime_backends` entry point 注册后端。
+`beefoundrysim.runtime_backends` entry point 注册后端。
 
 #### Runtime Backend 与 Session
 
@@ -443,7 +443,7 @@ frontend/src/ts/
 └─ contracts/
    └─ types.ts
 
-src/simlab/
+src/beefoundrysim/
 ├─ api/
 │  ├─ app.py
 │  ├─ dependencies.py

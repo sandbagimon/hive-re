@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-This file records third-party components directly used or distributed by SimLab. It is an inventory, not a replacement for the original license texts.
+This file records third-party components directly used or distributed by BeeFoundrySim. It is an inventory, not a replacement for the original license texts.
 
 ## OpenUSD / usd-core
 
@@ -10,7 +10,7 @@ This file records third-party components directly used or distributed by SimLab.
 - Purpose: read `.usd`, `.usda`, `.usdc`, and `.usdz` stages and standard `UsdPhysics` properties.
 - License: TOST; consult <https://openusd.org/license> and the license included with the installed package.
 - Distribution: dependency installed from the Python package index; not vendored in this repository.
-- Replacement boundary: `src/simlab/services/openusd_importer.py`. A compatible USD reader can replace it without changing the Scene or Bridge schemas.
+- Replacement boundary: `src/beefoundrysim/services/openusd_importer.py`. A compatible USD reader can replace it without changing the Scene or Bridge schemas.
 
 ## three.js
 

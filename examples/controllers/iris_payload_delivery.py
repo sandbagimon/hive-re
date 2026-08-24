@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from simlab.controllers.iris_payload_delivery import IrisPayloadDeliveryController
+from beefoundrysim.controllers.iris_payload_delivery import IrisPayloadDeliveryController
 
 
 def create_controller() -> IrisPayloadDeliveryController:

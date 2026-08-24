@@ -20,7 +20,7 @@
 ## 验证
 
 - 显式 QtWebEngine E2E：1 passed in 10.72s。
-- 三关键帧截图：`/tmp/simlab-multi-keyframe.png`。
+- 三关键帧截图：`/tmp/beefoundrysim-multi-keyframe.png`。
 - 截图确认时间、AxisA/AxisB targets、Completed 进度、最终 viewport pose 和滚动布局一致。
 
 ## 已知限制

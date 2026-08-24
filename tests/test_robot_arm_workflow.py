@@ -4,12 +4,12 @@ import math
 
 import pytest
 
-from simlab.models.actor import Actor
-from simlab.models.scene import Scene
-from simlab.services.openusd_importer import import_openusd_asset
-from simlab.services.physics_validation import run_physics_preflight
-from simlab.services.project_service import load_scene, save_scene
-from simlab.services.simulation_session import MuJoCoSimulationSession
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.services.openusd_importer import import_openusd_asset
+from beefoundrysim.services.physics_validation import run_physics_preflight
+from beefoundrysim.services.project_service import load_scene, save_scene
+from beefoundrysim.services.simulation_session import MuJoCoSimulationSession
 
 
 def test_external_usd_robot_round_trip_and_control_workflow(tmp_path) -> None:

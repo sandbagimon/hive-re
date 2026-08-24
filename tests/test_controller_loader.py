@@ -4,18 +4,18 @@ from pathlib import Path
 
 import pytest
 
-from simlab.models.actor import Actor
-from simlab.models.scene import Scene
-from simlab.services.controller_loader import ControllerLoadError, ProjectControllerLoader
-from simlab.services.controller_runtime import ControllerObservation
-from simlab.services.openusd_importer import import_openusd_asset
-from simlab.services.simulation_service import SimulationService
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.services.controller_loader import ControllerLoadError, ProjectControllerLoader
+from beefoundrysim.services.controller_runtime import ControllerObservation
+from beefoundrysim.services.openusd_importer import import_openusd_asset
+from beefoundrysim.services.simulation_service import SimulationService
 
 
 def _write_controller(path: Path, target: float = 0.5) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        "from simlab.services.controller_runtime import ControllerAction\n"
+        "from beefoundrysim.services.controller_runtime import ControllerAction\n"
         "class ProjectController:\n"
         "    name = 'Project Reach'\n"
         "    def reset(self, observation):\n"
@@ -91,7 +91,7 @@ def test_project_controller_file_drives_external_openusd_robot(tmp_path: Path) -
     source = tmp_path / "controllers" / "external_arm.py"
     source.parent.mkdir(parents=True)
     source.write_text(
-        "from simlab.services.controller_runtime import ControllerAction\n"
+        "from beefoundrysim.services.controller_runtime import ControllerAction\n"
         "class ExternalArmController:\n"
         "    def reset(self, observation): pass\n"
         "    def step(self, observation):\n"

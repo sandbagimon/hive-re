@@ -1,12 +1,12 @@
-from simlab.models.actor import Actor
-from simlab.models.scene import Scene
-from simlab.models.trajectory import (
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.models.trajectory import (
     JointTrajectory,
     JointTrajectoryKeyframe,
     SceneTrajectory,
 )
-from simlab.models.transform import Transform
-from simlab.services.scene_service import SceneService
+from beefoundrysim.models.transform import Transform
+from beefoundrysim.services.scene_service import SceneService
 
 
 def test_scene_serializes_round_trip() -> None:

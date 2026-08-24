@@ -7,15 +7,15 @@ from pathlib import Path
 import httpx
 import pytest
 
-from simlab.models.actor import Actor
-from simlab.models.attachment import Attachment
-from simlab.models.robotics import RoboticsModel, Sensor
-from simlab.models.scene import Scene
-from simlab.models.transform import Transform
-from simlab.resources import ResourceManager
-from simlab.services.project_service import load_scene
-from simlab.web_application import WebApplication
-from simlab.web_server import create_app
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.attachment import Attachment
+from beefoundrysim.models.robotics import RoboticsModel, Sensor
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.models.transform import Transform
+from beefoundrysim.resources import ResourceManager
+from beefoundrysim.services.project_service import load_scene
+from beefoundrysim.web_application import WebApplication
+from beefoundrysim.web_server import create_app
 
 
 def test_web_application_saves_and_opens_without_qt(tmp_path: Path) -> None:
@@ -219,10 +219,10 @@ def Scope "Looks"
 }
 '''
     textures = {
-        "base_color_texture": ("albedo.png", b"simlab-base-color"),
-        "normal_texture": ("normal.png", b"simlab-normal"),
-        "roughness_texture": ("roughness.png", b"simlab-roughness"),
-        "metallic_texture": ("metallic.png", b"simlab-metallic"),
+        "base_color_texture": ("albedo.png", b"beefoundrysim-base-color"),
+        "normal_texture": ("normal.png", b"beefoundrysim-normal"),
+        "roughness_texture": ("roughness.png", b"beefoundrysim-roughness"),
+        "metallic_texture": ("metallic.png", b"beefoundrysim-metallic"),
     }
     app = create_app(tmp_path, seed_assets=Path.cwd() / "assets")
     try:
@@ -670,7 +670,7 @@ def test_api_exports_downloadable_artifacts_without_server_paths(tmp_path: Path)
     assert artifact["download_url"] == f"/api/v1/artifacts/{artifact['id']}"
     assert "/" not in artifact["filename"]
     assert downloaded.status_code == 200
-    assert downloaded.headers["x-simlab-artifact-id"] == artifact["id"]
+    assert downloaded.headers["x-beefoundrysim-artifact-id"] == artifact["id"]
     assert b"<mujoco" in downloaded.content
 
 
@@ -749,4 +749,4 @@ def test_websocket_replaces_qt_runtime_signals() -> None:
 
     assert response["ok"] is True
     assert event["type"] == "title"
-    assert event["payload"] == "*SimLab - WebSocket Scene"
+    assert event["payload"] == "*BeeFoundrySim - WebSocket Scene"

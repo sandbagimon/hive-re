@@ -9,9 +9,9 @@ from examples.drone_delivery.scene import (
     _box,
     create_delivery_scene,
 )
-from simlab.models.actor import Actor
-from simlab.models.robotics import RigidTransform, Sensor, SensorNoise, SensorNoiseChannel
-from simlab.services.project_service import save_scene
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.robotics import RigidTransform, Sensor, SensorNoise, SensorNoiseChannel
+from beefoundrysim.services.project_service import save_scene
 
 RAY_COUNT = 12
 RAY_ORIGIN_RADIUS = 0.32

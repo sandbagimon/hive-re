@@ -12,7 +12,7 @@
   - 将当前 scene 导出为 MJCF。
   - 在进程内加载 `MjModel` 和 `MjData`。
   - 支持 `step()`、`reset()` 和当前 `state()`。
-  - 按 SimLab actor id 读取 MuJoCo body pose。
+  - 按 BeeFoundrySim actor id 读取 MuJoCo body pose。
 - 新增 `SimulationState` 和 `ActorSimulationState` 数据结构。
 - 改造 `SimulationService`：
   - 从子进程 runner 改为 in-process session 管理。

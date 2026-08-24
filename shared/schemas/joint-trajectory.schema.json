@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://simlab.local/schemas/joint-trajectory.schema.json",
-  "title": "SimLabJointTrajectory",
+  "$id": "https://beefoundrysim.local/schemas/joint-trajectory.schema.json",
+  "title": "BeeFoundrySimJointTrajectory",
   "$defs": {
     "keyframe": {
       "type": "object",

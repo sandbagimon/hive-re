@@ -3,12 +3,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from simlab.models.actor import Actor
-from simlab.models.attachment import Attachment, DeliveryTask, VacuumGripper
-from simlab.models.robotics import RoboticsModel
-from simlab.models.scene import Scene
-from simlab.models.transform import Transform
-from simlab.services.project_service import save_scene
+from beefoundrysim.models.actor import Actor
+from beefoundrysim.models.attachment import Attachment, DeliveryTask, VacuumGripper
+from beefoundrysim.models.robotics import RoboticsModel
+from beefoundrysim.models.scene import Scene
+from beefoundrysim.models.transform import Transform
+from beefoundrysim.services.project_service import save_scene
 
 IRIS_ASSET_ID = "openusd_iris_09f8390b45"
 IRIS_BODY_LINK = "link_c46480014a33"

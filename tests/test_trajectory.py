@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from simlab.models.trajectory import JointTrajectory
-from simlab.services.trajectory_player import JointTrajectoryPlayer
-from simlab.services.trajectory_validation import (
+from beefoundrysim.models.trajectory import JointTrajectory
+from beefoundrysim.services.trajectory_player import JointTrajectoryPlayer
+from beefoundrysim.services.trajectory_validation import (
     TrajectoryValidationError,
     validate_joint_trajectory,
 )

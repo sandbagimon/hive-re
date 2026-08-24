@@ -24,7 +24,7 @@
 
 - Qt Run/Jog/Pause/Reset E2E：1 passed，约 6 秒。
 - Physics preflight + Bridge 聚焦测试：16 passed。
-- 运行态截图：`/tmp/simlab-robot-joint-running.png`。
+- 运行态截图：`/tmp/beefoundrysim-robot-joint-running.png`。
 - 截图中不再存在错误的 `NO_PHYSICS_ACTORS` warning。
 
 ## 下一步

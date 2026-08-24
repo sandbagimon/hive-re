@@ -19,7 +19,7 @@
 ## 验证
 
 - 显式 QtWebEngine E2E：1 passed in 8.53s。
-- 完成态截图：`/tmp/simlab-robot-trajectory-completed.png`。
+- 完成态截图：`/tmp/beefoundrysim-robot-trajectory-completed.png`。
 - 截图确认 Completed、`0.80 / 0.80 s`、最终关节目标和 viewport 姿态一致，无布局重叠。
 
 ## 已知限制

@@ -24,7 +24,7 @@ MuJoCo 适配器解耦，并交付可从浏览器运行的完整示例。
   HUD 显示最近 clearance。
 - 将 Controller 初始化和逐帧实时控制的截止时间分离，避免 A* 初始化在服务器瞬时负载下被误判
   为逐帧超时；浏览器回归覆盖加载、12 路测距和起飞运行状态。
-- 将 Iris 运货基础控制器提升到 `simlab.controllers`，消除上传脚本对仓库 `examples` 包的隐式
+- 将 Iris 运货基础控制器提升到 `beefoundrysim.controllers`，消除上传脚本对仓库 `examples` 包的隐式
   依赖，确保隔离项目与安装部署环境可加载。
 
 ## 验证

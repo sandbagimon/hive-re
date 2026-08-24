@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import math
 
-from simlab.services.controller_runtime import ControllerAction, ControllerObservation
-
+from beefoundrysim.services.controller_runtime import ControllerAction, ControllerObservation
 
 # Stable joint ID imported from the bundled Franka Panda OpenUSD asset.
 PANDA_JOINT1 = "joint_5cff8870396d"
