@@ -1,0 +1,5315 @@
+{
+  "version": "1.0",
+  "name": "Brownstone Park Swarm Delivery",
+  "units": "meters",
+  "actors": [
+    {
+      "id": "actor_park_full",
+      "name": "Architectural Brownstone Park",
+      "type": "object",
+      "asset_id": "openusd_brownstone_park_8gb",
+      "transform": {
+        "position": [
+          -97.0,
+          -0.5,
+          -0.1
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          23.0,
+          28.0,
+          0.1
+        ],
+        "rgba": [
+          0.28,
+          0.34,
+          0.25,
+          1.0
+        ],
+        "visual_style": "park_stream_floor",
+        "physics": {
+          "dynamic": false
+        },
+        "geometry": {
+          "source_format": "openusd",
+          "source": "local-scene:brownstone-park",
+          "stream_scene_id": "brownstone-park",
+          "bounds": {
+            "min": [
+              -138.7,
+              -53.3,
+              -19.8
+            ],
+            "max": [
+              -54.9,
+              75.3,
+              8.1
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "actor_park_structure_west",
+      "name": "Park Structure West",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -96.7,
+          1.55,
+          1.165
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          2.6,
+          2.7,
+          2.33
+        ],
+        "rgba": [
+          0.35,
+          0.38,
+          0.33,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "known_obstacle"
+      }
+    },
+    {
+      "id": "actor_park_structure_center",
+      "name": "Park Structure Center",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -95.8,
+          3.55,
+          1.165
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          2.6,
+          2.7,
+          2.33
+        ],
+        "rgba": [
+          0.35,
+          0.38,
+          0.33,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "known_obstacle"
+      }
+    },
+    {
+      "id": "actor_park_structure_east",
+      "name": "Park Structure East",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -91.1,
+          14.05,
+          1.165
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          2.6,
+          2.7,
+          2.33
+        ],
+        "rgba": [
+          0.35,
+          0.38,
+          0.33,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "known_obstacle"
+      }
+    },
+    {
+      "id": "actor_iris_alpha",
+      "name": "Pegasus Iris Alpha",
+      "type": "robot",
+      "asset_id": "openusd_iris_09f8390b45",
+      "transform": {
+        "position": [
+          -106.5,
+          -6.0,
+          0.16999999999999998
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "source": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+        "robotics_cache": "assets/imported/openusd_iris_09f8390b45/robotics.json",
+        "import_report": "assets/imported/openusd_iris_09f8390b45/import-report.json",
+        "manifest": "assets/imported/openusd_iris_09f8390b45/manifest.json",
+        "articulation_ids": [
+          "articulation_07d1eea61341_alpha"
+        ],
+        "propulsion": {
+          "type": "quadrotor",
+          "model": "quadratic",
+          "command_mode": "angular_velocity",
+          "body_link_id": "link_c46480014a33_alpha",
+          "rotors": [
+            {
+              "id": "iris_rotor_0_alpha",
+              "link_id": "link_65e89d9cb4b6_alpha",
+              "actuator_id": "actuator_iris_rotor_0_alpha",
+              "axis": [
+                0.0,
+                0.0,
+                1.0
+              ],
+              "direction": -1,
+              "thrust_coefficient": 8.54858e-06,
+              "torque_coefficient": 1e-06,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            },
+            {
+              "id": "iris_rotor_1_alpha",
+              "link_id": "link_dd560abfac8c_alpha",
+              "actuator_id": "actuator_iris_rotor_1_alpha",
+              "axis": [
+                0.0,
+                0.0,
+                1.0
+              ],
+              "direction": -1,
+              "thrust_coefficient": 8.54858e-06,
+              "torque_coefficient": 1e-06,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            },
+            {
+              "id": "iris_rotor_2_alpha",
+              "link_id": "link_d53e5880040c_alpha",
+              "actuator_id": "actuator_iris_rotor_2_alpha",
+              "axis": [
+                0.0,
+                0.0,
+                1.0
+              ],
+              "direction": 1,
+              "thrust_coefficient": 8.54858e-06,
+              "torque_coefficient": 1e-06,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            },
+            {
+              "id": "iris_rotor_3_alpha",
+              "link_id": "link_81aeca72ce7b_alpha",
+              "actuator_id": "actuator_iris_rotor_3_alpha",
+              "axis": [
+                0.0,
+                0.0,
+                1.0
+              ],
+              "direction": 1,
+              "thrust_coefficient": 8.54858e-06,
+              "torque_coefficient": 1e-06,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "actor_payload_alpha",
+      "name": "Insulated Delivery Bag Alpha",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -103.5,
+          -6.0,
+          0.21000000000000002
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          0.18,
+          0.14,
+          0.11
+        ],
+        "rgba": [
+          0.13,
+          0.14,
+          0.15,
+          1.0
+        ],
+        "physics": {
+          "dynamic": true,
+          "material": "rubber",
+          "mass_mode": "mass",
+          "mass": 0.35,
+          "friction": [
+            0.72,
+            0.008,
+            0.0002
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "insulated_delivery_bag"
+      }
+    },
+    {
+      "id": "actor_pickup_pad_alpha",
+      "name": "Pickup Alpha",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -103.5,
+          -6.0,
+          0.07500000000000001
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          1.5,
+          1.5,
+          0.05
+        ],
+        "rgba": [
+          0.18,
+          0.55,
+          0.9,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "landing_pad_pickup"
+      }
+    },
+    {
+      "id": "actor_dropoff_pad_alpha",
+      "name": "Dropoff Alpha",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -89.5,
+          3.0,
+          0.34500000000000003
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          1.5,
+          1.5,
+          0.05
+        ],
+        "rgba": [
+          0.2,
+          0.75,
+          0.35,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "landing_pad_dropoff"
+      }
+    },
+    {
+      "id": "actor_iris_bravo",
+      "name": "Pegasus Iris Bravo",
+      "type": "robot",
+      "asset_id": "openusd_iris_09f8390b45",
+      "transform": {
+        "position": [
+          -106.5,
+          6.0,
+          0.42
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "source": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+        "robotics_cache": "assets/imported/openusd_iris_09f8390b45/robotics.json",
+        "import_report": "assets/imported/openusd_iris_09f8390b45/import-report.json",
+        "manifest": "assets/imported/openusd_iris_09f8390b45/manifest.json",
+        "articulation_ids": [
+          "articulation_07d1eea61341_bravo"
+        ],
+        "propulsion": {
+          "type": "quadrotor",
+          "model": "quadratic",
+          "command_mode": "angular_velocity",
+          "body_link_id": "link_c46480014a33_bravo",
+          "rotors": [
+            {
+              "id": "iris_rotor_0_bravo",
+              "link_id": "link_65e89d9cb4b6_bravo",
+              "actuator_id": "actuator_iris_rotor_0_bravo",
+              "axis": [
+                0.0,
+                0.0,
+                1.0
+              ],
+              "direction": -1,
+              "thrust_coefficient": 8.54858e-06,
+              "torque_coefficient": 1e-06,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            },
+            {
+              "id": "iris_rotor_1_bravo",
+              "link_id": "link_dd560abfac8c_bravo",
+              "actuator_id": "actuator_iris_rotor_1_bravo",
+              "axis": [
+                0.0,
+                0.0,
+                1.0
+              ],
+              "direction": -1,
+              "thrust_coefficient": 8.54858e-06,
+              "torque_coefficient": 1e-06,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            },
+            {
+              "id": "iris_rotor_2_bravo",
+              "link_id": "link_d53e5880040c_bravo",
+              "actuator_id": "actuator_iris_rotor_2_bravo",
+              "axis": [
+                0.0,
+                0.0,
+                1.0
+              ],
+              "direction": 1,
+              "thrust_coefficient": 8.54858e-06,
+              "torque_coefficient": 1e-06,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            },
+            {
+              "id": "iris_rotor_3_bravo",
+              "link_id": "link_81aeca72ce7b_bravo",
+              "actuator_id": "actuator_iris_rotor_3_bravo",
+              "axis": [
+                0.0,
+                0.0,
+                1.0
+              ],
+              "direction": 1,
+              "thrust_coefficient": 8.54858e-06,
+              "torque_coefficient": 1e-06,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "actor_payload_bravo",
+      "name": "Insulated Delivery Bag Bravo",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -103.5,
+          6.0,
+          0.45999999999999996
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          0.18,
+          0.14,
+          0.11
+        ],
+        "rgba": [
+          0.13,
+          0.14,
+          0.15,
+          1.0
+        ],
+        "physics": {
+          "dynamic": true,
+          "material": "rubber",
+          "mass_mode": "mass",
+          "mass": 0.35,
+          "friction": [
+            0.72,
+            0.008,
+            0.0002
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "insulated_delivery_bag"
+      }
+    },
+    {
+      "id": "actor_pickup_pad_bravo",
+      "name": "Pickup Bravo",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -103.5,
+          6.0,
+          0.325
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          1.5,
+          1.5,
+          0.05
+        ],
+        "rgba": [
+          0.18,
+          0.55,
+          0.9,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "landing_pad_pickup"
+      }
+    },
+    {
+      "id": "actor_dropoff_pad_bravo",
+      "name": "Dropoff Bravo",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -89.5,
+          -6.0,
+          0.625
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          1.5,
+          1.5,
+          0.05
+        ],
+        "rgba": [
+          0.2,
+          0.75,
+          0.35,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "landing_pad_dropoff"
+      }
+    },
+    {
+      "id": "actor_iris_charlie",
+      "name": "Pegasus Iris Charlie",
+      "type": "robot",
+      "asset_id": "openusd_iris_09f8390b45",
+      "transform": {
+        "position": [
+          -95.5,
+          -12.0,
+          0.94
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "source": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+        "robotics_cache": "assets/imported/openusd_iris_09f8390b45/robotics.json",
+        "import_report": "assets/imported/openusd_iris_09f8390b45/import-report.json",
+        "manifest": "assets/imported/openusd_iris_09f8390b45/manifest.json",
+        "articulation_ids": [
+          "articulation_07d1eea61341_charlie"
+        ],
+        "propulsion": {
+          "type": "quadrotor",
+          "model": "quadratic",
+          "command_mode": "angular_velocity",
+          "body_link_id": "link_c46480014a33_charlie",
+          "rotors": [
+            {
+              "id": "iris_rotor_0_charlie",
+              "link_id": "link_65e89d9cb4b6_charlie",
+              "actuator_id": "actuator_iris_rotor_0_charlie",
+              "axis": [
+                0.0,
+                0.0,
+                1.0
+              ],
+              "direction": -1,
+              "thrust_coefficient": 8.54858e-06,
+              "torque_coefficient": 1e-06,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            },
+            {
+              "id": "iris_rotor_1_charlie",
+              "link_id": "link_dd560abfac8c_charlie",
+              "actuator_id": "actuator_iris_rotor_1_charlie",
+              "axis": [
+                0.0,
+                0.0,
+                1.0
+              ],
+              "direction": -1,
+              "thrust_coefficient": 8.54858e-06,
+              "torque_coefficient": 1e-06,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            },
+            {
+              "id": "iris_rotor_2_charlie",
+              "link_id": "link_d53e5880040c_charlie",
+              "actuator_id": "actuator_iris_rotor_2_charlie",
+              "axis": [
+                0.0,
+                0.0,
+                1.0
+              ],
+              "direction": 1,
+              "thrust_coefficient": 8.54858e-06,
+              "torque_coefficient": 1e-06,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            },
+            {
+              "id": "iris_rotor_3_charlie",
+              "link_id": "link_81aeca72ce7b_charlie",
+              "actuator_id": "actuator_iris_rotor_3_charlie",
+              "axis": [
+                0.0,
+                0.0,
+                1.0
+              ],
+              "direction": 1,
+              "thrust_coefficient": 8.54858e-06,
+              "torque_coefficient": 1e-06,
+              "min_angular_velocity": 0.0,
+              "max_angular_velocity": 1100.0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "actor_payload_charlie",
+      "name": "Insulated Delivery Bag Charlie",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -95.5,
+          -10.0,
+          0.91
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          0.18,
+          0.14,
+          0.11
+        ],
+        "rgba": [
+          0.13,
+          0.14,
+          0.15,
+          1.0
+        ],
+        "physics": {
+          "dynamic": true,
+          "material": "rubber",
+          "mass_mode": "mass",
+          "mass": 0.35,
+          "friction": [
+            0.72,
+            0.008,
+            0.0002
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "insulated_delivery_bag"
+      }
+    },
+    {
+      "id": "actor_pickup_pad_charlie",
+      "name": "Pickup Charlie",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -95.5,
+          -10.0,
+          0.775
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          1.5,
+          1.5,
+          0.05
+        ],
+        "rgba": [
+          0.18,
+          0.55,
+          0.9,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "landing_pad_pickup"
+      }
+    },
+    {
+      "id": "actor_dropoff_pad_charlie",
+      "name": "Dropoff Charlie",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -95.5,
+          10.5,
+          0.025
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          1.5,
+          1.5,
+          0.05
+        ],
+        "rgba": [
+          0.2,
+          0.75,
+          0.35,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "landing_pad_dropoff"
+      }
+    },
+    {
+      "id": "actor_kiosk_west",
+      "name": "West Plaza Kiosk",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -99.0,
+          -4.5,
+          1.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          1.6,
+          1.6,
+          2.0
+        ],
+        "rgba": [
+          0.92,
+          0.42,
+          0.16,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "known_obstacle"
+      }
+    },
+    {
+      "id": "actor_kiosk_east",
+      "name": "East Meadow Kiosk",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -91.5,
+          6.5,
+          1.0
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          1.6,
+          1.6,
+          2.0
+        ],
+        "rgba": [
+          0.16,
+          0.55,
+          0.9,
+          1.0
+        ],
+        "physics": {
+          "dynamic": false,
+          "material": "default",
+          "mass_mode": "mass",
+          "mass": 1.0,
+          "friction": [
+            1.0,
+            0.005,
+            0.0001
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "known_obstacle"
+      }
+    },
+    {
+      "id": "actor_dynamic_cart",
+      "name": "Unmapped Crossing Cleaning Cart",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -101.5,
+          -12.5,
+          0.95
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          0.9,
+          0.5,
+          0.9
+        ],
+        "rgba": [
+          0.25,
+          0.7,
+          0.4,
+          1.0
+        ],
+        "physics": {
+          "dynamic": true,
+          "material": "rubber",
+          "mass_mode": "mass",
+          "mass": 90.0,
+          "friction": [
+            0.72,
+            0.008,
+            0.0002
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "dynamic_event"
+      }
+    },
+    {
+      "id": "actor_dynamic_van",
+      "name": "Unmapped Crossing Maintenance Van",
+      "type": "object",
+      "asset_id": "primitive_box",
+      "transform": {
+        "position": [
+          -85.8,
+          -12.0,
+          1.05
+        ],
+        "rotation": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "properties": {
+        "primitive": "box",
+        "size": [
+          1.1,
+          2.2,
+          1.0
+        ],
+        "rgba": [
+          0.88,
+          0.62,
+          0.08,
+          1.0
+        ],
+        "physics": {
+          "dynamic": true,
+          "material": "rubber",
+          "mass_mode": "mass",
+          "mass": 2400.0,
+          "friction": [
+            0.72,
+            0.008,
+            0.0002
+          ],
+          "solref": [
+            0.025,
+            1.0
+          ],
+          "solimp": [
+            0.92,
+            0.97,
+            0.001,
+            0.5,
+            2.0
+          ]
+        },
+        "visual_style": "dynamic_event"
+      }
+    }
+  ],
+  "simulation_config": {
+    "timestep": 0.005,
+    "controller_update_rate_hz": 100.0,
+    "duration": 200.0,
+    "wind": [
+      0.12,
+      -0.08,
+      0.0
+    ],
+    "controller_deadline": 0.05,
+    "controller_reset_deadline": 0.8,
+    "dynamic_events": [
+      {
+        "id": "event_cart_crosses_alpha_route",
+        "type": "kinematic_actor",
+        "actor_id": "actor_dynamic_cart",
+        "label": "Cleaning cart crossing the west plaza",
+        "activation_time": 14.0,
+        "completion_time": 24.0,
+        "interpolation": "smoothstep",
+        "keyframes": [
+          {
+            "time": 0.0,
+            "position": [
+              -101.5,
+              -12.5,
+              0.95
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "time": 14.0,
+            "position": [
+              -101.5,
+              -12.5,
+              0.95
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "time": 17.0,
+            "position": [
+              -101.5,
+              0.0,
+              0.95
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "time": 19.0,
+            "position": [
+              -91.5,
+              0.0,
+              0.95
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "time": 24.0,
+            "position": [
+              -101.5,
+              -12.5,
+              0.95
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "time": 200.0,
+            "position": [
+              -101.5,
+              -12.5,
+              0.95
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        ]
+      },
+      {
+        "id": "event_van_crosses_final_approach",
+        "type": "kinematic_actor",
+        "actor_id": "actor_dynamic_van",
+        "label": "Maintenance van crossing the east corridor",
+        "activation_time": 30.0,
+        "completion_time": 42.0,
+        "interpolation": "smoothstep",
+        "keyframes": [
+          {
+            "time": 0.0,
+            "position": [
+              -85.8,
+              -12.0,
+              1.05
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "time": 30.0,
+            "position": [
+              -85.8,
+              -12.0,
+              1.05
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "time": 33.0,
+            "position": [
+              -93.0,
+              -7.0,
+              1.05
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "time": 37.0,
+            "position": [
+              -93.0,
+              7.0,
+              1.05
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "time": 42.0,
+            "position": [
+              -85.8,
+              -12.0,
+              1.05
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          },
+          {
+            "time": 200.0,
+            "position": [
+              -85.8,
+              -12.0,
+              1.05
+            ],
+            "rotation": [
+              0.0,
+              0.0,
+              0.0
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "robotics": {
+    "version": "2.0",
+    "articulations": [
+      {
+        "id": "articulation_07d1eea61341_alpha",
+        "name": "Iris Quadcopter Alpha",
+        "root_link_id": "link_c46480014a33_alpha",
+        "fixed_base": false,
+        "source_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+        "source_prim_path": "/vehicle",
+        "links": [
+          {
+            "id": "link_c46480014a33_alpha",
+            "name": "body",
+            "parent_link_id": null,
+            "transform": {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            },
+            "visual_geometries": [
+              {
+                "id": "visual_da73878fa125_alpha",
+                "name": "body",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.7071035746228058,
+                    0.7071099877357483
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/body/body",
+                "rgba": [
+                  0.7,
+                  0.7,
+                  0.7,
+                  1.0
+                ],
+                "roughness": null,
+                "metalness": null
+              }
+            ],
+            "colliders": [
+              {
+                "id": "collider_3e7913cc3d09_alpha",
+                "name": "body",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.7071035746228058,
+                    0.7071099877357483
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/body/body",
+                "friction": [
+                  1.0,
+                  0.005,
+                  0.0001
+                ],
+                "restitution": 0.0,
+                "collision_mesh": "assets/imported/openusd_iris_09f8390b45/colliders/collider_3e7913cc3d09/collision.obj"
+              }
+            ],
+            "inertial": {
+              "mass": 1.5,
+              "center_of_mass": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "diagonal_inertia": [
+                0.029124999418854713,
+                0.029124999418854713,
+                0.05522499978542328
+              ],
+              "full_inertia": null
+            },
+            "source_prim_path": "/vehicle/body"
+          },
+          {
+            "id": "link_65e89d9cb4b6_alpha",
+            "name": "rotor0",
+            "parent_link_id": "link_c46480014a33_alpha",
+            "transform": {
+              "position": [
+                0.13759532827186577,
+                -0.20673533897435953,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "visual_geometries": [
+              {
+                "id": "visual_2c3cc13757c2_alpha",
+                "name": "iris_prop_ccw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.0005450629789668371,
+                    -0.0038281848239100913,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor0/iris_prop_ccw",
+                "rgba": [
+                  0.7,
+                  0.7,
+                  0.7,
+                  1.0
+                ],
+                "roughness": null,
+                "metalness": null
+              }
+            ],
+            "colliders": [
+              {
+                "id": "collider_5dd329fc4eed_alpha",
+                "name": "iris_prop_ccw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.0005450629789668371,
+                    -0.0038281848239100913,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor0/iris_prop_ccw",
+                "friction": [
+                  1.0,
+                  0.005,
+                  0.0001
+                ],
+                "restitution": 0.0,
+                "collision_mesh": "assets/imported/openusd_iris_09f8390b45/colliders/collider_5dd329fc4eed/collision.obj"
+              }
+            ],
+            "inertial": {
+              "mass": 0.005,
+              "center_of_mass": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "diagonal_inertia": null,
+              "full_inertia": null
+            },
+            "source_prim_path": "/vehicle/rotor0"
+          },
+          {
+            "id": "link_dd560abfac8c_alpha",
+            "name": "rotor1",
+            "parent_link_id": "link_c46480014a33_alpha",
+            "transform": {
+              "position": [
+                -0.12499996860425842,
+                0.21869458379089163,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "visual_geometries": [
+              {
+                "id": "visual_4d72ab886620_alpha",
+                "name": "iris_prop_ccw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.00022388287490729408,
+                    -0.004119582025255142,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor1/iris_prop_ccw",
+                "rgba": [
+                  0.7,
+                  0.7,
+                  0.7,
+                  1.0
+                ],
+                "roughness": null,
+                "metalness": null
+              }
+            ],
+            "colliders": [
+              {
+                "id": "collider_eb920ec6483d_alpha",
+                "name": "iris_prop_ccw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.00022388287490729408,
+                    -0.004119582025255142,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor1/iris_prop_ccw",
+                "friction": [
+                  1.0,
+                  0.005,
+                  0.0001
+                ],
+                "restitution": 0.0,
+                "collision_mesh": "assets/imported/openusd_iris_09f8390b45/colliders/collider_eb920ec6483d/collision.obj"
+              }
+            ],
+            "inertial": {
+              "mass": 0.005,
+              "center_of_mass": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "diagonal_inertia": null,
+              "full_inertia": null
+            },
+            "source_prim_path": "/vehicle/rotor1"
+          },
+          {
+            "id": "link_d53e5880040c_alpha",
+            "name": "rotor2",
+            "parent_link_id": "link_c46480014a33_alpha",
+            "transform": {
+              "position": [
+                0.13830880357211967,
+                0.2032196494885447,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "visual_geometries": [
+              {
+                "id": "visual_84cac9981045_alpha",
+                "name": "iris_prop_cw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    4.884981308350689e-15,
+                    -0.0009403522031591338,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor2/iris_prop_cw",
+                "rgba": [
+                  0.7,
+                  0.7,
+                  0.7,
+                  1.0
+                ],
+                "roughness": null,
+                "metalness": null
+              }
+            ],
+            "colliders": [
+              {
+                "id": "collider_8c7aedc016eb_alpha",
+                "name": "iris_prop_cw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    4.884981308350689e-15,
+                    -0.0009403522031591338,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor2/iris_prop_cw",
+                "friction": [
+                  1.0,
+                  0.005,
+                  0.0001
+                ],
+                "restitution": 0.0,
+                "collision_mesh": "assets/imported/openusd_iris_09f8390b45/colliders/collider_8c7aedc016eb/collision.obj"
+              }
+            ],
+            "inertial": {
+              "mass": 0.005,
+              "center_of_mass": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "diagonal_inertia": null,
+              "full_inertia": null
+            },
+            "source_prim_path": "/vehicle/rotor2"
+          },
+          {
+            "id": "link_81aeca72ce7b_alpha",
+            "name": "rotor3",
+            "parent_link_id": "link_c46480014a33_alpha",
+            "transform": {
+              "position": [
+                -0.12450201241313519,
+                -0.22199887369774485,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "visual_geometries": [
+              {
+                "id": "visual_9685cc98f86e_alpha",
+                "name": "iris_prop_cw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    -0.0016709731153214946,
+                    -0.000967065099411496,
+                    -0.00010050091257035598
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor3/iris_prop_cw",
+                "rgba": [
+                  0.7,
+                  0.7,
+                  0.7,
+                  1.0
+                ],
+                "roughness": null,
+                "metalness": null
+              }
+            ],
+            "colliders": [
+              {
+                "id": "collider_81de18ca3640_alpha",
+                "name": "iris_prop_cw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    -0.0016709731153214946,
+                    -0.000967065099411496,
+                    -0.00010050091257035598
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor3/iris_prop_cw",
+                "friction": [
+                  1.0,
+                  0.005,
+                  0.0001
+                ],
+                "restitution": 0.0,
+                "collision_mesh": "assets/imported/openusd_iris_09f8390b45/colliders/collider_81de18ca3640/collision.obj"
+              }
+            ],
+            "inertial": {
+              "mass": 0.005,
+              "center_of_mass": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "diagonal_inertia": null,
+              "full_inertia": null
+            },
+            "source_prim_path": "/vehicle/rotor3"
+          }
+        ],
+        "joints": [
+          {
+            "id": "joint_6c1f079d8b91_alpha",
+            "name": "joint0",
+            "type": "revolute",
+            "parent_link_id": "link_c46480014a33_alpha",
+            "child_link_id": "link_65e89d9cb4b6_alpha",
+            "origin": {
+              "position": [
+                0.13759532827186577,
+                -0.20673533897435953,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "limits": {
+              "lower": null,
+              "upper": null,
+              "effort": null,
+              "velocity": null
+            },
+            "initial_position": 0.0,
+            "source_prim_path": "/vehicle/rotor0/joint0",
+            "parent_frame": {
+              "position": [
+                0.13759532827186577,
+                -0.20673533897435953,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "child_frame": {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            },
+            "initial_velocity": 0.0
+          },
+          {
+            "id": "joint_817eb056c50c_alpha",
+            "name": "joint1",
+            "type": "revolute",
+            "parent_link_id": "link_c46480014a33_alpha",
+            "child_link_id": "link_dd560abfac8c_alpha",
+            "origin": {
+              "position": [
+                -0.12499996860425842,
+                0.21869458379089163,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "limits": {
+              "lower": null,
+              "upper": null,
+              "effort": null,
+              "velocity": null
+            },
+            "initial_position": 0.0,
+            "source_prim_path": "/vehicle/rotor1/joint1",
+            "parent_frame": {
+              "position": [
+                -0.12499996860425842,
+                0.21869458379089163,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "child_frame": {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            },
+            "initial_velocity": 0.0
+          },
+          {
+            "id": "joint_0f846eb9442b_alpha",
+            "name": "joint2",
+            "type": "revolute",
+            "parent_link_id": "link_c46480014a33_alpha",
+            "child_link_id": "link_d53e5880040c_alpha",
+            "origin": {
+              "position": [
+                0.13830880357211967,
+                0.2032196494885447,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "limits": {
+              "lower": null,
+              "upper": null,
+              "effort": null,
+              "velocity": null
+            },
+            "initial_position": 0.0,
+            "source_prim_path": "/vehicle/rotor2/joint2",
+            "parent_frame": {
+              "position": [
+                0.13830880357211967,
+                0.2032196494885447,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "child_frame": {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            },
+            "initial_velocity": 0.0
+          },
+          {
+            "id": "joint_b49b461e30ff_alpha",
+            "name": "joint3",
+            "type": "revolute",
+            "parent_link_id": "link_c46480014a33_alpha",
+            "child_link_id": "link_81aeca72ce7b_alpha",
+            "origin": {
+              "position": [
+                -0.12450201241313519,
+                -0.22199887369774485,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "limits": {
+              "lower": null,
+              "upper": null,
+              "effort": null,
+              "velocity": null
+            },
+            "initial_position": 0.0,
+            "source_prim_path": "/vehicle/rotor3/joint3",
+            "parent_frame": {
+              "position": [
+                -0.12450201241313519,
+                -0.22199887369774485,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "child_frame": {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            },
+            "initial_velocity": 0.0
+          }
+        ],
+        "actuators": [
+          {
+            "id": "actuator_iris_rotor_0_alpha",
+            "name": "rotor0_angular_velocity",
+            "joint_id": "joint_6c1f079d8b91_alpha",
+            "control_type": "velocity",
+            "control_range": [
+              0.0,
+              1100.0
+            ],
+            "stiffness": 0.0,
+            "damping": 0.0,
+            "max_force": null,
+            "source_prim_path": "/vehicle/rotor0/joint0",
+            "target_velocity": 0.0
+          },
+          {
+            "id": "actuator_iris_rotor_1_alpha",
+            "name": "rotor1_angular_velocity",
+            "joint_id": "joint_817eb056c50c_alpha",
+            "control_type": "velocity",
+            "control_range": [
+              0.0,
+              1100.0
+            ],
+            "stiffness": 0.0,
+            "damping": 0.0,
+            "max_force": null,
+            "source_prim_path": "/vehicle/rotor1/joint1",
+            "target_velocity": 0.0
+          },
+          {
+            "id": "actuator_iris_rotor_2_alpha",
+            "name": "rotor2_angular_velocity",
+            "joint_id": "joint_0f846eb9442b_alpha",
+            "control_type": "velocity",
+            "control_range": [
+              0.0,
+              1100.0
+            ],
+            "stiffness": 0.0,
+            "damping": 0.0,
+            "max_force": null,
+            "source_prim_path": "/vehicle/rotor2/joint2",
+            "target_velocity": 0.0
+          },
+          {
+            "id": "actuator_iris_rotor_3_alpha",
+            "name": "rotor3_angular_velocity",
+            "joint_id": "joint_b49b461e30ff_alpha",
+            "control_type": "velocity",
+            "control_range": [
+              0.0,
+              1100.0
+            ],
+            "stiffness": 0.0,
+            "damping": 0.0,
+            "max_force": null,
+            "source_prim_path": "/vehicle/rotor3/joint3",
+            "target_velocity": 0.0
+          }
+        ],
+        "sensors": [
+          {
+            "id": "sensor_iris_range_00_alpha",
+            "name": "Iris Range 0 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_alpha",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                0.32,
+                0.0,
+                0.22
+              ],
+              "quaternion": [
+                -0.0,
+                0.7071067811865475,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5100,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_01_alpha",
+            "name": "Iris Range 30 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_alpha",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                0.27712812921102037,
+                0.15999999999999998,
+                0.22
+              ],
+              "quaternion": [
+                -0.3535533905932737,
+                0.6123724356957945,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5101,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_02_alpha",
+            "name": "Iris Range 60 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_alpha",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                0.16000000000000003,
+                0.27712812921102037,
+                0.22
+              ],
+              "quaternion": [
+                -0.6123724356957945,
+                0.3535533905932738,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5102,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_03_alpha",
+            "name": "Iris Range 90 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_alpha",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                1.959434878635765e-17,
+                0.32,
+                0.22
+              ],
+              "quaternion": [
+                -0.7071067811865475,
+                4.329780281177466e-17,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5103,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_04_alpha",
+            "name": "Iris Range 120 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_alpha",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -0.15999999999999992,
+                0.27712812921102037,
+                0.22
+              ],
+              "quaternion": [
+                -0.6123724356957945,
+                -0.35355339059327356,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5104,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_05_alpha",
+            "name": "Iris Range 150 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_alpha",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -0.27712812921102037,
+                0.15999999999999998,
+                0.22
+              ],
+              "quaternion": [
+                -0.3535533905932737,
+                -0.6123724356957945,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5105,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_06_alpha",
+            "name": "Iris Range 180 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_alpha",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -0.32,
+                3.91886975727153e-17,
+                0.22
+              ],
+              "quaternion": [
+                -8.659560562354932e-17,
+                -0.7071067811865475,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5106,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_07_alpha",
+            "name": "Iris Range 210 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_alpha",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -0.2771281292110204,
+                -0.15999999999999992,
+                0.22
+              ],
+              "quaternion": [
+                0.3535533905932735,
+                -0.6123724356957946,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5107,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_08_alpha",
+            "name": "Iris Range 240 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_alpha",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -0.16000000000000014,
+                -0.2771281292110203,
+                0.22
+              ],
+              "quaternion": [
+                0.6123724356957942,
+                -0.35355339059327406,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5108,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_09_alpha",
+            "name": "Iris Range 270 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_alpha",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -5.878304635907295e-17,
+                -0.32,
+                0.22
+              ],
+              "quaternion": [
+                0.7071067811865475,
+                -1.2989340843532398e-16,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5109,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_10_alpha",
+            "name": "Iris Range 300 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_alpha",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                0.16000000000000003,
+                -0.27712812921102037,
+                0.22
+              ],
+              "quaternion": [
+                0.6123724356957945,
+                0.3535533905932738,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5110,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_11_alpha",
+            "name": "Iris Range 330 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_alpha",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                0.2771281292110203,
+                -0.16000000000000014,
+                0.22
+              ],
+              "quaternion": [
+                0.35355339059327406,
+                0.6123724356957942,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5111,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          }
+        ],
+        "visual_bundle": "assets/imported/openusd_iris_09f8390b45/visual-0c28e711659123fc.simbin"
+      },
+      {
+        "id": "articulation_07d1eea61341_bravo",
+        "name": "Iris Quadcopter Bravo",
+        "root_link_id": "link_c46480014a33_bravo",
+        "fixed_base": false,
+        "source_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+        "source_prim_path": "/vehicle",
+        "links": [
+          {
+            "id": "link_c46480014a33_bravo",
+            "name": "body",
+            "parent_link_id": null,
+            "transform": {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            },
+            "visual_geometries": [
+              {
+                "id": "visual_da73878fa125_bravo",
+                "name": "body",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.7071035746228058,
+                    0.7071099877357483
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/body/body",
+                "rgba": [
+                  0.7,
+                  0.7,
+                  0.7,
+                  1.0
+                ],
+                "roughness": null,
+                "metalness": null
+              }
+            ],
+            "colliders": [
+              {
+                "id": "collider_3e7913cc3d09_bravo",
+                "name": "body",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.7071035746228058,
+                    0.7071099877357483
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/body/body",
+                "friction": [
+                  1.0,
+                  0.005,
+                  0.0001
+                ],
+                "restitution": 0.0,
+                "collision_mesh": "assets/imported/openusd_iris_09f8390b45/colliders/collider_3e7913cc3d09/collision.obj"
+              }
+            ],
+            "inertial": {
+              "mass": 1.5,
+              "center_of_mass": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "diagonal_inertia": [
+                0.029124999418854713,
+                0.029124999418854713,
+                0.05522499978542328
+              ],
+              "full_inertia": null
+            },
+            "source_prim_path": "/vehicle/body"
+          },
+          {
+            "id": "link_65e89d9cb4b6_bravo",
+            "name": "rotor0",
+            "parent_link_id": "link_c46480014a33_bravo",
+            "transform": {
+              "position": [
+                0.13759532827186577,
+                -0.20673533897435953,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "visual_geometries": [
+              {
+                "id": "visual_2c3cc13757c2_bravo",
+                "name": "iris_prop_ccw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.0005450629789668371,
+                    -0.0038281848239100913,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor0/iris_prop_ccw",
+                "rgba": [
+                  0.7,
+                  0.7,
+                  0.7,
+                  1.0
+                ],
+                "roughness": null,
+                "metalness": null
+              }
+            ],
+            "colliders": [
+              {
+                "id": "collider_5dd329fc4eed_bravo",
+                "name": "iris_prop_ccw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.0005450629789668371,
+                    -0.0038281848239100913,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor0/iris_prop_ccw",
+                "friction": [
+                  1.0,
+                  0.005,
+                  0.0001
+                ],
+                "restitution": 0.0,
+                "collision_mesh": "assets/imported/openusd_iris_09f8390b45/colliders/collider_5dd329fc4eed/collision.obj"
+              }
+            ],
+            "inertial": {
+              "mass": 0.005,
+              "center_of_mass": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "diagonal_inertia": null,
+              "full_inertia": null
+            },
+            "source_prim_path": "/vehicle/rotor0"
+          },
+          {
+            "id": "link_dd560abfac8c_bravo",
+            "name": "rotor1",
+            "parent_link_id": "link_c46480014a33_bravo",
+            "transform": {
+              "position": [
+                -0.12499996860425842,
+                0.21869458379089163,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "visual_geometries": [
+              {
+                "id": "visual_4d72ab886620_bravo",
+                "name": "iris_prop_ccw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.00022388287490729408,
+                    -0.004119582025255142,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor1/iris_prop_ccw",
+                "rgba": [
+                  0.7,
+                  0.7,
+                  0.7,
+                  1.0
+                ],
+                "roughness": null,
+                "metalness": null
+              }
+            ],
+            "colliders": [
+              {
+                "id": "collider_eb920ec6483d_bravo",
+                "name": "iris_prop_ccw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.00022388287490729408,
+                    -0.004119582025255142,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor1/iris_prop_ccw",
+                "friction": [
+                  1.0,
+                  0.005,
+                  0.0001
+                ],
+                "restitution": 0.0,
+                "collision_mesh": "assets/imported/openusd_iris_09f8390b45/colliders/collider_eb920ec6483d/collision.obj"
+              }
+            ],
+            "inertial": {
+              "mass": 0.005,
+              "center_of_mass": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "diagonal_inertia": null,
+              "full_inertia": null
+            },
+            "source_prim_path": "/vehicle/rotor1"
+          },
+          {
+            "id": "link_d53e5880040c_bravo",
+            "name": "rotor2",
+            "parent_link_id": "link_c46480014a33_bravo",
+            "transform": {
+              "position": [
+                0.13830880357211967,
+                0.2032196494885447,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "visual_geometries": [
+              {
+                "id": "visual_84cac9981045_bravo",
+                "name": "iris_prop_cw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    4.884981308350689e-15,
+                    -0.0009403522031591338,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor2/iris_prop_cw",
+                "rgba": [
+                  0.7,
+                  0.7,
+                  0.7,
+                  1.0
+                ],
+                "roughness": null,
+                "metalness": null
+              }
+            ],
+            "colliders": [
+              {
+                "id": "collider_8c7aedc016eb_bravo",
+                "name": "iris_prop_cw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    4.884981308350689e-15,
+                    -0.0009403522031591338,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor2/iris_prop_cw",
+                "friction": [
+                  1.0,
+                  0.005,
+                  0.0001
+                ],
+                "restitution": 0.0,
+                "collision_mesh": "assets/imported/openusd_iris_09f8390b45/colliders/collider_8c7aedc016eb/collision.obj"
+              }
+            ],
+            "inertial": {
+              "mass": 0.005,
+              "center_of_mass": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "diagonal_inertia": null,
+              "full_inertia": null
+            },
+            "source_prim_path": "/vehicle/rotor2"
+          },
+          {
+            "id": "link_81aeca72ce7b_bravo",
+            "name": "rotor3",
+            "parent_link_id": "link_c46480014a33_bravo",
+            "transform": {
+              "position": [
+                -0.12450201241313519,
+                -0.22199887369774485,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "visual_geometries": [
+              {
+                "id": "visual_9685cc98f86e_bravo",
+                "name": "iris_prop_cw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    -0.0016709731153214946,
+                    -0.000967065099411496,
+                    -0.00010050091257035598
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor3/iris_prop_cw",
+                "rgba": [
+                  0.7,
+                  0.7,
+                  0.7,
+                  1.0
+                ],
+                "roughness": null,
+                "metalness": null
+              }
+            ],
+            "colliders": [
+              {
+                "id": "collider_81de18ca3640_bravo",
+                "name": "iris_prop_cw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    -0.0016709731153214946,
+                    -0.000967065099411496,
+                    -0.00010050091257035598
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor3/iris_prop_cw",
+                "friction": [
+                  1.0,
+                  0.005,
+                  0.0001
+                ],
+                "restitution": 0.0,
+                "collision_mesh": "assets/imported/openusd_iris_09f8390b45/colliders/collider_81de18ca3640/collision.obj"
+              }
+            ],
+            "inertial": {
+              "mass": 0.005,
+              "center_of_mass": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "diagonal_inertia": null,
+              "full_inertia": null
+            },
+            "source_prim_path": "/vehicle/rotor3"
+          }
+        ],
+        "joints": [
+          {
+            "id": "joint_6c1f079d8b91_bravo",
+            "name": "joint0",
+            "type": "revolute",
+            "parent_link_id": "link_c46480014a33_bravo",
+            "child_link_id": "link_65e89d9cb4b6_bravo",
+            "origin": {
+              "position": [
+                0.13759532827186577,
+                -0.20673533897435953,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "limits": {
+              "lower": null,
+              "upper": null,
+              "effort": null,
+              "velocity": null
+            },
+            "initial_position": 0.0,
+            "source_prim_path": "/vehicle/rotor0/joint0",
+            "parent_frame": {
+              "position": [
+                0.13759532827186577,
+                -0.20673533897435953,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "child_frame": {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            },
+            "initial_velocity": 0.0
+          },
+          {
+            "id": "joint_817eb056c50c_bravo",
+            "name": "joint1",
+            "type": "revolute",
+            "parent_link_id": "link_c46480014a33_bravo",
+            "child_link_id": "link_dd560abfac8c_bravo",
+            "origin": {
+              "position": [
+                -0.12499996860425842,
+                0.21869458379089163,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "limits": {
+              "lower": null,
+              "upper": null,
+              "effort": null,
+              "velocity": null
+            },
+            "initial_position": 0.0,
+            "source_prim_path": "/vehicle/rotor1/joint1",
+            "parent_frame": {
+              "position": [
+                -0.12499996860425842,
+                0.21869458379089163,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "child_frame": {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            },
+            "initial_velocity": 0.0
+          },
+          {
+            "id": "joint_0f846eb9442b_bravo",
+            "name": "joint2",
+            "type": "revolute",
+            "parent_link_id": "link_c46480014a33_bravo",
+            "child_link_id": "link_d53e5880040c_bravo",
+            "origin": {
+              "position": [
+                0.13830880357211967,
+                0.2032196494885447,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "limits": {
+              "lower": null,
+              "upper": null,
+              "effort": null,
+              "velocity": null
+            },
+            "initial_position": 0.0,
+            "source_prim_path": "/vehicle/rotor2/joint2",
+            "parent_frame": {
+              "position": [
+                0.13830880357211967,
+                0.2032196494885447,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "child_frame": {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            },
+            "initial_velocity": 0.0
+          },
+          {
+            "id": "joint_b49b461e30ff_bravo",
+            "name": "joint3",
+            "type": "revolute",
+            "parent_link_id": "link_c46480014a33_bravo",
+            "child_link_id": "link_81aeca72ce7b_bravo",
+            "origin": {
+              "position": [
+                -0.12450201241313519,
+                -0.22199887369774485,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "limits": {
+              "lower": null,
+              "upper": null,
+              "effort": null,
+              "velocity": null
+            },
+            "initial_position": 0.0,
+            "source_prim_path": "/vehicle/rotor3/joint3",
+            "parent_frame": {
+              "position": [
+                -0.12450201241313519,
+                -0.22199887369774485,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "child_frame": {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            },
+            "initial_velocity": 0.0
+          }
+        ],
+        "actuators": [
+          {
+            "id": "actuator_iris_rotor_0_bravo",
+            "name": "rotor0_angular_velocity",
+            "joint_id": "joint_6c1f079d8b91_bravo",
+            "control_type": "velocity",
+            "control_range": [
+              0.0,
+              1100.0
+            ],
+            "stiffness": 0.0,
+            "damping": 0.0,
+            "max_force": null,
+            "source_prim_path": "/vehicle/rotor0/joint0",
+            "target_velocity": 0.0
+          },
+          {
+            "id": "actuator_iris_rotor_1_bravo",
+            "name": "rotor1_angular_velocity",
+            "joint_id": "joint_817eb056c50c_bravo",
+            "control_type": "velocity",
+            "control_range": [
+              0.0,
+              1100.0
+            ],
+            "stiffness": 0.0,
+            "damping": 0.0,
+            "max_force": null,
+            "source_prim_path": "/vehicle/rotor1/joint1",
+            "target_velocity": 0.0
+          },
+          {
+            "id": "actuator_iris_rotor_2_bravo",
+            "name": "rotor2_angular_velocity",
+            "joint_id": "joint_0f846eb9442b_bravo",
+            "control_type": "velocity",
+            "control_range": [
+              0.0,
+              1100.0
+            ],
+            "stiffness": 0.0,
+            "damping": 0.0,
+            "max_force": null,
+            "source_prim_path": "/vehicle/rotor2/joint2",
+            "target_velocity": 0.0
+          },
+          {
+            "id": "actuator_iris_rotor_3_bravo",
+            "name": "rotor3_angular_velocity",
+            "joint_id": "joint_b49b461e30ff_bravo",
+            "control_type": "velocity",
+            "control_range": [
+              0.0,
+              1100.0
+            ],
+            "stiffness": 0.0,
+            "damping": 0.0,
+            "max_force": null,
+            "source_prim_path": "/vehicle/rotor3/joint3",
+            "target_velocity": 0.0
+          }
+        ],
+        "sensors": [
+          {
+            "id": "sensor_iris_range_00_bravo",
+            "name": "Iris Range 0 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_bravo",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                0.32,
+                0.0,
+                0.22
+              ],
+              "quaternion": [
+                -0.0,
+                0.7071067811865475,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5200,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_01_bravo",
+            "name": "Iris Range 30 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_bravo",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                0.27712812921102037,
+                0.15999999999999998,
+                0.22
+              ],
+              "quaternion": [
+                -0.3535533905932737,
+                0.6123724356957945,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5201,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_02_bravo",
+            "name": "Iris Range 60 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_bravo",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                0.16000000000000003,
+                0.27712812921102037,
+                0.22
+              ],
+              "quaternion": [
+                -0.6123724356957945,
+                0.3535533905932738,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5202,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_03_bravo",
+            "name": "Iris Range 90 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_bravo",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                1.959434878635765e-17,
+                0.32,
+                0.22
+              ],
+              "quaternion": [
+                -0.7071067811865475,
+                4.329780281177466e-17,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5203,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_04_bravo",
+            "name": "Iris Range 120 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_bravo",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -0.15999999999999992,
+                0.27712812921102037,
+                0.22
+              ],
+              "quaternion": [
+                -0.6123724356957945,
+                -0.35355339059327356,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5204,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_05_bravo",
+            "name": "Iris Range 150 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_bravo",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -0.27712812921102037,
+                0.15999999999999998,
+                0.22
+              ],
+              "quaternion": [
+                -0.3535533905932737,
+                -0.6123724356957945,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5205,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_06_bravo",
+            "name": "Iris Range 180 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_bravo",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -0.32,
+                3.91886975727153e-17,
+                0.22
+              ],
+              "quaternion": [
+                -8.659560562354932e-17,
+                -0.7071067811865475,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5206,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_07_bravo",
+            "name": "Iris Range 210 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_bravo",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -0.2771281292110204,
+                -0.15999999999999992,
+                0.22
+              ],
+              "quaternion": [
+                0.3535533905932735,
+                -0.6123724356957946,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5207,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_08_bravo",
+            "name": "Iris Range 240 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_bravo",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -0.16000000000000014,
+                -0.2771281292110203,
+                0.22
+              ],
+              "quaternion": [
+                0.6123724356957942,
+                -0.35355339059327406,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5208,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_09_bravo",
+            "name": "Iris Range 270 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_bravo",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -5.878304635907295e-17,
+                -0.32,
+                0.22
+              ],
+              "quaternion": [
+                0.7071067811865475,
+                -1.2989340843532398e-16,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5209,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_10_bravo",
+            "name": "Iris Range 300 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_bravo",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                0.16000000000000003,
+                -0.27712812921102037,
+                0.22
+              ],
+              "quaternion": [
+                0.6123724356957945,
+                0.3535533905932738,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5210,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_11_bravo",
+            "name": "Iris Range 330 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_bravo",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                0.2771281292110203,
+                -0.16000000000000014,
+                0.22
+              ],
+              "quaternion": [
+                0.35355339059327406,
+                0.6123724356957942,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5211,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          }
+        ],
+        "visual_bundle": "assets/imported/openusd_iris_09f8390b45/visual-0c28e711659123fc.simbin"
+      },
+      {
+        "id": "articulation_07d1eea61341_charlie",
+        "name": "Iris Quadcopter Charlie",
+        "root_link_id": "link_c46480014a33_charlie",
+        "fixed_base": false,
+        "source_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+        "source_prim_path": "/vehicle",
+        "links": [
+          {
+            "id": "link_c46480014a33_charlie",
+            "name": "body",
+            "parent_link_id": null,
+            "transform": {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            },
+            "visual_geometries": [
+              {
+                "id": "visual_da73878fa125_charlie",
+                "name": "body",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.7071035746228058,
+                    0.7071099877357483
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/body/body",
+                "rgba": [
+                  0.7,
+                  0.7,
+                  0.7,
+                  1.0
+                ],
+                "roughness": null,
+                "metalness": null
+              }
+            ],
+            "colliders": [
+              {
+                "id": "collider_3e7913cc3d09_charlie",
+                "name": "body",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.7071035746228058,
+                    0.7071099877357483
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/body/body",
+                "friction": [
+                  1.0,
+                  0.005,
+                  0.0001
+                ],
+                "restitution": 0.0,
+                "collision_mesh": "assets/imported/openusd_iris_09f8390b45/colliders/collider_3e7913cc3d09/collision.obj"
+              }
+            ],
+            "inertial": {
+              "mass": 1.5,
+              "center_of_mass": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "diagonal_inertia": [
+                0.029124999418854713,
+                0.029124999418854713,
+                0.05522499978542328
+              ],
+              "full_inertia": null
+            },
+            "source_prim_path": "/vehicle/body"
+          },
+          {
+            "id": "link_65e89d9cb4b6_charlie",
+            "name": "rotor0",
+            "parent_link_id": "link_c46480014a33_charlie",
+            "transform": {
+              "position": [
+                0.13759532827186577,
+                -0.20673533897435953,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "visual_geometries": [
+              {
+                "id": "visual_2c3cc13757c2_charlie",
+                "name": "iris_prop_ccw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.0005450629789668371,
+                    -0.0038281848239100913,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor0/iris_prop_ccw",
+                "rgba": [
+                  0.7,
+                  0.7,
+                  0.7,
+                  1.0
+                ],
+                "roughness": null,
+                "metalness": null
+              }
+            ],
+            "colliders": [
+              {
+                "id": "collider_5dd329fc4eed_charlie",
+                "name": "iris_prop_ccw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.0005450629789668371,
+                    -0.0038281848239100913,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor0/iris_prop_ccw",
+                "friction": [
+                  1.0,
+                  0.005,
+                  0.0001
+                ],
+                "restitution": 0.0,
+                "collision_mesh": "assets/imported/openusd_iris_09f8390b45/colliders/collider_5dd329fc4eed/collision.obj"
+              }
+            ],
+            "inertial": {
+              "mass": 0.005,
+              "center_of_mass": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "diagonal_inertia": null,
+              "full_inertia": null
+            },
+            "source_prim_path": "/vehicle/rotor0"
+          },
+          {
+            "id": "link_dd560abfac8c_charlie",
+            "name": "rotor1",
+            "parent_link_id": "link_c46480014a33_charlie",
+            "transform": {
+              "position": [
+                -0.12499996860425842,
+                0.21869458379089163,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "visual_geometries": [
+              {
+                "id": "visual_4d72ab886620_charlie",
+                "name": "iris_prop_ccw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.00022388287490729408,
+                    -0.004119582025255142,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor1/iris_prop_ccw",
+                "rgba": [
+                  0.7,
+                  0.7,
+                  0.7,
+                  1.0
+                ],
+                "roughness": null,
+                "metalness": null
+              }
+            ],
+            "colliders": [
+              {
+                "id": "collider_eb920ec6483d_charlie",
+                "name": "iris_prop_ccw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    0.00022388287490729408,
+                    -0.004119582025255142,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor1/iris_prop_ccw",
+                "friction": [
+                  1.0,
+                  0.005,
+                  0.0001
+                ],
+                "restitution": 0.0,
+                "collision_mesh": "assets/imported/openusd_iris_09f8390b45/colliders/collider_eb920ec6483d/collision.obj"
+              }
+            ],
+            "inertial": {
+              "mass": 0.005,
+              "center_of_mass": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "diagonal_inertia": null,
+              "full_inertia": null
+            },
+            "source_prim_path": "/vehicle/rotor1"
+          },
+          {
+            "id": "link_d53e5880040c_charlie",
+            "name": "rotor2",
+            "parent_link_id": "link_c46480014a33_charlie",
+            "transform": {
+              "position": [
+                0.13830880357211967,
+                0.2032196494885447,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "visual_geometries": [
+              {
+                "id": "visual_84cac9981045_charlie",
+                "name": "iris_prop_cw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    4.884981308350689e-15,
+                    -0.0009403522031591338,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor2/iris_prop_cw",
+                "rgba": [
+                  0.7,
+                  0.7,
+                  0.7,
+                  1.0
+                ],
+                "roughness": null,
+                "metalness": null
+              }
+            ],
+            "colliders": [
+              {
+                "id": "collider_8c7aedc016eb_charlie",
+                "name": "iris_prop_cw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    4.884981308350689e-15,
+                    -0.0009403522031591338,
+                    0.0
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor2/iris_prop_cw",
+                "friction": [
+                  1.0,
+                  0.005,
+                  0.0001
+                ],
+                "restitution": 0.0,
+                "collision_mesh": "assets/imported/openusd_iris_09f8390b45/colliders/collider_8c7aedc016eb/collision.obj"
+              }
+            ],
+            "inertial": {
+              "mass": 0.005,
+              "center_of_mass": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "diagonal_inertia": null,
+              "full_inertia": null
+            },
+            "source_prim_path": "/vehicle/rotor2"
+          },
+          {
+            "id": "link_81aeca72ce7b_charlie",
+            "name": "rotor3",
+            "parent_link_id": "link_c46480014a33_charlie",
+            "transform": {
+              "position": [
+                -0.12450201241313519,
+                -0.22199887369774485,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "visual_geometries": [
+              {
+                "id": "visual_9685cc98f86e_charlie",
+                "name": "iris_prop_cw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    -0.0016709731153214946,
+                    -0.000967065099411496,
+                    -0.00010050091257035598
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor3/iris_prop_cw",
+                "rgba": [
+                  0.7,
+                  0.7,
+                  0.7,
+                  1.0
+                ],
+                "roughness": null,
+                "metalness": null
+              }
+            ],
+            "colliders": [
+              {
+                "id": "collider_81de18ca3640_charlie",
+                "name": "iris_prop_cw",
+                "geometry_type": "mesh",
+                "transform": {
+                  "position": [
+                    -0.0016709731153214946,
+                    -0.000967065099411496,
+                    -0.00010050091257035598
+                  ],
+                  "quaternion": [
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                  ]
+                },
+                "size": [
+                  1.0,
+                  1.0,
+                  1.0
+                ],
+                "asset_uri": "assets/imported/openusd_iris_09f8390b45/source/iris.usd",
+                "source_prim_path": "/vehicle/rotor3/iris_prop_cw",
+                "friction": [
+                  1.0,
+                  0.005,
+                  0.0001
+                ],
+                "restitution": 0.0,
+                "collision_mesh": "assets/imported/openusd_iris_09f8390b45/colliders/collider_81de18ca3640/collision.obj"
+              }
+            ],
+            "inertial": {
+              "mass": 0.005,
+              "center_of_mass": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "diagonal_inertia": null,
+              "full_inertia": null
+            },
+            "source_prim_path": "/vehicle/rotor3"
+          }
+        ],
+        "joints": [
+          {
+            "id": "joint_6c1f079d8b91_charlie",
+            "name": "joint0",
+            "type": "revolute",
+            "parent_link_id": "link_c46480014a33_charlie",
+            "child_link_id": "link_65e89d9cb4b6_charlie",
+            "origin": {
+              "position": [
+                0.13759532827186577,
+                -0.20673533897435953,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "limits": {
+              "lower": null,
+              "upper": null,
+              "effort": null,
+              "velocity": null
+            },
+            "initial_position": 0.0,
+            "source_prim_path": "/vehicle/rotor0/joint0",
+            "parent_frame": {
+              "position": [
+                0.13759532827186577,
+                -0.20673533897435953,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "child_frame": {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            },
+            "initial_velocity": 0.0
+          },
+          {
+            "id": "joint_817eb056c50c_charlie",
+            "name": "joint1",
+            "type": "revolute",
+            "parent_link_id": "link_c46480014a33_charlie",
+            "child_link_id": "link_dd560abfac8c_charlie",
+            "origin": {
+              "position": [
+                -0.12499996860425842,
+                0.21869458379089163,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "limits": {
+              "lower": null,
+              "upper": null,
+              "effort": null,
+              "velocity": null
+            },
+            "initial_position": 0.0,
+            "source_prim_path": "/vehicle/rotor1/joint1",
+            "parent_frame": {
+              "position": [
+                -0.12499996860425842,
+                0.21869458379089163,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "child_frame": {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            },
+            "initial_velocity": 0.0
+          },
+          {
+            "id": "joint_0f846eb9442b_charlie",
+            "name": "joint2",
+            "type": "revolute",
+            "parent_link_id": "link_c46480014a33_charlie",
+            "child_link_id": "link_d53e5880040c_charlie",
+            "origin": {
+              "position": [
+                0.13830880357211967,
+                0.2032196494885447,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "limits": {
+              "lower": null,
+              "upper": null,
+              "effort": null,
+              "velocity": null
+            },
+            "initial_position": 0.0,
+            "source_prim_path": "/vehicle/rotor2/joint2",
+            "parent_frame": {
+              "position": [
+                0.13830880357211967,
+                0.2032196494885447,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "child_frame": {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            },
+            "initial_velocity": 0.0
+          },
+          {
+            "id": "joint_b49b461e30ff_charlie",
+            "name": "joint3",
+            "type": "revolute",
+            "parent_link_id": "link_c46480014a33_charlie",
+            "child_link_id": "link_81aeca72ce7b_charlie",
+            "origin": {
+              "position": [
+                -0.12450201241313519,
+                -0.22199887369774485,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "axis": [
+              0.0,
+              0.0,
+              1.0
+            ],
+            "limits": {
+              "lower": null,
+              "upper": null,
+              "effort": null,
+              "velocity": null
+            },
+            "initial_position": 0.0,
+            "source_prim_path": "/vehicle/rotor3/joint3",
+            "parent_frame": {
+              "position": [
+                -0.12450201241313519,
+                -0.22199887369774485,
+                0.023000000044703484
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.7071035746228058,
+                0.7071099877357483
+              ]
+            },
+            "child_frame": {
+              "position": [
+                0.0,
+                0.0,
+                0.0
+              ],
+              "quaternion": [
+                0.0,
+                0.0,
+                0.0,
+                1.0
+              ]
+            },
+            "initial_velocity": 0.0
+          }
+        ],
+        "actuators": [
+          {
+            "id": "actuator_iris_rotor_0_charlie",
+            "name": "rotor0_angular_velocity",
+            "joint_id": "joint_6c1f079d8b91_charlie",
+            "control_type": "velocity",
+            "control_range": [
+              0.0,
+              1100.0
+            ],
+            "stiffness": 0.0,
+            "damping": 0.0,
+            "max_force": null,
+            "source_prim_path": "/vehicle/rotor0/joint0",
+            "target_velocity": 0.0
+          },
+          {
+            "id": "actuator_iris_rotor_1_charlie",
+            "name": "rotor1_angular_velocity",
+            "joint_id": "joint_817eb056c50c_charlie",
+            "control_type": "velocity",
+            "control_range": [
+              0.0,
+              1100.0
+            ],
+            "stiffness": 0.0,
+            "damping": 0.0,
+            "max_force": null,
+            "source_prim_path": "/vehicle/rotor1/joint1",
+            "target_velocity": 0.0
+          },
+          {
+            "id": "actuator_iris_rotor_2_charlie",
+            "name": "rotor2_angular_velocity",
+            "joint_id": "joint_0f846eb9442b_charlie",
+            "control_type": "velocity",
+            "control_range": [
+              0.0,
+              1100.0
+            ],
+            "stiffness": 0.0,
+            "damping": 0.0,
+            "max_force": null,
+            "source_prim_path": "/vehicle/rotor2/joint2",
+            "target_velocity": 0.0
+          },
+          {
+            "id": "actuator_iris_rotor_3_charlie",
+            "name": "rotor3_angular_velocity",
+            "joint_id": "joint_b49b461e30ff_charlie",
+            "control_type": "velocity",
+            "control_range": [
+              0.0,
+              1100.0
+            ],
+            "stiffness": 0.0,
+            "damping": 0.0,
+            "max_force": null,
+            "source_prim_path": "/vehicle/rotor3/joint3",
+            "target_velocity": 0.0
+          }
+        ],
+        "sensors": [
+          {
+            "id": "sensor_iris_range_00_charlie",
+            "name": "Iris Range 0 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_charlie",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                0.32,
+                0.0,
+                0.22
+              ],
+              "quaternion": [
+                -0.0,
+                0.7071067811865475,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5300,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_01_charlie",
+            "name": "Iris Range 30 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_charlie",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                0.27712812921102037,
+                0.15999999999999998,
+                0.22
+              ],
+              "quaternion": [
+                -0.3535533905932737,
+                0.6123724356957945,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5301,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_02_charlie",
+            "name": "Iris Range 60 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_charlie",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                0.16000000000000003,
+                0.27712812921102037,
+                0.22
+              ],
+              "quaternion": [
+                -0.6123724356957945,
+                0.3535533905932738,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5302,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_03_charlie",
+            "name": "Iris Range 90 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_charlie",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                1.959434878635765e-17,
+                0.32,
+                0.22
+              ],
+              "quaternion": [
+                -0.7071067811865475,
+                4.329780281177466e-17,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5303,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_04_charlie",
+            "name": "Iris Range 120 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_charlie",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -0.15999999999999992,
+                0.27712812921102037,
+                0.22
+              ],
+              "quaternion": [
+                -0.6123724356957945,
+                -0.35355339059327356,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5304,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_05_charlie",
+            "name": "Iris Range 150 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_charlie",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -0.27712812921102037,
+                0.15999999999999998,
+                0.22
+              ],
+              "quaternion": [
+                -0.3535533905932737,
+                -0.6123724356957945,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5305,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_06_charlie",
+            "name": "Iris Range 180 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_charlie",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -0.32,
+                3.91886975727153e-17,
+                0.22
+              ],
+              "quaternion": [
+                -8.659560562354932e-17,
+                -0.7071067811865475,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5306,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_07_charlie",
+            "name": "Iris Range 210 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_charlie",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -0.2771281292110204,
+                -0.15999999999999992,
+                0.22
+              ],
+              "quaternion": [
+                0.3535533905932735,
+                -0.6123724356957946,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5307,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_08_charlie",
+            "name": "Iris Range 240 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_charlie",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -0.16000000000000014,
+                -0.2771281292110203,
+                0.22
+              ],
+              "quaternion": [
+                0.6123724356957942,
+                -0.35355339059327406,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5308,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_09_charlie",
+            "name": "Iris Range 270 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_charlie",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                -5.878304635907295e-17,
+                -0.32,
+                0.22
+              ],
+              "quaternion": [
+                0.7071067811865475,
+                -1.2989340843532398e-16,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5309,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_10_charlie",
+            "name": "Iris Range 300 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_charlie",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                0.16000000000000003,
+                -0.27712812921102037,
+                0.22
+              ],
+              "quaternion": [
+                0.6123724356957945,
+                0.3535533905932738,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5310,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          },
+          {
+            "id": "sensor_iris_range_11_charlie",
+            "name": "Iris Range 330 deg",
+            "sensor_type": "rangefinder",
+            "link_id": "link_c46480014a33_charlie",
+            "joint_id": null,
+            "update_rate_hz": 50.0,
+            "source_prim_path": null,
+            "local_transform": {
+              "position": [
+                0.2771281292110203,
+                -0.16000000000000014,
+                0.22
+              ],
+              "quaternion": [
+                0.35355339059327406,
+                0.6123724356957942,
+                0.0,
+                0.7071067811865475
+              ]
+            },
+            "max_distance": 4.0,
+            "noise": {
+              "seed": 5311,
+              "channels": {
+                "distance": {
+                  "bias": 0.0,
+                  "standard_deviation": 0.004
+                }
+              }
+            }
+          }
+        ],
+        "visual_bundle": "assets/imported/openusd_iris_09f8390b45/visual-0c28e711659123fc.simbin"
+      }
+    ]
+  },
+  "attachments": [
+    {
+      "id": "attachment_iris_hook_alpha",
+      "type": "weld",
+      "parent_body_id": "link_c46480014a33_alpha",
+      "child_body_id": "actor_payload_alpha",
+      "parent_anchor": [
+        0.0,
+        0.0,
+        -0.12
+      ],
+      "child_anchor": [
+        0.0,
+        0.0,
+        0.11
+      ],
+      "initially_active": false,
+      "capture_distance": 0.035,
+      "capture_speed": 0.14,
+      "capture_duration": 0.25,
+      "require_contact": true,
+      "contact_probe_radius": 0.016,
+      "solref": [
+        0.04,
+        1.0
+      ],
+      "solimp": [
+        0.9,
+        0.95,
+        0.001,
+        0.5,
+        2.0
+      ],
+      "gripper": {
+        "type": "four_cup_vacuum",
+        "plate_half_extents": [
+          0.075,
+          0.055,
+          0.009
+        ],
+        "cup_offset": [
+          0.05,
+          0.032
+        ],
+        "cup_radius": 0.016,
+        "cup_height": 0.018,
+        "mount_radius": 0.011,
+        "mount_length": 0.078
+      }
+    },
+    {
+      "id": "attachment_iris_hook_bravo",
+      "type": "weld",
+      "parent_body_id": "link_c46480014a33_bravo",
+      "child_body_id": "actor_payload_bravo",
+      "parent_anchor": [
+        0.0,
+        0.0,
+        -0.12
+      ],
+      "child_anchor": [
+        0.0,
+        0.0,
+        0.11
+      ],
+      "initially_active": false,
+      "capture_distance": 0.035,
+      "capture_speed": 0.14,
+      "capture_duration": 0.25,
+      "require_contact": true,
+      "contact_probe_radius": 0.016,
+      "solref": [
+        0.04,
+        1.0
+      ],
+      "solimp": [
+        0.9,
+        0.95,
+        0.001,
+        0.5,
+        2.0
+      ],
+      "gripper": {
+        "type": "four_cup_vacuum",
+        "plate_half_extents": [
+          0.075,
+          0.055,
+          0.009
+        ],
+        "cup_offset": [
+          0.05,
+          0.032
+        ],
+        "cup_radius": 0.016,
+        "cup_height": 0.018,
+        "mount_radius": 0.011,
+        "mount_length": 0.078
+      }
+    },
+    {
+      "id": "attachment_iris_hook_charlie",
+      "type": "weld",
+      "parent_body_id": "link_c46480014a33_charlie",
+      "child_body_id": "actor_payload_charlie",
+      "parent_anchor": [
+        0.0,
+        0.0,
+        -0.12
+      ],
+      "child_anchor": [
+        0.0,
+        0.0,
+        0.11
+      ],
+      "initially_active": false,
+      "capture_distance": 0.035,
+      "capture_speed": 0.14,
+      "capture_duration": 0.25,
+      "require_contact": true,
+      "contact_probe_radius": 0.016,
+      "solref": [
+        0.04,
+        1.0
+      ],
+      "solimp": [
+        0.9,
+        0.95,
+        0.001,
+        0.5,
+        2.0
+      ],
+      "gripper": {
+        "type": "four_cup_vacuum",
+        "plate_half_extents": [
+          0.075,
+          0.055,
+          0.009
+        ],
+        "cup_offset": [
+          0.05,
+          0.032
+        ],
+        "cup_radius": 0.016,
+        "cup_height": 0.018,
+        "mount_radius": 0.011,
+        "mount_length": 0.078
+      }
+    }
+  ],
+  "delivery_tasks": [
+    {
+      "id": "task_delivery_alpha",
+      "type": "aerial_delivery",
+      "attachment_id": "attachment_iris_hook_alpha",
+      "payload_body_id": "actor_payload_alpha",
+      "pickup_position": [
+        -103.5,
+        -6.0,
+        0.21000000000000002
+      ],
+      "dropoff_position": [
+        -89.5,
+        3.0,
+        0.48
+      ],
+      "position_tolerance": 0.35,
+      "settle_speed": 0.15,
+      "settle_duration": 0.5
+    },
+    {
+      "id": "task_delivery_bravo",
+      "type": "aerial_delivery",
+      "attachment_id": "attachment_iris_hook_bravo",
+      "payload_body_id": "actor_payload_bravo",
+      "pickup_position": [
+        -103.5,
+        6.0,
+        0.45999999999999996
+      ],
+      "dropoff_position": [
+        -89.5,
+        -6.0,
+        0.76
+      ],
+      "position_tolerance": 0.35,
+      "settle_speed": 0.15,
+      "settle_duration": 0.5
+    },
+    {
+      "id": "task_delivery_charlie",
+      "type": "aerial_delivery",
+      "attachment_id": "attachment_iris_hook_charlie",
+      "payload_body_id": "actor_payload_charlie",
+      "pickup_position": [
+        -95.5,
+        -10.0,
+        0.91
+      ],
+      "dropoff_position": [
+        -95.5,
+        10.5,
+        0.16
+      ],
+      "position_tolerance": 0.35,
+      "settle_speed": 0.15,
+      "settle_duration": 0.5
+    }
+  ]
+}
